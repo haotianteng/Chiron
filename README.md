@@ -13,8 +13,8 @@ $python ctcbns/utils/extract_sig_ref.py --input_dir <fast5_file or directory> --
 This will create two folder called raw and reference in the same folder of fast5_file_dir if the output_dir is not given, for example  
 path_to_fast5_dir/fast5_file_dir  
 then the raw folder will be created in   
-path_to_fast5_dir/raw      	#folder contained the raw signal files
-path_to_fast5_dir/reference	#folder contained the original base calling by **Metrichor**
+path_to_fast5_dir/raw      	#folder contained the raw signal files  
+path_to_fast5_dir/reference	#folder contained the original base calling by **Metrichor**  
 
 If the output_dir is given, then the raw and reference folder will be generated under the output_dir
   
