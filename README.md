@@ -6,19 +6,19 @@ Build with **Tensorflow** and python 2.7
 Installing [Tensorflow by Google](https://www.tensorflow.org/).  
 Recommend to install tensorflow in a virtual environment, like **anaconda**.  
 
-## Run  
-1. Activate tensorflow environment, take anaconda for example:  
-$source activate tensorflow  
-     
-2. Transfer the .fast5 file into a .signal file.  
-$python ctcbns/utils/raw.py --input_dir <fast5_file_dir>  
+## Run      
+1. Transfer the .fast5 file into a .signal file.  
+$python ctcbns/utils/extract_sig_ref.py --input_dir <fast5_file or directory> --output_dir <output directory>  
 
-This will create a folder called raw in the same folder of fast5_file_dir, for example  
+This will create two folder called raw and reference in the same folder of fast5_file_dir if the output_dir is not given, for example  
 path_to_fast5_dir/fast5_file_dir  
 then the raw folder will be created in   
-path_to_fast5_dir/raw  
+path_to_fast5_dir/raw      	#folder contained the raw signal files
+path_to_fast5_dir/reference	#folder contained the original base calling by **Metrichor**
+
+If the output_dir is given, then the raw and reference folder will be generated under the output_dir
   
-Format of .signal file is quite simple:  
+Format of .signal file:  
 One line of the raw signal, like:  
 544 554 556 571 563 472 467 487 482 513 517 521 495 504 500 520 492 506 ...  
 Or one column of the raw signal:  
@@ -39,7 +39,7 @@ Or one column of the raw signal:
 $python ctcbns/ctcbns_eval.py --input <.signal file or folder containing .signal file> --output <output_directory>  
 
 ## Train the model  
-Usually the default model works fine on the R9.7 protocal, but if the basecalling result is not satisfying, you can train your own model based on some training data set.  
+Usually the default model works fine on the R9.7 protocal, but if the basecalling result is not satisfying, you can train your own model based on your own training data set.  
 
 1. Hardware request:  
 Recommand training on the GPU with tensorflow, usually a 8GB RAM is required.  
