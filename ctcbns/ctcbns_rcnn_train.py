@@ -9,7 +9,7 @@ import tensorflow as tf
 from distutils.dir_util import copy_tree
 from ctcbns_input import read_raw_data_sets
 from cnn import getcnnfeature
-#from cnn import getcnnlogit
+from cnn import getcnnlogit
 from rnn import rnn_layers
 #from rnn import rnn_layers_one_direction
 class Flags():
@@ -20,10 +20,10 @@ class Flags():
         self.sequence_len = 300
         self.batch_size = 20
         self.step_rate = 1e-3 
-        self.max_steps = 2500
+        self.max_steps = 5000
         self.k_mer = 1
-        self.model_name = 'crnn5+5_ker7_hn400_resnet'
-        self.retrain = False
+        self.model_name = 'crnn5+5_resnet'
+        self.retrain = True
 FLAGS = Flags()
 def save_model():
     copy_tree(FLAGS.home_dir+'/ctcbns/ctcbns',FLAGS.log_dir+FLAGS.model_name+'/model')

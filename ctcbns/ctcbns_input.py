@@ -19,7 +19,7 @@ raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 #                          )
 class Flags():
     def __init__(self):
-        self.max_reads_number = 500000
+        self.max_reads_number = 200000
 #        self.max_segment_len = 200
 FLAGS = Flags()
 

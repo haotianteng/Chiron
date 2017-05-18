@@ -11,12 +11,14 @@ import numpy as np
 from tensorflow.contrib.rnn.python.ops.core_rnn_cell import LSTMCell
 from ctcbns.utils.lstm import BNLSTMCell
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
-def rnn_layers(x,seq_length,training,hidden_num=400,layer_num = 5,class_n = 5):
+def rnn_layers(x,seq_length,training,hidden_num=200,layer_num = 5,class_n = 5,keep_prob=None):
     cells_fw = list()
     cells_bw = list()
     for i in range(layer_num):
         cell_fw = BNLSTMCell(hidden_num,training = training)#,training)
         cell_bw = BNLSTMCell(hidden_num,training = training)#,training)
+        if keep_prob is not None:
+            cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw,)
         cells_fw.append(cell_fw)
         cells_bw.append(cell_bw)
     with tf.variable_scope('BDLSTM_rnn') as scope:

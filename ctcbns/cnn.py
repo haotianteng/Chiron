@@ -83,7 +83,7 @@ def inception_layer(indata,training,times=16):
         conv0f = conv_layer(indata,ksize=[1,1,in_channel,times*2],padding = 'SAME',training = training,name = 'conv0f_1x1')
         conv1f = conv_layer(conv0f,ksize=[1,3,times*2,times*3],padding = 'SAME',training = training,name = 'conv1f_1x3_d3',dilate = 3)
     return(tf.concat([conv1a,conv0b,conv1c,conv1d,conv1e,conv1f],axis = -1,name = 'concat'))
-def residual_layer(indata,out_channel,training,i_bn = False):
+def residual_layer(indata,out_channel,training,i_bn = False,keep_prob=None):
     fea_shape = indata.get_shape().as_list()
     in_channel = fea_shape[-1]
     with tf.variable_scope('branch1'):
@@ -95,7 +95,7 @@ def residual_layer(indata,out_channel,training,i_bn = False):
     with tf.variable_scope('plus'):
         relu_out = tf.nn.relu(indata_cp+conv_out3,name = 'final_relu')
     return relu_out
-def getcnnfeature(signal,training):
+def getcnnfeature(signal,training,keep_prob=None):
     signal_shape = signal.get_shape().as_list()
     signal = tf.reshape(signal,[signal_shape[0],1,signal_shape[1],1])
     print(signal.get_shape())
@@ -141,21 +141,34 @@ def getcnnfeature(signal,training):
 #    
 #    with tf.variable_scope('avg_pool_1'):
 #        avg_pool1 = tf.nn.avg_pool(incp13,ksize = [1,1,7,1],strides = [1,1,1,1],padding = 'SAME',name='ap_1x7_s1')
-
 #   Residual Layer x 5
+#    with tf.variable_scope('res_layer1'):
+#        res1 = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+#    with tf.variable_scope('res_layer2'):
+#        res2 = residual_layer(res1,out_channel = 256,training = training)
+#    with tf.variable_scope('res_layer3'):
+#        res3 = residual_layer(res2,out_channel = 256,training = training)
+#    with tf.variable_scope('res_layer4'):
+#        res4 = residual_layer(res3,out_channel = 512,training = training)
+#    with tf.variable_scope('res_layer5'):
+#        res5 = residual_layer(res4,out_channel = 512,training = training)
+#   Residual Layer x 5
+    Layer_num=5
+#    out_channel_stack=[256]*Layer_num
+    out_channel_stack=[256,256,256,512,512]
+    if keep_prob is not None:
+        assert keep_prob.get_shape().as_list()[0]==Layer_num
     with tf.variable_scope('res_layer1'):
-        res1 = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
-    with tf.variable_scope('res_layer2'):
-        res2 = residual_layer(res1,out_channel = 256,training = training)
-    with tf.variable_scope('res_layer3'):
-        res3 = residual_layer(res2,out_channel = 256,training = training)
-    with tf.variable_scope('res_layer4'):
-        res4 = residual_layer(res3,out_channel = 512,training = training)
-    with tf.variable_scope('res_layer5'):
-        res5 = residual_layer(res4,out_channel = 512,training = training)
-        
-    feashape = res5.get_shape().as_list()
-    fea = tf.reshape(res5,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+        res1= residual_layer(signal,out_channel = out_channel_stack[0],training = training,i_bn = True)
+    layer_list = list()
+    layer_list.append(res1)
+    for i in range(2,Layer_num+1):
+        with tf.variable_scope('res_layer'+str(i)):
+            tmp_layer = residual_layer(layer_list[-1],out_channel=out_channel_stack[i-1],training=training)
+        layer_list.append(tmp_layer)
+#        
+    feashape = layer_list[-1].get_shape().as_list()
+    fea = tf.reshape(layer_list[-1],[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
     return fea
 
 def getcnnlogit(fea,outnum=5):
