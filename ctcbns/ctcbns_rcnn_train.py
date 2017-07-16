@@ -18,12 +18,12 @@ class Flags():
         self.data_dir = self.home_dir + 'data/Lambda_R9.4/raw/'
         self.log_dir = self.home_dir+'/ctcbns/log/'
         self.sequence_len = 300
-        self.batch_size = 20
+        self.batch_size = 40
         self.step_rate = 1e-3 
-        self.max_steps = 5000
+        self.max_steps = 1
         self.k_mer = 1
-        self.model_name = 'crnn5+5_resnet'
-        self.retrain = True
+        self.model_name = 'crnn5+5_attention'
+        self.retrain = False
 FLAGS = Flags()
 def save_model():
     copy_tree(FLAGS.home_dir+'/ctcbns/ctcbns',FLAGS.log_dir+FLAGS.model_name+'/model')
@@ -68,57 +68,57 @@ def prediction(logits,seq_length,label,top_paths=1):
     tf.summary.scalar('Error_rate',error)
     return error
 
-def train():
-    training = tf.placeholder(tf.bool)
-    x = tf.placeholder(tf.float32,shape = [FLAGS.batch_size,FLAGS.sequence_len])
-    seq_length = tf.placeholder(tf.int32, shape = [FLAGS.batch_size])
-    y_indexs = tf.placeholder(tf.int64)
-    y_values = tf.placeholder(tf.int32)
-    y_shape = tf.placeholder(tf.int64)
-    y = tf.SparseTensor(y_indexs,y_values,y_shape)
-    logits,ratio = inference(x,seq_length,training)
-    ctc_loss = loss(logits,seq_length,y)
-    opt = train_step(ctc_loss)
-    error = prediction(logits,seq_length,y)
-    init = tf.global_variables_initializer()
-    saver = tf.train.Saver()
-    summary = tf.summary.merge_all()
-    
-    sess = tf.Session(config = tf.ConfigProto(allow_soft_placement=True))
-    save_model()
-    if FLAGS.retrain==False:
-        sess.run(init)
-        print("Model init finished, begin loading data. \n")
-    else:
-        saver.restore(sess,tf.train.latest_checkpoint(FLAGS.log_dir+FLAGS.model_name))
-        print("Model loaded finished, begin loading data. \n")
-    summary_writer = tf.summary.FileWriter(FLAGS.log_dir+FLAGS.model_name+'/summary/', sess.graph)
-    
-    train_ds,valid_ds = read_raw_data_sets(FLAGS.data_dir,FLAGS.sequence_len,valid_reads_num = 10000,k_mer = FLAGS.k_mer)
-    
-    for i in range(FLAGS.max_steps):
-        batch_x,seq_len,batch_y = train_ds.next_batch(FLAGS.batch_size)
-        indxs,values,shape = batch_y
-        feed_dict =  {x:batch_x,seq_length:seq_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
-        loss_val,_ = sess.run([ctc_loss,opt],feed_dict = feed_dict)
-        if i%10 ==0:
-            valid_x,valid_len,valid_y = valid_ds.next_batch(FLAGS.batch_size)
-            indxs,values,shape = valid_y
-            feed_dict = {x:valid_x,seq_length:valid_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
-            error_val = sess.run(error,feed_dict = feed_dict)
-            print "Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f"\
-            %(train_ds.epochs_completed,train_ds.index_in_epoch,loss_val,error_val)
-            saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/model.ckpt',i)
-            summary_str = sess.run(summary, feed_dict=feed_dict)
-            summary_writer.add_summary(summary_str, i)
-            summary_writer.flush()
-            
-    saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/final.ckpt')
-    print(FLAGS.model_name)
-def main():
-    train()
+#def train():
+training = tf.placeholder(tf.bool)
+x = tf.placeholder(tf.float32,shape = [FLAGS.batch_size,FLAGS.sequence_len])
+seq_length = tf.placeholder(tf.int32, shape = [FLAGS.batch_size])
+y_indexs = tf.placeholder(tf.int64)
+y_values = tf.placeholder(tf.int32)
+y_shape = tf.placeholder(tf.int64)
+y = tf.SparseTensor(y_indexs,y_values,y_shape)
+logits,ratio = inference(x,seq_length,training)
+ctc_loss = loss(logits,seq_length,y)
+opt = train_step(ctc_loss)
+error = prediction(logits,seq_length,y)
+init = tf.global_variables_initializer()
+saver = tf.train.Saver()
+summary = tf.summary.merge_all()
 
-if __name__ == "__main__":
-    main()
+sess = tf.Session(config = tf.ConfigProto(allow_soft_placement=True))
+save_model()
+if FLAGS.retrain==False:
+    sess.run(init)
+    print("Model init finished, begin loading data. \n")
+else:
+    saver.restore(sess,tf.train.latest_checkpoint(FLAGS.log_dir+FLAGS.model_name))
+    print("Model loaded finished, begin loading data. \n")
+summary_writer = tf.summary.FileWriter(FLAGS.log_dir+FLAGS.model_name+'/summary/', sess.graph)
+
+train_ds,valid_ds = read_raw_data_sets(FLAGS.data_dir,FLAGS.sequence_len,valid_reads_num = 10000,k_mer = FLAGS.k_mer)
+
+for i in range(FLAGS.max_steps):
+    batch_x,seq_len,batch_y = train_ds.next_batch(FLAGS.batch_size)
+    indxs,values,shape = batch_y
+    feed_dict =  {x:batch_x,seq_length:seq_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
+    loss_val,_ = sess.run([ctc_loss,opt],feed_dict = feed_dict)
+    if i%10 ==0:
+        valid_x,valid_len,valid_y = valid_ds.next_batch(FLAGS.batch_size)
+        indxs,values,shape = valid_y
+        feed_dict = {x:valid_x,seq_length:valid_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
+        error_val = sess.run(error,feed_dict = feed_dict)
+        print "Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f"\
+        %(train_ds.epochs_completed,train_ds.index_in_epoch,loss_val,error_val)
+        saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/model.ckpt',i)
+        summary_str = sess.run(summary, feed_dict=feed_dict)
+        summary_writer.add_summary(summary_str, i)
+        summary_writer.flush()
         
+saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/final.ckpt')
+print(FLAGS.model_name)
+#def main():
+#    train()
+#
+#if __name__ == "__main__":
+#    main()
+#        
         

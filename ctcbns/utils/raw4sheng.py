@@ -18,15 +18,19 @@ def extract(raw_folder = None):
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
     if raw_folder is None:
-        raw_folder = os.path.abspath(os.path.join(root_folder, os.pardir))+'/raw/'
+        raw_folder = os.path.abspath(os.path.join(root_folder, os.pardir))+'/raw_ws/'
     if not os.path.isdir(raw_folder):
         os.mkdir(raw_folder)
     for file_n in os.listdir(root_folder):
+        success = False
         print(file_n)
         if file_n.endswith('signal_label'):
             output_file = raw_folder+os.path.splitext(file_n)[0]
             print(output_file)
-            success = extract_file(root_folder+os.path.sep+file_n,output_file)
+            try:
+                success = extract_file(root_folder+os.path.sep+file_n,output_file)
+            except:
+                continue
             if success:
                 count +=1
             sys.stdout.write("%s file transfered.   \n" % (file_n) )

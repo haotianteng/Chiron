@@ -173,7 +173,7 @@ def read_raw_data_sets(data_dir,seq_length = 200,k_mer = 1,valid_reads_num = 0):
                 else:
                     sys.stdout.write("%d lines read.   \n" % (count) )
             file_count+=1
-#            print("Successfully read %d"%(file_count))
+            print("Successfully read %d"%(file_count))
     assert valid_reads_num < len(event),"Valid reads number bigger than the total reads number."
     train_event = event[valid_reads_num:]
     train_event_length = event_length[valid_reads_num:]
