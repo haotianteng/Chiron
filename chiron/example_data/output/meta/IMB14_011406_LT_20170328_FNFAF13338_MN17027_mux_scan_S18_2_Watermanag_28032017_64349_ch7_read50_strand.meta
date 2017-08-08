@@ -1,0 +1,8 @@
+# Reading Basecalling assembly output total rate(bp/s)
+0.005 12.052 0.006 0.000 12.063 3.813
+#read_len batch_size segment_len jump start_pos
+46 1 300 300 0
+# input_name model_name
+/home/haotianteng/UQ/deepBNS/chiron_package/example_data/output/raw/IMB14_011406_LT_20170328_FNFAF13338_MN17027_mux_scan_S18_2_Watermanag_28032017_64349_ch7_read50_strand.signal /home/haotianteng/UQ/deepBNS/chiron_package/model/crnn3+3_S10_2_re
+$ Wall_time Sys_time User_time Cpu_time
+13.015 2.618 24.254 26.872
