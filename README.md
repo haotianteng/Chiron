@@ -1,4 +1,5 @@
-# Basecaller for Nanopore Sequencer(BNS)
+#chiron
+## A basecaller for Nanopore Sequencer(BNS)
 Using a cnn+rnn+ctc structure to establish a end-to-end basecalling for the nanopore sequencer.  
 Build with **Tensorflow** and python 2.7  
 
@@ -93,5 +94,6 @@ retrain: If this is a new model, or you want to load the model you trained befor
 4. Train  
 $source activate tensorflow   
 $python ctcbns/ctcbns_rcnn_train.py  
+
 
 
