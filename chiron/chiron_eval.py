@@ -9,16 +9,16 @@ import argparse,os,time
 import numpy as np
 import tensorflow as tf
 from chiron_input import read_data_for_eval
-from chiron.utils.easy_assembler import simple_assembly
+from utils.easy_assembler import simple_assembly
 from cnn import getcnnfeature
 #from cnn import getcnnlogit
 from rnn import rnn_layers
-from chiron.utils.unix_time import unix_time
+from utils.unix_time import unix_time
 
 parser = argparse.ArgumentParser(description='Basecall a signal file')
 parser.add_argument('-i','--input', help="File path or Folder path to the signal file.")
 parser.add_argument('-o','--output', help = "Output Folder name")
-parser.add_argument('-m','--model', default = '../model/crnn3+3_S10_2_re',help = "model folder")
+parser.add_argument('-m','--model', default = './model/DNA_default',help = "model folder")
 parser.add_argument('-s','--start',type=int,default = 0,help = "Start index of the signal file.")
 parser.add_argument('-b','--batch_size',type = int,default = 1100,help="Batch size for run, bigger batch_size will increase the processing speed but require larger RAM load")
 parser.add_argument('-l','--segment_len',type = int,default = 300, help="Segment length to be divided into.")
@@ -50,7 +50,7 @@ def sparse2dense(predict_val):
     return predict_read
 def index2base(read):
     base = ['A','C','G','T']
-    bpread = [base[x] for x in read]
+    bpread = [base[x] for x in read]6
     bpread = ''.join(x for x in bpread)
     return bpread
 

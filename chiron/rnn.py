@@ -9,7 +9,7 @@ Created on Fri Apr 21 03:46:35 2017
 import tensorflow as tf
 import numpy as np
 from tensorflow.contrib.rnn.python.ops.core_rnn_cell import LSTMCell
-from chiron.utils.lstm import BNLSTMCell
+from utils.lstm import BNLSTMCell
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
 def rnn_layers(x,seq_length,training,hidden_num=100,layer_num = 3,class_n = 5):
     cells_fw = list()

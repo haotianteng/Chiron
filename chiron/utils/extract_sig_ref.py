@@ -9,12 +9,8 @@ Created on Thu May  4 10:57:35 2017
 import h5py
 import numpy as np
 import os,argparse,sys
-parser = argparse.ArgumentParser(description='Extract the signal and reference from fast5 file.')
-parser.add_argument('-i','--input_dir', help="Directory that store the fast5 files.")
-parser.add_argument('-o','--output_dir',default = None,help="Directory that output the signal and reference sequence.")
-FLAGS = parser.parse_args()
 
-def extract():
+def extract(FLAGS):
     count = 1
     root_folder = FLAGS.input_dir
     out_folder = FLAGS.output_dir
@@ -62,8 +58,10 @@ def extract_file(input_file):
     except:
         reference = input_data['Analyses/Alignment_000/Aligned_template/Fasta'].value
     return raw_signal,reference
-def main():
-    extract()
-            
+
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Extract the signal and reference from fast5 file.')
+    parser.add_argument('-i','--input_dir', help="Directory that store the fast5 files.")
+    parser.add_argument('-o','--output_dir',default = None,help="Directory that output the signal and reference sequence.")
+    args = parser.parse_args()
+    extract(args)

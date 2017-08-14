@@ -12,19 +12,7 @@ from cnn import getcnnfeature
 #from cnn import getcnnlogit
 from rnn import rnn_layers
 #from rnn import rnn_layers_one_direction
-class Flags():
-    def __init__(self):
-        self.home_dir = "/home/haotianteng/UQ/deepBNS/"
-        self.data_dir = self.home_dir + 'data/Lambda_R9.4/raw/'
-        self.log_dir = self.home_dir+'/chiron/log/'
-        self.sequence_len = 400
-        self.batch_size = 100
-        self.step_rate = 1e-5 
-        self.max_steps = 2500
-        self.k_mer = 1
-        self.model_name = 'crnn5+5_resnet'
-        self.retrain = True
-FLAGS = Flags()
+
 def save_model():
     copy_tree(FLAGS.home_dir+'/chiron/chiron',FLAGS.log_dir+FLAGS.model_name+'/model')
 def inference(x,seq_length,training):
@@ -114,10 +102,24 @@ def train():
             summary_writer.flush()
             
     saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/final.ckpt')
-def main():
+def run(args):
+    global FLAGS
+    FLAGS=args
     train()
 
 if __name__ == "__main__":
-    main()
+    class Flags():
+     def __init__(self):
+        self.home_dir = "/home/haotianteng/UQ/deepBNS/"
+        self.data_dir = self.home_dir + 'data/Lambda_R9.4/raw/'
+        self.log_dir = self.home_dir+'/chiron/log/'
+        self.sequence_len = 400
+        self.batch_size = 100
+        self.step_rate = 1e-5 
+        self.max_steps = 2500
+        self.k_mer = 1
+        self.model_name = 'crnn5+5_resnet'
+        self.retrain = True
+    run(FLAGS)
         
         
