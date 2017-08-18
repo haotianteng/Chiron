@@ -1,4 +1,4 @@
-# chiron
+# Chiron
 ## A basecaller for Nanopore Sequencer
 Using a cnn+rnn+ctc structure to establish a end-to-end basecalling for the nanopore sequencer.  
 Build with **Tensorflow** and python 2.7  

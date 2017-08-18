@@ -63,5 +63,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract the signal and reference from fast5 file.')
     parser.add_argument('-i','--input_dir', help="Directory that store the fast5 files.")
     parser.add_argument('-o','--output_dir',default = None,help="Directory that output the signal and reference sequence.")
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[1:])
     extract(args)

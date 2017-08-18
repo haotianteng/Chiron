@@ -138,7 +138,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(prog='chiron',description='A deep neural network basecaller.')
     parser.add_argument('-i','--input',default='example_data/output/raw', help="File path or Folder path to the fast5 file.")
     parser.add_argument('-o','--output',default='example_data/output', help = "Output Folder name")
-    parser.add_argument('-m','--model', default = 'model/crnn3+3_S10_2_re',help = "model folder")
+    parser.add_argument('-m','--model', default = '../model/crnn3+3_S10_2_re',help = "model folder")
     parser.add_argument('-s','--start',type=int,default = 0,help = "Start index of the signal file.")
     parser.add_argument('-b','--batch_size',type = int,default = 1100,help="Batch size for run, bigger batch_size will increase the processing speed but require larger RAM load")
     parser.add_argument('-l','--segment_len',type = int,default = 300, help="Segment length to be divided into.")
