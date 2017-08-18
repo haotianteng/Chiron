@@ -1,45 +1,44 @@
 # chiron
-## A basecaller for Nanopore Sequencer(BNS)
+## A basecaller for Nanopore Sequencer
 Using a cnn+rnn+ctc structure to establish a end-to-end basecalling for the nanopore sequencer.  
 Build with **Tensorflow** and python 2.7  
 
-## Before run  
+## Install
+### Install using pip
+$ pip install chiron  
+This will install chiron and a CPU-only tensorflow for you.  
+### Install from github
+$ git clone https://github.com/haotianteng/chiron.git  
+
+
+
+## Basecall
+### If install from Pip:
+The chiron command should be able to run direclty:  
+$ chiron call -i <input_fast5_folder> -o <output_folder>  
+
+### If install from github:
+#### Before run  
 Installing [Tensorflow by Google](https://www.tensorflow.org/).  
+Using pip:
+$ pip install tensorflow-gpu==1.0.1  
+Or install CPU-only version  
+$ pip install tensorflow==1.0.1  
 Recommend to install tensorflow in a virtual environment, like **anaconda**.  
+Then run the **entry.py** in the **chiron** folder:
+$ python /path/to/chiron/entry.py -i <input_fast5_folder> -o <output_fast5_folder>
 
-## Run      
-1. Transfer the .fast5 file into a .signal file.  
-$python ctcbns/utils/extract_sig_ref.py --input_dir <fast5_file or directory> --output_dir <output directory>  
-
-This will create two folder called raw and reference in the same folder of fast5_file_dir if the output_dir is not given, for example  
-path_to_fast5_dir/fast5_file_dir  
-then the raw folder will be created in   
-path_to_fast5_dir/raw      	#folder contained the raw signal files  
-path_to_fast5_dir/reference	#folder contained the original base calling by **Metrichor**  
-
-If the output_dir is given, then the raw and reference folder will be generated under the output_dir
-  
-Format of .signal file:  
-One line of the raw signal, like:  
+###Result:
+This will create four folder called **raw**,**result**,**segments**,**meta** and **reference** in the output folder   
+**result** folder: Fasta file with the same name of fast5 file containing the basecalling result.  
+**raw** folder: Containing raw signal file.   
+.signal file format:  
 544 554 556 571 563 472 467 487 482 513 517 521 495 504 500 520 492 506 ...  
-Or one column of the raw signal:  
-544  
-554  
-556  
-571  
-564  
-472  
-467  
-487  
-482  
-513  
-517  
-...  
+**segments** folder: Containing the segments basecalled from each fast5 file.
+**meta** folder:Containing the meta information for each read. Same name as fast5 file.
+**reference** folder: Containing the reference sequence.(If any)
 
-3.Base call!  
-$python ctcbns/ctcbns_eval.py --input <.signal file or folder containing .signal file> --output <output_directory>  
-
-## Train the model  
+## Training
 Usually the default model works fine on the R9.7 protocal, but if the basecalling result is not satisfying, you can train your own model based on your own training data set.  
 
 1. Hardware request:  
@@ -68,12 +67,12 @@ Each line represent a DNA base pair in the Pore: <start_position  end_position  
 2nd column: End position of the current nucleotide.  
 3rd column: Nucleotide, for DNA is A G C T  
 
-3. Go in to the ctcbns/ctcbns_rcnn_train.py and change the hyper parameters in FLAGS class:  
+3. Go in to the chiron/chiron_rcnn_train.py and change the hyper parameters in FLAGS class:  
 class Flags():  
     def __init__(self):  
         self.home_dir = "/home/haotianteng/UQ/deepBNS/"  
         self.data_dir = self.home_dir + 'data/Lambda_R9.4/raw/'  
-        self.log_dir = self.home_dir+'/ctcbns/log/'  
+        self.log_dir = self.home_dir+'/chiron/log/'  
         self.sequence_len = 200  
         self.batch_size = 100  
         self.step_rate = 1e-3   
@@ -87,13 +86,13 @@ sequence_len: The length of the segment you want to separate the sequence into. 
 batch_size: The batch size.  
 step_rate:Learning rate of the optimizer.  
 max_step: Maximum step of the optimizer.  
-k_mer: ctcbns support learning based on k-mer instead of the single nucleotide, this should be an odd number, even number will cause error.  
+k_mer: chiron support learning based on k-mer instead of the single nucleotide, this should be an odd number, even number will cause error.  
 model_name: the name of the model, the record will be stored in the directory log_dir/model_name/  
 retrain: If this is a new model, or you want to load the model you trained before, also the model will be load from the directory log_dir/model_name/  
 
 4. Train  
 $source activate tensorflow   
-$python ctcbns/ctcbns_rcnn_train.py  
+$python chiron/chiron_rcnn_train.py  
 
 
 
