@@ -123,7 +123,7 @@ def run(args):
     global FLAGS
     FLAGS=args
     time_dict=unix_time(evaluation)
-    print FLAGS.output
+    print(FLAGS.output)
     print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f'%(time_dict['real'],time_dict['sys'],time_dict['user']))
     meta_folder = os.path.join(FLAGS.output,'meta')
     if os.path.isdir(FLAGS.input):

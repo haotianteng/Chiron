@@ -54,5 +54,5 @@ def main(arguments=sys.argv[1:]):
     args=parser.parse_args(arguments)
     args.func(args)
 if __name__=='__main__':
-    print sys.argv[1:]
+    print(sys.argv[1:])
     main()    
