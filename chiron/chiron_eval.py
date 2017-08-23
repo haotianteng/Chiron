@@ -103,9 +103,9 @@ def evaluation():
          path_meta=os.path.join(meta_folder,file_pre+'.meta')
          with open(path_reads,'w+') as out_f, open(path_con,'w+') as out_con:
              for indx,read in enumerate(bpreads):
-                 out_f.write(">sequence"+str(indx)+'\n')
+                 out_f.write(file_pre+str(indx)+'\n')
                  out_f.write(read+'\n')
-             out_con.write(">sequence\n"+c_bpread)
+             out_con.write("{}\n{}".format(file_pre, c_bpread))
          with open(path_meta,'w+') as out_meta:
              total_time = time.time()-start_time
              output_time=total_time-assembly_time
@@ -123,7 +123,7 @@ def run(args):
     global FLAGS
     FLAGS=args
     time_dict=unix_time(evaluation)
-    print FLAGS.output
+    print(FLAGS.output)
     print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f'%(time_dict['real'],time_dict['sys'],time_dict['user']))
     meta_folder = os.path.join(FLAGS.output,'meta')
     if os.path.isdir(FLAGS.input):
