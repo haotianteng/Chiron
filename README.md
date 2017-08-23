@@ -31,7 +31,7 @@ For CPU-version:
 pip install tensorflow==1.0.1  
 pip install h5py
 ```
-For GPU-version:
+For GPU-version(Nvidia GPU required):
 ```
 pip install tensorflow-gpu==1.0.1  
 pip install h5py

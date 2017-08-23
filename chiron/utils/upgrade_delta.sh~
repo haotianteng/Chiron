@@ -1,2 +1,0 @@
-#!/bin/sh
-scp -r /home/haotianteng/UQ/deepBNS/chiron haotian.teng@delta.imb.uq.edu.au:/shares/compbio/Group-Yang/htteng/deepBNS/

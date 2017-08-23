@@ -33,14 +33,16 @@ def extract(FLAGS):
             try:
                 raw_signal,reference = extract_file(root_folder+os.path.sep+file_n)
                 count+=1
-                if len(raw_signal)==0 or len(reference)==0:
+                if len(raw_signal)==0:
+                    print ("Failed in extracting "+(os.path.join(raw_folder,os.path.splitext(file_n)[0]+'.signal')))
                     continue
             except:
                 continue
             signal_file = open(os.path.join(raw_folder,os.path.splitext(file_n)[0]+'.signal'),'w+')
-            ref_file = open(os.path.join(ref_folder,os.path.splitext(file_n)[0]+'_ref.fasta'),'w+')
             signal_file.write(" ".join([str(val) for val in raw_signal]))
-            ref_file.write(reference)
+            if len(reference)>0:
+                ref_file = open(os.path.join(ref_folder,os.path.splitext(file_n)[0]+'_ref.fasta'),'w+')
+                ref_file.write(reference)
 	    print("Extracted "+(os.path.join(raw_folder,os.path.splitext(file_n)[0]+'.signal')))
 def extract_file(input_file):
     try:
@@ -56,7 +58,10 @@ def extract_file(input_file):
         reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
         reference = '>template\n'+reference.split('\n')[1]
     except:
-        reference = input_data['Analyses/Alignment_000/Aligned_template/Fasta'].value
+        try:
+            reference = input_data['Analyses/Alignment_000/Aligned_template/Fasta'].value
+        except:
+            reference = ''
     return raw_signal,reference
 
 if __name__ == '__main__':
