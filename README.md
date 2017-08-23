@@ -66,7 +66,7 @@ python chiron/entry.py call -i chiron/example_folder/ -o <output_folder>
 ### Output
 `chiron call` will create five folders in `<output_folder>` called `raw`, `result`, `segments`, `meta`, and `reference`.
 
-* `result`: Fasta files with the same name as the fast5 file they contain the basecalling result for.  
+* `result`: Fasta files with the same name as the fast5 file they contain the basecalling result for. To create a single, merged version of these fasta files, try something like `paste --delimiter=\\n --serial result/*.fasta > merged.fasta` 
 * `raw`: Contains a file for each fast5 file with it's raw signal. This file format is an list of integers. i.e `544 554 556 571 563 472 467 487 482 513 517 521 495 504 500 520 492 506 ... `
 * `segments`: Contains the segments basecalled from each fast5 file.
 * `meta`: Contains the meta information for each read (read length, basecalling rate etc.). Each file has the same name as it's fast5 file.
