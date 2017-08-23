@@ -105,7 +105,7 @@ def evaluation():
              for indx,read in enumerate(bpreads):
                  out_f.write(file_pre+str(indx)+'\n')
                  out_f.write(read+'\n')
-             out_con.write("{}}\n{}".format(file_pre, c_bpread))
+             out_con.write("{}\n{}".format(file_pre, c_bpread))
          with open(path_meta,'w+') as out_meta:
              total_time = time.time()-start_time
              output_time=total_time-assembly_time
