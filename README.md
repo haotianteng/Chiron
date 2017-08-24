@@ -3,6 +3,10 @@
 Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling for the nanopore sequencer.  
 Built with **TensorFlow** and python 2.7 by members of the Coin Group at the Institute for Molecular Bioscience (University of Queensland).
 
+Preprint out now at http://www.biorxiv.org/content/early/2017/08/23/179531
+
+---
+
 ## Install
 ### Install using `pip` (recommended)
 If you currently have TensorFlow installed on your system, we would advise you to create a virtual environment to install Chiron into, this way there is no clash of versions etc.
