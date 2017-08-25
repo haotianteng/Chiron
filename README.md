@@ -3,7 +3,7 @@
 Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling for the nanopore sequencer.  
 Built with **TensorFlow** and python 2.7 by members of the Coin Group at the Institute for Molecular Bioscience (University of Queensland).
 
-Preprint out now at http://www.biorxiv.org/content/early/2017/08/23/179531
+Preprint out now at http://www.biorxiv.org/content/early/2017/08/24/179531
 
 ---
 
