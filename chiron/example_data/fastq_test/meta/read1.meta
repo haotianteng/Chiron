@@ -1,6 +1,0 @@
-# Reading Basecalling assembly output total rate(bp/s)
-0.033 1.444 0.085 0.001 1.564 1645.523
-# read_len batch_size segment_len jump start_pos
-2573 1100 300 30 0
-# input_name model_name
-./chiron/example_data/fastq_test/raw/ /home/haotianteng/anaconda2/envs/chiron-gpu/lib/python2.7/site-packages/chiron-0.1.3-py2.7.egg/chiron/entry.pyc/../model/DNA_default
