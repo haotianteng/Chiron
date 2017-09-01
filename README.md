@@ -44,8 +44,8 @@ For alternate/detailed installation instructions for TensorFlow, see their [fant
 An example call to Chiron to run basecalling is:  
 ```
 chiron call -i <input_fast5_folder> -o <output_folder>
+
 ```
-Simples!
 
 ### If installed from GitHub:
 
@@ -53,6 +53,7 @@ All Chiron functionality can be run from **entry.py** in the Chiron folder. (You
 
 ```
 python chiron/entry.py call -i <input_fast5_folder> -o <output_folder>
+
 ```
 
 ### Test run
@@ -66,11 +67,19 @@ python chiron/entry.py call -i chiron/example_folder/ -o <output_folder>
 ### Output
 `chiron call` will create five folders in `<output_folder>` called `raw`, `result`, `segments`, `meta`, and `reference`.
 
-* `result`: Fasta files with the same name as the fast5 file they contain the basecalling result for. To create a single, merged version of these fasta files, try something like `paste --delimiter=\\n --serial result/*.fasta > merged.fasta` 
+* `result`: fastq/fasta files with the same name as the fast5 file they contain the basecalling result for. To create a single, merged version of these fasta files, try something like `paste --delimiter=\\n --serial result/*.fasta > merged.fasta` 
 * `raw`: Contains a file for each fast5 file with it's raw signal. This file format is an list of integers. i.e `544 554 556 571 563 472 467 487 482 513 517 521 495 504 500 520 492 506 ... `
 * `segments`: Contains the segments basecalled from each fast5 file.
 * `meta`: Contains the meta information for each read (read length, basecalling rate etc.). Each file has the same name as it's fast5 file.
 * `reference`: Contains the reference sequence (if any).
+
+### Output format
+With -e flag to output fastq file(default) with quality score or fasta file.  
+Example:  
+chiron call -i <input_fast5_folder> -o <output_folder> -e fastq  
+
+
+chiron call -i <input_fast5_folder> -o <output_folder> -e fasta  
 
 ## Training
 Usually the default model works fine on the R9.4 protocol, but if the basecalling result is not satisfying, you can train a model on your own training data set.  
