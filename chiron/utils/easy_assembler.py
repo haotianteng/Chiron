@@ -248,11 +248,11 @@ def add_count_qs(concensus,concensus_qs,start_indx,segment,qs):
 
 def main():
     #bpreads = ['AAGGCCTAGCT','AGGCCTAGCAA','GGCCTAGCTC','AAAGGCCTAGT']
-    logits_sample = np.load('/home/haotianteng/UQ/deepBNS/Chiron_Project/chiron_fastqoutput/chiron/utils/logits_sample.npy')
+#    logits_sample = np.load('/home/haotianteng/UQ/deepBNS/Chiron_Project/chiron_fastqoutput/chiron/utils/logits_sample.npy')
     start = time.time()
     #test = mc_path(logits_sample[300,:,:],base_type = 0)
     #print time.time()-start
-    bpreads = section_decoding(logits_sample)
+#    bpreads = section_decoding(logits_sample)
     #census = simple_assembly(bpreads)
 
 #    result = np.argmax(census,axis=0)
