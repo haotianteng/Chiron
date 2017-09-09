@@ -121,6 +121,6 @@ if __name__ == "__main__":
         self.k_mer = 1
         self.model_name = 'crnn3+3_mix_hel'
         self.retrain = False
-    run(FLAGS)
+    run(Flags)
         
         
