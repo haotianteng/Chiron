@@ -100,7 +100,8 @@ def train():
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, i)
             summary_writer.flush()
-            
+    print "Model %s saved."%(FLAGS.log_dir+FLAGS.model_name)
+    print "Reads number %d"%(train_ds.reads_n)       
     saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/final.ckpt')
 def run(args):
     global FLAGS
@@ -110,16 +111,16 @@ def run(args):
 if __name__ == "__main__":
     class Flags():
      def __init__(self):
-        self.home_dir = "/home/haotianteng/UQ/deepBNS/"
-        self.data_dir = self.home_dir + 'data/Lambda_R9.4/raw/'
+        self.home_dir = "/shares/coin/haotian.teng/deepBNS/"
+        self.data_dir = self.home_dir + 'data/train_set_all/raw/'
         self.log_dir = self.home_dir+'/chiron/log/'
-        self.sequence_len = 400
-        self.batch_size = 100
-        self.step_rate = 1e-5 
-        self.max_steps = 2500
+        self.sequence_len = 300
+        self.batch_size = 750
+        self.step_rate = 1e-3 
+        self.max_steps = 20000
         self.k_mer = 1
-        self.model_name = 'crnn5+5_resnet'
-        self.retrain = True
+        self.model_name = 'crnn3+3_mix_hel'
+        self.retrain = False
     run(FLAGS)
         
         
