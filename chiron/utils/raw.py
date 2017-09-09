@@ -9,21 +9,23 @@ import labelop
 import os,argparse,sys
 parser = argparse.ArgumentParser(description='Transfer fast5 to raw_pair file.')
 parser.add_argument('-i','--input_dir', help="Directory that store the fast5 files.")
+parser.add_argument('-o','--output_dir',default = None,help = "Output folder")
 args = parser.parse_args()
 basecall_subgroup = 'BaseCalled_template'
 basecall_group = 'Basecall_1D_000';
 def extract(raw_folder = None):
     count = 1
     root_folder = args.input_dir
+    output_folder = args.output_dir
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
-    if raw_folder is None:
-        raw_folder = os.path.abspath(os.path.join(root_folder, os.pardir))+'/raw/'
-    if not os.path.isdir(raw_folder):
-        os.mkdir(raw_folder)
+    if output_folder is None:
+        output_folder = os.path.abspath(os.path.join(root_folder, os.pardir))+'/raw/'
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
     for file_n in os.listdir(root_folder):
         if file_n.endswith('fast5'):
-            output_file = raw_folder+os.path.splitext(file_n)[0]
+            output_file = output_folder+os.path.splitext(file_n)[0]
             success = extract_file(root_folder+os.path.sep+file_n,output_file)
             if success:
                 count +=1
@@ -47,5 +49,5 @@ def main():
     extract()
             
 if __name__ == '__main__':
-    root_folder = '/home/haotianteng/UQ/deepBNS/data/Lambda_R9.4'
+    root_folder = '/home/haotianteng/UQ/deepBNS/data/NA12878-WGS/raw'
     main()
