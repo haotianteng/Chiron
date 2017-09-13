@@ -78,8 +78,8 @@ def write_output(segments,consensus,time_list,file_pre,suffix='fasta',seg_q_scor
     path_meta=os.path.join(meta_folder,file_pre+'.meta')
     with open(path_reads,'w+') as out_f, open(path_con,'w+') as out_con:
         for indx,read in enumerate(segments):
-            out_f.write("@"+file_pre+str(indx)+"\n")
-            out_f.write(read+"\n")
+            out_f.write(file_pre+str(indx)+'\n')
+            out_f.write(read+'\n')
             if (suffix=='fastq') and (seg_q_score is not None):
                 out_f.write("+\n")
                 out_f.write(seg_q_score[indx]+"\n")
