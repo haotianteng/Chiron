@@ -52,12 +52,12 @@ def path_prob(logits):
     prob_logits = tf.reduce_mean(logits_diff,axis = -2)
     return prob_logits
 
-def qs(concensus,concensus_qs,output_standard = 'phred+33'):
-    sort_ind = np.argsort(concensus,axis = 0)
-    L = concensus.shape[1]
-    sorted_concensus = concensus[sort_ind,np.arange(L)[np.newaxis,:]]
-    sorted_concensus_qs = concensus_qs[sort_ind,np.arange(L)[np.newaxis,:]]
-    quality_score = 10* ( np.log10((sorted_concensus[3,:]+1)/(sorted_concensus[2,:]+1))) + sorted_concensus_qs[3,:]/sorted_concensus[3,:]/np.log(10)
+def qs(consensus,consensus_qs,output_standard = 'phred+33'):
+    sort_ind = np.argsort(consensus,axis = 0)
+    L = consensus.shape[1]
+    sorted_consensus = consensus[sort_ind,np.arange(L)[np.newaxis,:]]
+    sorted_consensus_qs = consensus_qs[sort_ind,np.arange(L)[np.newaxis,:]]
+    quality_score = 10* ( np.log10((sorted_consensus[3,:]+1)/(sorted_consensus[2,:]+1))) + sorted_consensus_qs[3,:]/sorted_consensus[3,:]/np.log(10)
     if output_standard == 'number':
         return quality_score.astype(int)
     elif output_standard == 'phred+33':
@@ -67,7 +67,7 @@ def qs(concensus,concensus_qs,output_standard = 'phred+33'):
 def write_output(segments,consensus,time_list,file_pre,suffix='fasta',seg_q_score=None,q_score=None):
     """
     seg_q_score: A length seg_num string list. Quality score for the segments.
-    q_socre: A string. Quality score for the concensus sequence.
+    q_socre: A string. Quality score for the consensus sequence.
     """
     start_time,reading_time,basecall_time,assembly_time=time_list
     result_folder = os.path.join(FLAGS.output,'result')
@@ -169,11 +169,11 @@ def evaluation():
          basecall_time=time.time()-start_time
          bpreads = [index2base(read) for read in reads]
          if FLAGS.extension == 'fastq':
-             concensus,qs_concensus = simple_assembly_qs(bpreads,qs_list)
-             qs_string = qs(concensus,qs_concensus)
+             consensus,qs_consensus = simple_assembly_qs(bpreads,qs_list)
+             qs_string = qs(consensus,qs_consensus)
          else:
-             concensus = simple_assembly(bpreads) 
-         c_bpread = index2base(np.argmax(concensus,axis = 0))
+             consensus = simple_assembly(bpreads) 
+         c_bpread = index2base(np.argmax(consensus,axis = 0))
          np.set_printoptions(threshold=np.nan)
          assembly_time=time.time()-start_time
          print("Assembly finished, begin output. %5.2f seconds"%(time.time()-start_time))
