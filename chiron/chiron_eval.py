@@ -81,8 +81,8 @@ def write_output(segments,consensus,time_list,file_pre,suffix='fasta',seg_q_scor
             out_f.write(file_pre+str(indx)+'\n')
             out_f.write(read+'\n')
             if (suffix=='fastq') and (seg_q_score is not None):
-                out_f.wirte('+\n')
-                out_f.wirte(seg_q_score[indx]+'\n')
+                out_f.write('+\n')
+                out_f.write(seg_q_score[indx]+'\n')
         out_con.write("{}\n{}".format(file_pre, consensus))
         if (suffix=='fastq') and (q_score is not None):
             out_con.write("+\n")
