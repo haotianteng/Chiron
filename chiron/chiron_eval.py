@@ -81,12 +81,12 @@ def write_output(segments,consensus,time_list,file_pre,suffix='fasta',seg_q_scor
             out_f.write(file_pre+str(indx)+'\n')
             out_f.write(read+'\n')
             if (suffix=='fastq') and (seg_q_score is not None):
-                out_f.write("+\n")
-                out_f.write(seg_q_score[indx]+"\n")
+                out_f.write('+\n')
+                out_f.write(seg_q_score[indx]+'\n')
         if (suffix=='fastq') and (q_score is not None):
-            out_con.write("@{}\n{}\n+\n{}\n".format(file_pre, consensus, q_score))
+            out_con.write('@{}\n{}\n+\n{}\n'.format(file_pre, consensus, q_score))
         else:
-            out_con.write("{}\n{}".format(file_pre, consensus))
+            out_con.write('{}\n{}'.format(file_pre, consensus))
     with open(path_meta,'w+') as out_meta:
         total_time = time.time()-start_time
         output_time=total_time-assembly_time
