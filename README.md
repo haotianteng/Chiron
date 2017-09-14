@@ -3,10 +3,6 @@
 Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling for the nanopore sequencer.  
 Built with **TensorFlow** and python 2.7 by members of the Coin Group at the Institute for Molecular Bioscience (University of Queensland).
 
-Preprint out now at http://www.biorxiv.org/content/early/2017/08/24/179531
-
----
-
 ## Install
 ### Install using `pip` (recommended)
 If you currently have TensorFlow installed on your system, we would advise you to create a virtual environment to install Chiron into, this way there is no clash of versions etc.
@@ -92,7 +88,12 @@ Usually the default model works fine on the R9.4 protocol, but if the basecallin
 Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.  
 
 #### Prepare the training data set.  
-Need `.signal` file and correspond `.label` file, a typical file format:  
+Using raw.py script to extract the signal and label from the re-squiggled fast5 file.
+For how to re-squiggle fast5 file, check [here, nanoraw re-squiggle](https://nanoraw.readthedocs.io/en/latest/resquiggle.html#example-commands)
+```
+python chiron/utils/raw.py --input_dir <fast5 folder> --output_dir <output_folder>
+```
+`.signal` file and correspond `.label` file, a typical file format:  
 
 `.signal` file format:  
 `544 554 556 571 563 472 467 487 482 513 517 521 495 504 500 520 492 506 ...`  
