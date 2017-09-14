@@ -93,7 +93,7 @@ Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.
 
 #### Prepare the training data set.  
 Using raw.py script to extract the signal and label from the re-squiggled fast5 file.
-(For how to re-squiggle fast5 file, check [here, nanoraw re-squiggle](https://nanoraw.readthedocs.io/en/latest/resquiggle.html#example-commands)
+(For how to re-squiggle fast5 file, check [here, nanoraw re-squiggle](https://nanoraw.readthedocs.io/en/latest/resquiggle.html#example-commands))
 ```
 python chiron/utils/raw.py --input_dir <fast5 folder> --output_dir <output_folder>
 ```
