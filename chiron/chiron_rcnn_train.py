@@ -12,6 +12,7 @@ from cnn import getcnnfeature
 #from cnn import getcnnlogit
 from rnn import rnn_layers
 #from rnn import rnn_layers_one_direction
+import time
 
 def save_model():
     copy_tree(FLAGS.home_dir+'/chiron/chiron',FLAGS.log_dir+FLAGS.model_name+'/model')
@@ -83,7 +84,7 @@ def train():
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir+FLAGS.model_name+'/summary/', sess.graph)
     
     train_ds,valid_ds = read_raw_data_sets(FLAGS.data_dir,FLAGS.sequence_len,valid_reads_num = 10000,k_mer = FLAGS.k_mer)
-    
+    start=time.time()
     for i in range(FLAGS.max_steps):
         batch_x,seq_len,batch_y = train_ds.next_batch(FLAGS.batch_size)
         indxs,values,shape = batch_y
@@ -94,8 +95,9 @@ def train():
             indxs,values,shape = valid_y
             feed_dict = {x:valid_x,seq_length:valid_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
             error_val = sess.run(error,feed_dict = feed_dict)
-            print "Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f"\
-            %(train_ds.epochs_completed,train_ds.index_in_epoch,loss_val,error_val)
+	    end = time.time()
+            print "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f"\
+            %(i,FLAGS.max_steps,train_ds.epochs_completed,train_ds.index_in_epoch,loss_val,error_val,(end-start)/(i+1))
             saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/model.ckpt',i)
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, i)
