@@ -86,7 +86,7 @@ chiron call -i <input_fast5_folder> -o <output_folder> -e fastq
 chiron call -i <input_fast5_folder> -o <output_folder> -e fasta  
 
 ## Training
-Usually the default model works fine on the R9.4 protocol, but if the basecalling result is not satisfying, you can train a model on your own training data set.  
+The default DNA model trained on R9.4 protocol with a mix of Lambda and E.coli dataset, if the basecalling result is not satisfying, you can train a model on your own training data set.  
 
 #### Hardware request:  
 Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.  
@@ -94,8 +94,16 @@ Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.
 #### Prepare the training data set.  
 Using raw.py script to extract the signal and label from the re-squiggled fast5 file.
 (For how to re-squiggle fast5 file, check [here, nanoraw re-squiggle](https://nanoraw.readthedocs.io/en/latest/resquiggle.html#example-commands))
+
+#### If installed from `pip`:
 ```
-python chiron/utils/raw.py --input_dir <fast5 folder> --output_dir <output_folder>
+chiron export -i <fast5 folder> -o <output_folder>
+```
+
+or directly use the raw.py script in utils.
+
+```
+python chiron/utils/raw.py --input <fast5 folder> --output <output_folder>
 ```
 `.signal` file and correspond `.label` file, a typical file format:  
 
@@ -148,8 +156,18 @@ class Flags():
 `model_name`: The name of the model. The record will be stored in the directory `log_dir/model_name/`
 `retrain`: If this is a new model, or you want to load the model you trained before. The model will be loaded from  `log_dir/model_name/`  
 
-### Train!
+### Train
+
 ```
 source activate tensorflow   
+```
+#### If installed from `pip`:
+```
+chiron train --data_dir <signal_label folder> --log_dir <model_log_folder> --model_name <saved_model_name>
+```
+
+or run directly by  
+
+```
 python chiron/chiron_rcnn_train.py  
 ```

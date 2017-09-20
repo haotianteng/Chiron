@@ -7,16 +7,11 @@ Created on Mon Apr 10 04:16:40 2017
 """
 import labelop
 import os,argparse,sys
-parser = argparse.ArgumentParser(description='Transfer fast5 to raw_pair file.')
-parser.add_argument('-i','--input_dir', help="Directory that store the fast5 files.")
-parser.add_argument('-o','--output_dir',default = None,help = "Output folder")
-args = parser.parse_args()
-basecall_subgroup = 'BaseCalled_template'
-basecall_group = 'Basecall_1D_000';
+
 def extract(raw_folder = None):
     count = 1
-    root_folder = args.input_dir
-    output_folder = args.output_dir
+    root_folder = FLAGS.input+os.path.sep
+    output_folder = FLAGS.output+os.path.sep
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
     if output_folder is None:
@@ -32,7 +27,7 @@ def extract(raw_folder = None):
             sys.stdout.write("%s file transfered.   \n" % (file_n) )
 def extract_file(input_file,output_file):
     try:
-        (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(input_file,basecall_group,basecall_subgroup)
+        (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(input_file,FLAGS.basecall_group,FLAGS.basecall_subgroup)
     except IOError:
         return False
     except:
@@ -45,9 +40,16 @@ def extract_file(input_file,output_file):
     f_signal.close()
     f_label.close()
     return True
-def main():
+def run(args):
+    global FLAGS
+    FLAGS = args
     extract()
             
-if __name__ == '__main__':
-    root_folder = '/home/haotianteng/UQ/deepBNS/data/NA12878-WGS/raw'
-    main()
+if __name__=="__main__":
+    parser = argparse.ArgumentParser(description='Transfer fast5 to raw_pair file.')
+    parser.add_argument('-i','--input', help="Directory that store the fast5 files.")
+    parser.add_argument('-o','--output',default = None,help = "Output folder")
+    parser.add_argument('--basecall_group',default = 'Basecall_1D_000',help = 'Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
+    parser.add_argument('--basecall_subgroup',default = 'BaseCalled_template',help = 'Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
+    args=parser.parse_args(sys.argv[1:])
+    run(args)

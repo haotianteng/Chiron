@@ -12,10 +12,10 @@ from cnn import getcnnfeature
 #from cnn import getcnnlogit
 from rnn import rnn_layers
 #from rnn import rnn_layers_one_direction
-import time,os
+import time
 
 def save_model():
-    copy_tree(os.path.dirname(os.path.abspath(__file__)),FLAGS.log_dir+FLAGS.model_name+'/model')
+    copy_tree(FLAGS.home_dir+'/chiron/chiron',FLAGS.log_dir+FLAGS.model_name+'/model')
 def inference(x,seq_length,training):
     cnn_feature = getcnnfeature(x,training = training)
     feashape = cnn_feature.get_shape().as_list()
@@ -84,7 +84,7 @@ def train():
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir+FLAGS.model_name+'/summary/', sess.graph)
     
     train_ds,valid_ds = read_raw_data_sets(FLAGS.data_dir,FLAGS.sequence_len,valid_reads_num = 10000,k_mer = FLAGS.k_mer)
-    start=time.time()
+    
     for i in range(FLAGS.max_steps):
         batch_x,seq_len,batch_y = train_ds.next_batch(FLAGS.batch_size)
         indxs,values,shape = batch_y
@@ -95,7 +95,6 @@ def train():
             indxs,values,shape = valid_y
             feed_dict = {x:valid_x,seq_length:valid_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
             error_val = sess.run(error,feed_dict = feed_dict)
-	    end = time.time()
             print "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f"\
             %(i,FLAGS.max_steps,train_ds.epochs_completed,train_ds.index_in_epoch,loss_val,error_val,(end-start)/(i+1))
             saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/model.ckpt',i)
@@ -108,13 +107,12 @@ def train():
 def run(args):
     global FLAGS
     FLAGS=args
-    FLAGS.data_dir = FLAGS.data_dir + os.path.sep
-    FLAGS.log_dir = FLAGS.log_dir + os.path.sep
     train()
 
 if __name__ == "__main__":
     class Flags():
      def __init__(self):
+        self.home_dir = "/shares/coin/haotian.teng/deepBNS/"
         self.data_dir = self.home_dir + 'data/train_set_all/raw/'
         self.log_dir = self.home_dir+'/chiron/log/'
         self.sequence_len = 300
