@@ -20,7 +20,7 @@ def extract(raw_folder = None):
         os.mkdir(output_folder)
     for file_n in os.listdir(root_folder):
         if file_n.endswith('fast5'):
-            output_file = output_folder+os.path.splitext(file_n)[0]
+            output_file = output_folder+os.path.sep+os.path.splitext(file_n)[0]
             success = extract_file(root_folder+os.path.sep+file_n,output_file)
             if success:
                 count +=1
