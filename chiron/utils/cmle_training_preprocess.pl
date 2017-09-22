@@ -14,5 +14,5 @@ while ( my $line = <LABEL> ) {
   chomp $line;
   my ( $start, $end, $label ) = split /\s+/, $line;
   my @slice = @signal[ $start .. ($end-1) ];
-  print OUT $label, "\t", join( ",", @slice ), "\t", $base, "\n";
+  print OUT $label, "\t", $start, "\t", $end, "\t", scalar(@signal), "\t", join( ",", @slice ), "\t", $base, "\n";
 }
