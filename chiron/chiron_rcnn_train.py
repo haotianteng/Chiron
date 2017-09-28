@@ -115,15 +115,17 @@ def run(args):
 if __name__ == "__main__":
     class Flags():
      def __init__(self):
-        self.data_dir = self.home_dir + 'data/train_set_all/raw/'
-        self.log_dir = self.home_dir+'/chiron/log/'
+	self.home_dir = '/home/haotianteng/deepBNS/'
+        self.data_dir = self.home_dir + 'data/train_mix_hel/raw/'
+        self.log_dir = self.home_dir+'/model_log/'
         self.sequence_len = 300
         self.batch_size = 750
         self.step_rate = 1e-3 
-        self.max_steps = 20000
+        self.max_steps = 30000
         self.k_mer = 1
         self.model_name = 'crnn3+3_mix_hel'
         self.retrain = False
-    run(Flags)
+    flags=Flags()
+    run(flags)
         
         
