@@ -31,8 +31,8 @@ def loss(logits,seq_len,label):
     tf.summary.scalar('loss',loss)
     return loss
 
-def train_step(loss):
-    opt = tf.train.AdamOptimizer(FLAGS.step_rate).minimize(loss)
+def train_step(loss,global_step = None):
+    opt = tf.train.AdamOptimizer(FLAGS.step_rate).minimize(loss,global_step=global_step)
 #    opt = tf.train.GradientDescentOptimizer(FLAGS.step_rate).minimize(loss)
 #    opt = tf.train.RMSPropOptimizer(FLAGS.step_rate).minimize(loss)
 #    opt = tf.train.MomentumOptimizer(FLAGS.step_rate,0.9).minimize(loss)
@@ -59,6 +59,7 @@ def prediction(logits,seq_length,label,top_paths=1):
 
 def train():
     training = tf.placeholder(tf.bool)
+    global_step=tf.get_variable('global_step',trainable=False,shape=(),dtype = tf.int32,initializer = tf.zeros_initializer)
     x = tf.placeholder(tf.float32,shape = [FLAGS.batch_size,FLAGS.sequence_len])
     seq_length = tf.placeholder(tf.int32, shape = [FLAGS.batch_size])
     y_indexs = tf.placeholder(tf.int64)
@@ -67,7 +68,7 @@ def train():
     y = tf.SparseTensor(y_indexs,y_values,y_shape)
     logits,ratio = inference(x,seq_length,training)
     ctc_loss = loss(logits,seq_length,y)
-    opt = train_step(ctc_loss)
+    opt = train_step(ctc_loss,global_step = global_step)
     error = prediction(logits,seq_length,y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -91,6 +92,7 @@ def train():
         feed_dict =  {x:batch_x,seq_length:seq_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
         loss_val,_ = sess.run([ctc_loss,opt],feed_dict = feed_dict)
         if i%10 ==0:
+	    global_step_val = tf.train.global_step(sess,global_step)
             valid_x,valid_len,valid_y = valid_ds.next_batch(FLAGS.batch_size)
             indxs,values,shape = valid_y
             feed_dict = {x:valid_x,seq_length:valid_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
@@ -98,13 +100,14 @@ def train():
 	    end = time.time()
             print "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f"\
             %(i,FLAGS.max_steps,train_ds.epochs_completed,train_ds.index_in_epoch,loss_val,error_val,(end-start)/(i+1))
-            saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/model.ckpt',i)
+            saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/model.ckpt',global_step=global_step_val)
             summary_str = sess.run(summary, feed_dict=feed_dict)
-            summary_writer.add_summary(summary_str, i)
+            summary_writer.add_summary(summary_str, global_step = global_step_val)
             summary_writer.flush()
+    global_step_val = tf.train.global_step(sess,global_step)
     print "Model %s saved."%(FLAGS.log_dir+FLAGS.model_name)
     print "Reads number %d"%(train_ds.reads_n)       
-    saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/final.ckpt')
+    saver.save(sess,FLAGS.log_dir+FLAGS.model_name+'/final.ckpt',global_step=global_step_val)
 def run(args):
     global FLAGS
     FLAGS=args
@@ -121,10 +124,10 @@ if __name__ == "__main__":
         self.sequence_len = 300
         self.batch_size = 750
         self.step_rate = 1e-3 
-        self.max_steps = 30000
+        self.max_steps = 20000
         self.k_mer = 1
         self.model_name = 'crnn3+3_mix_hel'
-        self.retrain = False
+        self.retrain =False
     flags=Flags()
     run(flags)
         
