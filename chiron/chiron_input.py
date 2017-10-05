@@ -11,12 +11,10 @@ import h5py
 import tempfile
 raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 
-
-
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = 50000
-        self.MAXLEN = 1e4 #Maximum Length of the holder in biglist. 1e6 by default
+        self.max_reads_number = None
+        self.MAXLEN = 1e6 #Maximum Length of the holder in biglist. 1e6 by default
 #        self.max_segment_len = 200
 FLAGS = Flags()
 
@@ -386,15 +384,15 @@ def base2ind(base,alphabet_n = 4,base_n = 1):
     else:
         return alphabeta.index(base)                   
 #
-#def main():
+def main():
 ### Input Test ###
-Data_dir = "/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw/"
-train = read_raw_data_sets(Data_dir,seq_length = 400)
-for i in range(100):
-    inputX,sequence_length,label = train.next_batch(10)
-    indxs,values,shape = label
-#if __name__=='__main__':
-#    main()
+	Data_dir = "/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw/"
+	train = read_raw_data_sets(Data_dir,seq_length = 400)
+	for i in range(100):
+	    inputX,sequence_length,label = train.next_batch(10)
+	    indxs,values,shape = label
+if __name__=='__main__':
+    main()
 #    
 #     
 #            
