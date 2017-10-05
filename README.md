@@ -1,7 +1,7 @@
 # Chiron
 ## A basecaller for Oxford Nanopore Technologies' sequencers
 Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling for the nanopore sequencer.  
-Built with **TensorFlow** and python 2.7 by members of the Coin Group at the Institute for Molecular Bioscience (University of Queensland).
+Built with **TensorFlow** and python 2.7.
 
 If you found Chiron useful, please consider to cite:  
 > Teng, H., et al. (2017). Chiron: Translating nanopore raw signal directly into nucleotide sequence using deep learning. [bioRxiv 179531] (https://www.biorxiv.org/content/early/2017/09/12/179531)
