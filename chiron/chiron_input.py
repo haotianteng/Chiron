@@ -206,7 +206,18 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
     ###Read from raw data
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp()+'/temp_record.hdf5'
-    hdf5_record = h5py.File(h5py_file_path,"w")
+    else:
+        if not os.path.isdir(os.path.dirname(os.path.abspath(h5py_file_path))):
+            try:
+                os.remove(os.path.dirname(os.path.abspath(h5py_file_path)))
+            except:
+                pass
+            try:
+                os.remove(os.path.abspath(h5py_file_path))
+            except:
+                pass
+            os.mkdir(os.path.dirname(os.path.abspath(h5py_file_path)))
+    hdf5_record = h5py.File(h5py_file_path,"a")
     event_h = hdf5_record.create_dataset('event/record',dtype = 'float32', shape=(0,seq_length),maxshape = (None,seq_length))
     event_length_h = hdf5_record.create_dataset('event/length',dtype = 'int32',shape=(0,),maxshape =(None,),chunks =True )
     label_h = hdf5_record.create_dataset('label/record',dtype = 'int32',shape = (0,0),maxshape = (None,seq_length))
