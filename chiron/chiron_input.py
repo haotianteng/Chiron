@@ -209,10 +209,6 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
     else:
         if not os.path.isdir(os.path.dirname(os.path.abspath(h5py_file_path))):
             try:
-                os.remove(os.path.dirname(os.path.abspath(h5py_file_path)))
-            except:
-                pass
-            try:
                 os.remove(os.path.abspath(h5py_file_path))
             except:
                 pass
