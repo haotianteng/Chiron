@@ -13,8 +13,8 @@ raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = None
-        self.MAXLEN = 1e6 #Maximum Length of the holder in biglist. 1e6 by default
+        self.max_reads_number = 100000
+        self.MAXLEN = 1e5 #Maximum Length of the holder in biglist. 1e6 by default
 #        self.max_segment_len = 200
 FLAGS = Flags()
 
@@ -103,7 +103,6 @@ class DataSet(object):
         self._epochs_completed = 0
         self._index_in_epoch = 0
         self._for_eval = for_eval
-        self._epochs_perm=list()
         self._perm = np.arange(self._reads_n)
         
     @property
@@ -130,9 +129,7 @@ class DataSet(object):
     @property
     def for_eval(self):
         return self._for_eval
-    @property
-    def epochs_perm(self):
-        return self._epochs_perm
+        
     @property
     def perm(self):
         return self._perm
@@ -153,7 +150,6 @@ class DataSet(object):
         if self._epochs_completed == 0 and start == 0:
          if shuffle:
           np.random.shuffle(self._perm)
-         self._epochs_perm.append(self._perm)
         # Go to the next epoch
         if start + batch_size > self._reads_n:
           # Finished epoch
@@ -165,7 +161,6 @@ class DataSet(object):
           # Shuffle the data
           if shuffle:
             np.random.shuffle(self._perm)
-          self._epochs_perm.append(self._perm)
           # Start next epoch
           start = 0
           self._index_in_epoch = batch_size - rest_reads_n

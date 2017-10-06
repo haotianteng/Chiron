@@ -10,8 +10,8 @@ from distutils.dir_util import copy_tree
 from chiron_input import read_raw_data_sets
 from cnn import getcnnfeature
 #from cnn import getcnnlogit
-from rnn import rnn_layers
-#from rnn import rnn_layers_one_direction
+#from rnn import rnn_layers
+from rnn import rnn_layers_one_direction
 import time,os
 
 def save_model():
@@ -20,8 +20,8 @@ def inference(x,seq_length,training):
     cnn_feature = getcnnfeature(x,training = training)
     feashape = cnn_feature.get_shape().as_list()
     ratio = FLAGS.sequence_len/feashape[1]
-    logits = rnn_layers(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
-#    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 ) 
+#    logits = rnn_layers(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
+    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 ) 
 #    logits = getcnnlogit(cnn_feature)
     return logits,ratio
 
@@ -59,7 +59,7 @@ def prediction(logits,seq_length,label,top_paths=1):
 
 def train():
     training = tf.placeholder(tf.bool)
-    global_step=tf.get_variable('global_step',trainable=False,shape=(),dtype = tf.int32,initializer = tf.zeros_initializer)
+    global_step=tf.get_variable('global_step',trainable=False,shape=(),dtype = tf.int32,initializer = tf.zeros_initializer())
     x = tf.placeholder(tf.float32,shape = [FLAGS.batch_size,FLAGS.sequence_len])
     seq_length = tf.placeholder(tf.int32, shape = [FLAGS.batch_size])
     y_indexs = tf.placeholder(tf.int64)
@@ -84,7 +84,7 @@ def train():
         print("Model loaded finished, begin loading data. \n")
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir+FLAGS.model_name+'/summary/', sess.graph)
     
-    train_ds,valid_ds = read_raw_data_sets(FLAGS.data_dir,FLAGS.sequence_len,valid_reads_num = 10000,k_mer = FLAGS.k_mer)
+    train_ds = read_raw_data_sets(FLAGS.data_dir,FLAGS.cache_dir,FLAGS.sequence_len,k_mer = FLAGS.k_mer)
     start=time.time()
     for i in range(FLAGS.max_steps):
         batch_x,seq_len,batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -93,7 +93,7 @@ def train():
         loss_val,_ = sess.run([ctc_loss,opt],feed_dict = feed_dict)
         if i%10 ==0:
 	    global_step_val = tf.train.global_step(sess,global_step)
-            valid_x,valid_len,valid_y = valid_ds.next_batch(FLAGS.batch_size)
+            valid_x,valid_len,valid_y = train_ds.next_batch(FLAGS.batch_size)
             indxs,values,shape = valid_y
             feed_dict = {x:valid_x,seq_length:valid_len/ratio,y_indexs:indxs,y_values:values,y_shape:shape,training:True}
             error_val = sess.run(error,feed_dict = feed_dict)
@@ -118,15 +118,15 @@ def run(args):
 if __name__ == "__main__":
     class Flags():
      def __init__(self):
-	self.home_dir = '/home/haotianteng/deepBNS/'
-        self.data_dir = self.home_dir + 'data/train_mix_hel/raw/'
-        self.log_dir = self.home_dir+'/model_log/'
+        self.data_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw'
+        self.cache_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/cache'
+        self.log_dir = '/media/haotianteng/Linux_ex/GVM_model'
         self.sequence_len = 300
         self.batch_size = 750
         self.step_rate = 1e-3 
         self.max_steps = 20000
         self.k_mer = 1
-        self.model_name = 'crnn3+3_mix_hel'
+        self.model_name = 'test'
         self.retrain =False
     flags=Flags()
     run(flags)
