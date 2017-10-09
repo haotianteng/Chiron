@@ -13,7 +13,7 @@ raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = 100000
+        self.max_reads_number = None
         self.MAXLEN = 1e5 #Maximum Length of the holder in biglist. 1e6 by default
 #        self.max_segment_len = 200
 FLAGS = Flags()
@@ -136,8 +136,11 @@ class DataSet(object):
     
     def read_into_memory(self,index):
         event = np.asarray(zip([self._event[i] for i in index],[self._event_length[i] for i in index]))
-        label = np.asarray(zip([self._label[i] for i in index],[self._label_length[i] for i in index]))
-        return event,label
+	if not self.for_eval:
+        	label = np.asarray(zip([self._label[i] for i in index],[self._label_length[i] for i in index]))
+        else:
+		label = []
+	return event,label
     def next_batch(self, batch_size,shuffle = True):
         """Return next batch in batch_size from the data set.
             Input Args:
@@ -208,11 +211,11 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
         h5py_file_path = tempfile.mkdtemp()+'/temp_record.hdf5'
     else:
         if not os.path.isdir(os.path.dirname(os.path.abspath(h5py_file_path))):
-            try:
-                os.remove(os.path.abspath(h5py_file_path))
-            except:
-                pass
             os.mkdir(os.path.dirname(os.path.abspath(h5py_file_path)))
+	try:
+            os.remove(os.path.abspath(h5py_file_path))
+        except:
+            pass
     hdf5_record = h5py.File(h5py_file_path,"a")
     event_h = hdf5_record.create_dataset('event/record',dtype = 'float32', shape=(0,seq_length),maxshape = (None,seq_length))
     event_length_h = hdf5_record.create_dataset('event/length',dtype = 'int32',shape=(0,),maxshape =(None,),chunks =True )
@@ -226,7 +229,7 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
     file_count = 0
     for name in os.listdir(data_dir):
         if name.endswith(".signal"):
-            file_pre = os.path.splitext(name)[0]
+            file_pre = os.pa        os.mkdir(os.path.dirname(os.path.abspath(h5py_file_path)://community.nanoporetech.com/downloadsth.splitext(name)[0]
             f_signal = read_signal(data_dir+name)
             if len(f_signal)==0:
                 continue
