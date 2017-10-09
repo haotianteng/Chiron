@@ -229,7 +229,7 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
     file_count = 0
     for name in os.listdir(data_dir):
         if name.endswith(".signal"):
-            file_pre = os.pa        os.mkdir(os.path.dirname(os.path.abspath(h5py_file_path)://community.nanoporetech.com/downloadsth.splitext(name)[0]
+            file_pre = os.path.splitext(name)[0]      
             f_signal = read_signal(data_dir+name)
             if len(f_signal)==0:
                 continue
