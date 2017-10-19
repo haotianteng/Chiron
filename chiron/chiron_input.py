@@ -13,7 +13,7 @@ raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = 1000000
+        self.max_reads_number = 10000
         self.MAXLEN = 1e3 #Maximum Length of the holder in biglist. 1e6 by default
 #        self.max_segment_len = 200
 FLAGS = Flags()
@@ -169,9 +169,15 @@ class DataSet(object):
           self._index_in_epoch = batch_size - rest_reads_n
           end = self._index_in_epoch
           event_new_part,label_new_part = self.read_into_memory(self._perm[start:end])
-          
-          event_batch = np.concatenate((event_rest_part, event_new_part), axis=0)
-          label_batch = np.concatenate((label_rest_part, label_new_part), axis=0)
+          if event_rest_part.shape[0]==0:
+              event_batch = event_new_part
+              label_batch = label_new_part
+          elif event_new_part.shape[0]==0:
+              event_batch = event_rest_part
+              label_batch = label_rest_part
+          else:
+              event_batch = np.concatenate((event_rest_part, event_new_part), axis=0)
+              label_batch = np.concatenate((label_rest_part, label_new_part), axis=0)
         else:
           self._index_in_epoch += batch_size
           end = self._index_in_epoch
