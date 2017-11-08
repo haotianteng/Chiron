@@ -13,8 +13,8 @@ raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = 10000
-        self.MAXLEN = 1e3 #Maximum Length of the holder in biglist. 1e6 by default
+        self.max_reads_number = 100000
+        self.MAXLEN = 1e5 #Maximum Length of the holder in biglist. 1e5 by default
 #        self.max_segment_len = 200
 FLAGS = Flags()
 
@@ -182,7 +182,6 @@ class DataSet(object):
           self._index_in_epoch += batch_size
           end = self._index_in_epoch
           event_batch,label_batch = self.read_into_memory(self._perm[start:end])
-          
         if not self._for_eval:
             label_batch = batch2sparse(label_batch)
         seq_length = event_batch[:,1].astype(np.int32)
@@ -298,7 +297,10 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
                         sys.stdout.write("%d lines read.   \n" % (count) )
                 file_count+=1
     #            print("Successfully read %d"%(file_count))
-    train = read_cache_dataset(h5py_file_path)
+    if event.cache:
+        train = read_cache_dataset(h5py_file_path)
+    else:
+        train = DataSet(event = event,event_length = event_length,label = label,label_length = label_length)
     return train
 def read_signal(file_path,normalize = True):
     f_h = open(file_path,'r')

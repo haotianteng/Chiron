@@ -68,6 +68,19 @@ We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanopo
 python chiron/entry.py call -i chiron/example_folder/ -o <output_folder>
 ```
 
+### Decoder choice
+(From v0.3)  
+Beam search decoder: chiron call -i <input> -o <output> --beam <beam_width>  
+Greedy decoder: chiron call -i <input> -o <output> --beam 0  
+
+Beam Seach decoder give a higher accuracy, and larger beam width can furthur improve the accuracy.
+Greedy decoder give a faster decoding speed than the beam search decoder:  
+|Device|Greedy decoder rate|Beam Search decoder rate(beam widh =50)|
+| ---|---|---|
+|CPU |21bp/s |17bp/s|
+|GPU |1652bp/s|1204bp/s|
+
+
 
 ### Output
 `chiron call` will create five folders in `<output_folder>` called `raw`, `result`, `segments`, `meta`, and `reference`.

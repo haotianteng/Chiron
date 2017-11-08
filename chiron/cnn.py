@@ -141,7 +141,17 @@ def getcnnfeature(signal,training):
 #    
 #    with tf.variable_scope('avg_pool_1'):
 #        avg_pool1 = tf.nn.avg_pool(incp13,ksize = [1,1,7,1],strides = [1,1,1,1],padding = 'SAME',name='ap_1x7_s1')
-
+############################################################################### 
+#   Residual layer x 50
+#    layer_num = 50
+#    layer_list = list()
+#    for i in range(layer_num):
+#        with tf.variable_scope('res_layer'+str(i+1)):
+#            layer_list.append(residual_layer(signal,out_channel = 256,training = training,i_bn = True))
+#    feashape = layer_list[-1].get_shape().as_list()
+#    fea = tf.reshape(layer_list[-1],[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+#    return fea
+###############################################################################            
 #   Residual Layer x 5
     with tf.variable_scope('res_layer1'):
         res1 = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
@@ -152,11 +162,11 @@ def getcnnfeature(signal,training):
 #    with tf.variable_scope('res_layer4'):
 #        res4 = residual_layer(res3,out_channel = 512,training = training)
 #    with tf.variable_scope('res_layer5'):
-#        res5 = residual_layer(res4,out_channel = 512,training = training)
-        
+#        res5 = residual_layer(res4,out_channel = 512,training = training)        
     feashape = res3.get_shape().as_list()
     fea = tf.reshape(res3,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
     return fea
+############################################################################### 
 
 def getcnnlogit(fea,outnum=5):
     feashape = fea.get_shape().as_list()

@@ -108,8 +108,10 @@ def evaluation():
     logits,_ = inference(x,seq_length,training = training)
     if FLAGS.extension =='fastq':
         prob = path_prob(logits)
-    predict = tf.nn.ctc_greedy_decoder(tf.transpose(logits,perm=[1,0,2]),seq_length,merge_repeated = True)
-#    predict = tf.nn.ctc_beam_search_decoder(tf.transpose(logits,perm=[1,0,2]),seq_length,merge_repeated = False)#For beam_search_decoder, set the merge_repeated to false. 5-10 times slower than greedy decoder
+    if FLAGS.beam==0:
+    	predict = tf.nn.ctc_greedy_decoder(tf.transpose(logits,perm=[1,0,2]),seq_length,merge_repeated = True)
+    else:
+    	predict = tf.nn.ctc_beam_search_decoder(tf.transpose(logits,perm=[1,0,2]),seq_length,merge_repeated = False,beam_width=FLAGS.beam)#For beam_search_decoder, set the merge_repeated to false. 5-10 times slower than greedy decoder
     config=tf.ConfigProto(allow_soft_placement=True,intra_op_parallelism_threads=FLAGS.threads,inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
     with tf.Session(config = config) as sess:
@@ -201,10 +203,11 @@ if __name__=="__main__":
     parser.add_argument('-o','--output',default='example_data/output', help = "Output Folder name")
     parser.add_argument('-m','--model', default = 'model/DNA_default',help = "model folder")
     parser.add_argument('-s','--start',type=int,default = 0,help = "Start index of the signal file.")
-    parser.add_argument('-b','--batch_size',type = int,default = 1100,help="Batch size for run, bigger batch_size will increase the processing speed but require larger RAM load")
+    parser.add_argument('-b','--batch_size',type = int,default = 1100,help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
     parser.add_argument('-l','--segment_len',type = int,default = 300, help="Segment length to be divided into.")
     parser.add_argument('-j','--jump',type = int,default = 30,help = "Step size for segment")
     parser.add_argument('-t','--threads',type = int,default = 0,help = "Threads number")
     parser.add_argument('-e','--extension',default = 'fastq',help = "Output file extension.")
+    parser.add_argument('--beam',type = int,default = 0, help = "Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     args=parser.parse_args(sys.argv[1:])
     run(args)

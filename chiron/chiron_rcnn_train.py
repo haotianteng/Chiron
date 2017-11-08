@@ -9,7 +9,7 @@ import tensorflow as tf
 from distutils.dir_util import copy_tree
 from chiron_input import read_raw_data_sets
 from cnn import getcnnfeature
-#from cnn import getcnnlogit
+from cnn import getcnnlogit
 #from rnn import rnn_layers
 from rnn import rnn_layers_one_direction
 import time,os
@@ -21,8 +21,8 @@ def inference(x,seq_length,training):
     feashape = cnn_feature.get_shape().as_list()
     ratio = FLAGS.sequence_len/feashape[1]
 #    logits = rnn_layers(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
-    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 ) 
-#    logits = getcnnlogit(cnn_feature)
+#    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 ) 
+    logits = getcnnlogit(cnn_feature)
     return logits,ratio
 
 def loss(logits,seq_len,label):
@@ -118,15 +118,15 @@ def run(args):
 if __name__ == "__main__":
     class Flags():
      def __init__(self):
-        self.data_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw'
-        self.cache_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/cache'
+        self.data_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw/'
+        self.cache_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/cache/train.hdf5'
         self.log_dir = '/media/haotianteng/Linux_ex/GVM_model'
         self.sequence_len = 300
-        self.batch_size = 750
+        self.batch_size = 400
         self.step_rate = 1e-3 
         self.max_steps = 20000
         self.k_mer = 1
-        self.model_name = 'test'
+        self.model_name = 'res50'
         self.retrain =False
     flags=Flags()
     run(flags)
