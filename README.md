@@ -75,10 +75,11 @@ Greedy decoder: chiron call -i <input> -o <output> --beam 0
 
 Beam Seach decoder give a higher accuracy, and larger beam width can furthur improve the accuracy.
 Greedy decoder give a faster decoding speed than the beam search decoder:  
-| Device | Greedy decoder rate(bp/s) | Beam Search decoder rate(bp/s), beam_width=50 |
-| --- | --- | --- |
-| CPU | 21 | 17 |
-| GPU | 1652 | 1204 |
+
+| Device | Greedy decoder rate(bp/s) | Beam Search decoder rate(bp/s), beam_width=50 |  
+| --- | --- | --- |  
+| CPU | 21 | 17 |  
+| GPU | 1652 | 1204 |  
 
 
 
