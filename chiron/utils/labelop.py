@@ -61,7 +61,7 @@ def get_label_segment(fast5_fn, basecall_group, basecall_subgroup):
         corr_dat = corr_dat .value
     except:
         raise RuntimeError, (
-            'Corrected data know found.')
+            'Corrected data now found.')
 
     corr_start_time = corr_attrs['read_start_rel_to_raw']
     corr_starts = corr_dat['start'] + corr_start_time
@@ -139,7 +139,7 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup):
         corr_data = corr_data .value
     except:
         raise RuntimeError, (
-            'Corrected data know found.')
+            'Corrected data not found.')
 
     fast5_info = fast5_data['UniqueGlobalKey/channel_id'].attrs
     #sampling_rate = fast5_info['sampling_rate'].astype('int_')
