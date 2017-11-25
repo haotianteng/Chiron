@@ -33,6 +33,10 @@ def loss(logits,seq_len,label):
 
 def train_step(loss,step_rate, global_step = None):
     opt = tf.train.AdamOptimizer(step_rate).minimize(loss,global_step=global_step)
+### Uncomment to use different optimizer
+#    opt = tf.train.GradientDescentOptimizer(FLAGS.step_rate).minimize(loss)
+#    opt = tf.train.RMSPropOptimizer(FLAGS.step_rate).minimize(loss)
+#    opt = tf.train.MomentumOptimizer(FLAGS.step_rate,0.9).minimize(loss)
     return opt
 def prediction(logits,seq_length,label,top_paths=1):
     """
