@@ -20,11 +20,12 @@ FLAGS = Flags()
 
 class biglist(object):
     #Read into memory if reads number < MAXLEN, otherwise read into h5py database
-    def __init__(self,data_handle,dtype = 'float32',length = 0,cache = False):
+    def __init__(self,data_handle,dtype = 'float32',length = 0,cache = False,max_len=1e5):
         self.handle = data_handle
         self.dtype = dtype
         self.holder = list()
         self.len = length
+        self.max_len = max_len
         self.cache = cache #Mark if the list has been saved into hdf5 or not
     @property
     def shape(self):
@@ -50,7 +51,7 @@ class biglist(object):
          if len(self.holder)!=0:
             self.save()
     def check_save(self):
-        if len(self.holder) > FLAGS.MAXLEN:
+        if len(self.holder) > self.max_len:
          self.save()
          self.cache = True
         
@@ -246,10 +247,10 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
         event_length_h = hdf5_record.create_dataset('event/length',dtype = 'int32',shape=(0,),maxshape =(None,),chunks =True )
         label_h = hdf5_record.create_dataset('label/record',dtype = 'int32',shape = (0,0),maxshape = (None,seq_length))
         label_length_h = hdf5_record.create_dataset('label/length',dtype = 'int32',shape = (0,),maxshape = (None,))
-        event = biglist(data_handle = event_h)
-        event_length = biglist(data_handle = event_length_h)
-        label = biglist(data_handle = label_h)
-        label_length = biglist(data_handle = label_length_h)
+        event = biglist(data_handle = event_h,max_len=FLAGS.MAXLEN)
+        event_length = biglist(data_handle = event_length_h,max_len=FLAGS.MAXLEN)
+        label = biglist(data_handle = label_h,max_len=FLAGS.MAXLEN)
+        label_length = biglist(data_handle = label_length_h,max_len=FLAGS.MAXLEN)
         count = 0
         file_count = 0
         for name in os.listdir(data_dir):

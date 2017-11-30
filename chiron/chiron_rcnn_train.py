@@ -7,7 +7,7 @@ Created on Mon Apr 17 17:32:32 2017
 """
 
 import argparse
-from tensorflow.contrib.training.python.training import hparam
+#from tensorflow.contrib.training.python.training import hparam
 import tensorflow as tf
 from distutils.dir_util import copy_tree
 from chiron_input import read_raw_data_sets

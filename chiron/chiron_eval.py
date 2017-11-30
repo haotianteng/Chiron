@@ -143,10 +143,13 @@ def evaluation():
          reads_n = eval_data.reads_n
          reading_time=time.time()-start_time
          reads = list()
+         signals = np.empty((0,FLAGS.segment_len),dtype = np.float)
          qs_list = np.empty((0,1),dtype = np.float)
          qs_string = None
          for i in range(0,reads_n,FLAGS.batch_size):
              batch_x,seq_len,_ = eval_data.next_batch(FLAGS.batch_size,shuffle = False)
+             if not FLAGS.concise:
+                 signals+=batch_x
              batch_x=np.pad(batch_x,((0,FLAGS.batch_size-len(batch_x)),(0,0)),mode='constant')
              seq_len=np.pad(seq_len,((0,FLAGS.batch_size-len(seq_len))),mode='constant')
              feed_dict = {x:batch_x,seq_length:seq_len,training:False}
@@ -174,13 +177,18 @@ def evaluation():
              consensus,qs_consensus = simple_assembly_qs(bpreads,qs_list)
              qs_string = qs(consensus,qs_consensus)
          else:
-             consensus = simple_assembly(bpreads) 
+             consensus = simple_assembly(bpreads)
+         if signals!=eval_data.event:
+             print len(signals)
+             print signals
+             print len(eval_data.event)
+             print eval_data.event
          c_bpread = index2base(np.argmax(consensus,axis = 0))
          np.set_printoptions(threshold=np.nan)
          assembly_time=time.time()-start_time
          print("Assembly finished, begin output. %5.2f seconds"%(time.time()-start_time))
          list_of_time = [start_time,reading_time,basecall_time,assembly_time]
-         write_output(bpreads,c_bpread,list_of_time,file_pre,suffix = FLAGS.extension,q_score = qs_string)
+         write_output(bpreads,c_bpread,list_of_time,file_pre,concise = FLAGS.concise,suffix = FLAGS.extension,q_score = qs_string)
 
 def run(args):
     global FLAGS
@@ -209,5 +217,6 @@ if __name__=="__main__":
     parser.add_argument('-t','--threads',type = int,default = 0,help = "Threads number")
     parser.add_argument('-e','--extension',default = 'fastq',help = "Output file extension.")
     parser.add_argument('--beam',type = int,default = 0, help = "Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
+    parser.add_argument('--concise',action = 'store_true',help = "Concisely output the result, the meta and segments files will not be output.")
     args=parser.parse_args(sys.argv[1:])
     run(args)
