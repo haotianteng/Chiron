@@ -95,6 +95,14 @@ def residual_layer(indata,out_channel,training,i_bn = False):
     with tf.variable_scope('plus'):
         relu_out = tf.nn.relu(indata_cp+conv_out3,name = 'final_relu')
     return relu_out
+def causal_layer(indata,out,training,dilate,activation='Relu'):
+    """
+    An implementation of the Wavenet causal layer, input Args:
+    dilate: dilate gap, an positive int is required.
+    activation:"Relu",""
+    """
+    ### Under construction
+    return None
 def getcnnfeature(signal,training):
     signal_shape = signal.get_shape().as_list()
     signal = tf.reshape(signal,[signal_shape[0],1,signal_shape[1],1])
