@@ -80,7 +80,16 @@ class alignments:
                     self.q_end.append(hit.q_en)
                     self.section.append(hit.ctg)
                     self.strand.append(hit.strand)
-def get_label(ref,align,signals,lens,segments):
+def get_label(ref,align,read_index,signals,lens,segments):
+    """
+    Input Args:
+        ref: reference sequence for the segment, data type: string
+        align: An alignments class, the alignments for all the reads
+        read_index: The index of the read in the align class.
+        signals: list of the signal arrays. [segment_number,segment_length]
+        lens: list of the length of the above signals. [segment_number]
+        segments: list of the segment output. [segment_number,segment_sequence]
+    """
     return None
 def label() :
     align = alignments()
@@ -157,7 +166,6 @@ parser.add_argument('-o','--output',help="The path of the output hdf5 file.",req
 parser.add_argument('-a','--alignment',default=None, help="Sam file alignment, containing the alignment between the merged fastq file to genome sequence")
 parser.add_argument('-f','--fastx',default=None,help="The output fastq or fasta files, if a sam file is given, this input will be ignored")
 parser.add_argument('-m','--max',default=1000000,help="Maximum number of reads that labelled.")
-parser.add_argument('')
 args=parser.parse_args(sys.argv[1:])
 aligns = alignments()
 run(args)

@@ -9,11 +9,12 @@ import numpy as np
 import os,collections,sys
 import h5py
 import tempfile
+from statsmodels import robust
 raw_labels = collections.namedtuple('raw_labels',['start','length','base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = 100000
+        self.max_reads_number = 10000
         self.MAXLEN = 1e5 #Maximum Length of the holder in biglist. 1e5 by default
 #        self.max_segment_len = 200
 FLAGS = Flags()
@@ -142,7 +143,7 @@ class DataSet(object):
         else:
 		label = []
 	return event,label
-    def next_batch(self, batch_size,shuffle = True):
+    def next_batch(self, batch_size,shuffle = True,sig_norm = False):
         """Return next batch in batch_size from the data set.
             Input Args:
                 batch_size:batch size
@@ -187,7 +188,7 @@ class DataSet(object):
             label_batch = batch2sparse(label_batch)
         seq_length = event_batch[:,1].astype(np.int32)
         return np.vstack(event_batch[:,0]).astype(np.float32),seq_length,label_batch
-def read_data_for_eval(file_path,start_index=0,step = 20,seg_length = 200):
+def read_data_for_eval(file_path,start_index=0,step = 20,seg_length = 200,sig_norm = True):
     '''
     Input Args:
         file_path: file path to a signal file.
@@ -200,7 +201,7 @@ def read_data_for_eval(file_path,start_index=0,step = 20,seg_length = 200):
         event_len = list()
         label = list()
         label_len = list()
-        f_signal = read_signal(file_path,normalize = True)
+        f_signal = read_signal(file_path,normalize = sig_norm)
         f_signal = f_signal[start_index:]
         sig_len = len(f_signal)
         for indx in range(0,sig_len,step):
@@ -303,7 +304,7 @@ def read_raw_data_sets(data_dir,h5py_file_path=None,seq_length = 300,k_mer = 1,m
     else:
         train = DataSet(event = event,event_length = event_length,label = label,label_length = label_length)
     return train
-def read_signal(file_path,normalize = True):
+def read_signal(file_path,normalize = "median"):
     f_h = open(file_path,'r')
     signal = list()
     for line in f_h:
@@ -311,8 +312,10 @@ def read_signal(file_path,normalize = True):
     signal = np.asarray(signal)
     if len(signal)==0:
         return signal.tolist()
-    if normalize:
+    if normalize == "mean":
         signal = (signal - np.mean(signal))/np.float(np.std(signal))
+    elif normalize == "median":
+        signal = (signal - np.median(signal))/np.float(robust.mad(signal))
     return signal.tolist()
 
 def read_label(file_path,skip_start=10,window_n = 0):
@@ -416,7 +419,7 @@ def base2ind(base,alphabet_n = 4,base_n = 1):
 #
 def main():
 ### Input Test ###
-	Data_dir = "/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw/"
+	Data_dir = "/home/haotianteng/UQ/deepBNS/data/Lambda_R9.4/raw/"
 	train = read_raw_data_sets(Data_dir,seq_length = 400)
 	for i in range(100):
 	    inputX,sequence_length,label = train.next_batch(10)
