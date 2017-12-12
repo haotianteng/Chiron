@@ -36,6 +36,7 @@ def main(arguments=sys.argv[1:]):
     parser_call.add_argument('-t','--threads',type = int,default = 0,help = "Threads number, default is 0, which use all the available threads.")
     parser_call.add_argument('-e','--extension',default = 'fastq',help = "Output file type.")
     parser_call.add_argument('--beam',type = int,default = 50, help = "Beam width used in beam search decoder, default is 50, set to 0 to use a greedy decoder. Large beam width give better decoding result but require longer decoding time.")
+    parser_call.add_argument('--concise',action = 'store_true',help = "Concisely output the result, the meta and segments files will not be output.")
     parser_call.set_defaults(func=evaluation)
 
     #parser for 'extract' command

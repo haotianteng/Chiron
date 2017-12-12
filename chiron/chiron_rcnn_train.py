@@ -5,6 +5,8 @@ Created on Mon Apr 17 17:32:32 2017
 
 @author: haotianteng
 """
+
+from tensorflow.contrib.training.python.training import hparam
 import tensorflow as tf
 from distutils.dir_util import copy_tree
 from chiron_input import read_raw_data_sets
@@ -31,11 +33,8 @@ def loss(logits,seq_len,label):
     tf.summary.scalar('loss',loss)
     return loss
 
-def train_step(loss,global_step = None):
-    opt = tf.train.AdamOptimizer(FLAGS.step_rate).minimize(loss,global_step=global_step)
-#    opt = tf.train.GradientDescentOptimizer(FLAGS.step_rate).minimize(loss)
-#    opt = tf.train.RMSPropOptimizer(FLAGS.step_rate).minimize(loss)
-#    opt = tf.train.MomentumOptimizer(FLAGS.step_rate,0.9).minimize(loss)
+def train_step(loss,step_rate, global_step = None):
+    opt = tf.train.AdamOptimizer(step_rate).minimize(loss,global_step=global_step)
     return opt
 def prediction(logits,seq_length,label,top_paths=1):
     """

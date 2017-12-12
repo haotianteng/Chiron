@@ -64,7 +64,7 @@ def qs(consensus,consensus_qs,output_standard = 'phred+33'):
         q_string = [chr(x+33) for x in quality_score.astype(int)]
         return ''.join(q_string)
     
-def write_output(segments,consensus,time_list,file_pre,suffix='fasta',seg_q_score=None,q_score=None):
+def write_output(segments,consensus,time_list,file_pre,concise = False,suffix='fasta',seg_q_score=None,q_score=None):
     """
     seg_q_score: A length seg_num string list. Quality score for the segments.
     q_socre: A string. Quality score for the consensus sequence.
@@ -74,32 +74,35 @@ def write_output(segments,consensus,time_list,file_pre,suffix='fasta',seg_q_scor
     seg_folder = os.path.join(FLAGS.output,'segments')
     meta_folder = os.path.join(FLAGS.output,'meta')
     path_con = os.path.join(result_folder,file_pre+'.'+suffix)
-    path_reads = os.path.join(seg_folder,file_pre+'.'+suffix)
-    path_meta=os.path.join(meta_folder,file_pre+'.meta')
+    if not concise:
+        path_reads = os.path.join(seg_folder,file_pre+'.'+suffix)
+        path_meta=os.path.join(meta_folder,file_pre+'.meta')
     with open(path_reads,'w+') as out_f, open(path_con,'w+') as out_con:
-        for indx,read in enumerate(segments):
-            out_f.write(file_pre+str(indx)+'\n')
-            out_f.write(read+'\n')
-            if (suffix=='fastq') and (seg_q_score is not None):
-                out_f.write('+\n')
-                out_f.write(seg_q_score[indx]+'\n')
+        if not concise:
+            for indx,read in enumerate(segments):
+                out_f.write(file_pre+str(indx)+'\n')
+                out_f.write(read+'\n')
+                if (suffix=='fastq') and (seg_q_score is not None):
+                    out_f.write('+\n')
+                    out_f.write(seg_q_score[indx]+'\n')
         if (suffix=='fastq') and (q_score is not None):
             out_con.write('@{}\n{}\n+\n{}\n'.format(file_pre, consensus, q_score))
         else:
             out_con.write('{}\n{}'.format(file_pre, consensus))
-    with open(path_meta,'w+') as out_meta:
-        total_time = time.time()-start_time
-        output_time=total_time-assembly_time
-        assembly_time-=basecall_time
-        basecall_time-=reading_time                       
-        total_len = len(consensus)                        
-        total_time=time.time()-start_time
-        out_meta.write("# Reading Basecalling assembly output total rate(bp/s)\n" )
-        out_meta.write("%5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"%(reading_time,basecall_time,assembly_time,output_time,total_time,total_len/total_time))
-        out_meta.write("# read_len batch_size segment_len jump start_pos\n")
-        out_meta.write("%d %d %d %d %d\n"%(total_len,FLAGS.batch_size,FLAGS.segment_len,FLAGS.jump,FLAGS.start))
-        out_meta.write("# input_name model_name\n")
-        out_meta.write("%s %s\n"%(FLAGS.input,FLAGS.model))
+    if not concise:
+        with open(path_meta,'w+') as out_meta:
+            total_time = time.time()-start_time
+            output_time=total_time-assembly_time
+            assembly_time-=basecall_time
+            basecall_time-=reading_time                       
+            total_len = len(consensus)                        
+            total_time=time.time()-start_time
+            out_meta.write("# Reading Basecalling assembly output total rate(bp/s)\n" )
+            out_meta.write("%5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"%(reading_time,basecall_time,assembly_time,output_time,total_time,total_len/total_time))
+            out_meta.write("# read_len batch_size segment_len jump start_pos\n")
+            out_meta.write("%d %d %d %d %d\n"%(total_len,FLAGS.batch_size,FLAGS.segment_len,FLAGS.jump,FLAGS.start))
+            out_meta.write("# input_name model_name\n")
+            out_meta.write("%s %s\n"%(FLAGS.input,FLAGS.model))
     
 def evaluation():
     x = tf.placeholder(tf.float32,shape = [FLAGS.batch_size,FLAGS.segment_len])
@@ -139,14 +142,17 @@ def evaluation():
              continue
          file_pre = os.path.splitext(name)[0]
          input_path = os.path.join(file_dir,name)
-         eval_data = read_data_for_eval(input_path,FLAGS.start,seg_length = FLAGS.segment_len,step = FLAGS.jump)
+         eval_data = read_data_for_eval(input_path,FLAGS.start,seg_length = FLAGS.segment_len,step = FLAGS.jump,sig_norm = False)
          reads_n = eval_data.reads_n
          reading_time=time.time()-start_time
          reads = list()
+         signals = np.empty((0,FLAGS.segment_len),dtype = np.float)
          qs_list = np.empty((0,1),dtype = np.float)
          qs_string = None
          for i in range(0,reads_n,FLAGS.batch_size):
-             batch_x,seq_len,_ = eval_data.next_batch(FLAGS.batch_size,shuffle = False)
+             batch_x,seq_len,_ = eval_data.next_batch(FLAGS.batch_size,shuffle = False,sig_norm=False)
+             if not FLAGS.concise:
+                 signals+=batch_x
              batch_x=np.pad(batch_x,((0,FLAGS.batch_size-len(batch_x)),(0,0)),mode='constant')
              seq_len=np.pad(seq_len,((0,FLAGS.batch_size-len(seq_len))),mode='constant')
              feed_dict = {x:batch_x,seq_length:seq_len,training:False}
@@ -174,13 +180,18 @@ def evaluation():
              consensus,qs_consensus = simple_assembly_qs(bpreads,qs_list)
              qs_string = qs(consensus,qs_consensus)
          else:
-             consensus = simple_assembly(bpreads) 
+             consensus = simple_assembly(bpreads)
+         if signals!=eval_data.event:
+             print len(signals)
+             print signals
+             print len(eval_data.event)
+             print eval_data.event
          c_bpread = index2base(np.argmax(consensus,axis = 0))
          np.set_printoptions(threshold=np.nan)
          assembly_time=time.time()-start_time
          print("Assembly finished, begin output. %5.2f seconds"%(time.time()-start_time))
          list_of_time = [start_time,reading_time,basecall_time,assembly_time]
-         write_output(bpreads,c_bpread,list_of_time,file_pre,suffix = FLAGS.extension,q_score = qs_string)
+         write_output(bpreads,c_bpread,list_of_time,file_pre,concise = FLAGS.concise,suffix = FLAGS.extension,q_score = qs_string)
 
 def run(args):
     global FLAGS
@@ -209,5 +220,6 @@ if __name__=="__main__":
     parser.add_argument('-t','--threads',type = int,default = 0,help = "Threads number")
     parser.add_argument('-e','--extension',default = 'fastq',help = "Output file extension.")
     parser.add_argument('--beam',type = int,default = 0, help = "Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
+    parser.add_argument('--concise',action = 'store_true',help = "Concisely output the result, the meta and segments files will not be output.")
     args=parser.parse_args(sys.argv[1:])
     run(args)
