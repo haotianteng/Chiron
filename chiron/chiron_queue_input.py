@@ -13,8 +13,8 @@ import tensorflow as tf
 import os
 SIGNAL_LEN = 512
 LABEL_LEN = 512
-TRAIN_QUEUE_CAPACITY = 50000
-VALID_QUEUE_CAPACITY = 10000
+TRAIN_QUEUE_CAPACITY = 500000
+VALID_QUEUE_CAPACITY = 100000
 def read_data(filename_queue):
     """
     Reads and parses binary file of the .bin data files.
@@ -58,7 +58,7 @@ def read_data(filename_queue):
     record.label.set_shape([LABEL_LEN])
     return record
     
-def _generate_signal_label_batch(signal,label,signal_len,batch_size,shuffle,queue_capacity=50000,min_queue_examples=20000,threads = 16):
+def _generate_signal_label_batch(signal,label,signal_len,batch_size,shuffle,queue_capacity=500000,min_queue_examples=200000,threads = 16):
     """
     Generate a queue of signal-label batch.
     Args:

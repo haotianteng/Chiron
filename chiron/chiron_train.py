@@ -97,12 +97,13 @@ def train(hparam):
     save_model(hparam.log_dir, hparam.model_name)
     if hparam.retrain==False:
         sess.run(init)
-        print("Model init finished, begin loading data. \n")
+        print("Model init finished, begin training. \n")
     else:
         saver.restore(sess,tf.train.latest_checkpoint(hparam.log_dir+hparam.model_name))
-        print("Model loaded finished, begin loading data. \n")
+        print("Model loaded finished, begin training. \n")
     summary_writer = tf.summary.FileWriter(hparam.log_dir+hparam.model_name+'/summary/', sess.graph)
     
+    _ = tf.train.start_queue_runners(sess=sess)
     
     start=time.time()
     for i in range(hparam.max_steps):
