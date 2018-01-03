@@ -7,9 +7,10 @@ Created on Sat Apr 15 02:48:26 2017
 """
 
 import tensorflow as tf
+import numpy as np
 from tensorflow.contrib.layers import batch_norm
 
-def conv_layer(indata,ksize,padding,training,name,dilate = 1,strides=[1,1,1,1],bias_term = False,active = True,BN= True):
+def conv_layer(indata,ksize,padding,training,name,dilate = 1,strides=[1,1,1,1],bias_term = False,active = True,BN= True,active_function='relu'):
     """A standard convlotional layer"""
     with tf.variable_scope(name):
         W = tf.get_variable("weights", dtype = tf.float32, shape=ksize,initializer=tf.contrib.layers.xavier_initializer())
@@ -17,9 +18,9 @@ def conv_layer(indata,ksize,padding,training,name,dilate = 1,strides=[1,1,1,1],b
             b = tf.get_variable("bias", dtype=tf.float32,shape=[ksize[-1]])
         if dilate>1:
             if bias_term:
-                conv_out = b + tf.nn.atrous_conv2d(indata,W,rate = dilate,padding=padding,name=name)
+                conv_out = b + tf.nn.convolution(input = indata,filter = W,dilation_rate = np.asarray([1,dilate]),padding=padding,name=name)
             else:
-                conv_out = tf.nn.atrous_conv2d(indata,W,rate = dilate,padding=padding,name=name)
+                conv_out = tf.nn.convolution(input = indata,filter = W,dilation_rate = np.asarray([1,dilate]),padding=padding,name=name)
         else:
             if bias_term:
                 conv_out = b + tf.nn.conv2d(indata,W,strides = strides,padding = padding,name = name)
@@ -30,8 +31,15 @@ def conv_layer(indata,ksize,padding,training,name,dilate = 1,strides=[1,1,1,1],b
 #            conv_out = batchnorm(conv_out,scope=scope,training = training)
             conv_out = simple_global_bn(conv_out,name = name+'_bn')
     if active:
-        with tf.variable_scope(name+'_relu'):
-            conv_out = tf.nn.relu(conv_out,name='relu')
+        if active_function=='relu':
+            with tf.variable_scope(name+'_relu'):
+                conv_out = tf.nn.relu(conv_out,name='relu')
+        elif active_function=='sigmoid':
+            with tf.variable_scope(name+'_sigmoid'):
+                conv_out = tf.sigmoid(conv_out,name='sigmoid')
+        elif active_function=='tanh':
+            with tf.variable_scope(name+'_tanh'):
+                conv_out = tf.tanh(conv_out,name='tanh')
     return conv_out
 def batchnorm(inp,scope,training,decay = 0.99,epsilon = 1e-5):
     with tf.variable_scope(scope):
@@ -95,14 +103,26 @@ def residual_layer(indata,out_channel,training,i_bn = False):
     with tf.variable_scope('plus'):
         relu_out = tf.nn.relu(indata_cp+conv_out3,name = 'final_relu')
     return relu_out
-def causal_layer(indata,out,training,dilate,activation='Relu'):
+def wavenet_layer(indata,out_channel,training,dilate,gated_activation=True,i_bn=True):
     """
-    An implementation of the Wavenet causal layer, input Args:
+    An implementation of a variant of the Wavenet layer, input Args:
     dilate: dilate gap, an positive int is required.
-    activation:"Relu",""
+
     """
-    ### Under construction
-    return None
+    in_shape = indata.get_shape().as_list()
+    in_channel = in_shape[-1]
+    with tf.variable_scope('identity_branch'):
+        indata_cp = conv_layer(indata,ksize = [1,1,in_channel,out_channel],padding = 'SAME',training = training,name = 'identity',BN = i_bn,active = False)
+    with tf.variable_scope('dilate_branch'):
+        with tf.variable_scope('gate_branch'):
+            gate_out = conv_layer(indata,ksize = [1,2,in_channel,out_channel],padding = 'SAME',training = training,dilate = dilate,name = 'gate',BN = i_bn,active_function='sigmoid')
+        with tf.variable_scope('filter_branch'):
+            filter_out = conv_layer(indata,ksize = [1,2,in_channel,out_channel],padding = 'SAME',training = training,dilate = dilate,name = 'filter',BN = i_bn,active_function='tanh')
+        gated_out = gate_out*filter_out
+        gated_cp = conv_layer(gated_out,ksize = [1,1,out_channel,out_channel],padding = 'SAME',training = training,name = 'identity',BN = i_bn,active = False,bias_term=False)
+    with tf.variable_scope('plus'):
+        relu_out = tf.nn.relu(indata_cp + gated_cp,name='final_relu')
+    return relu_out
 def getcnnfeature(signal,training):
     signal_shape = signal.get_shape().as_list()
     signal = tf.reshape(signal,[signal_shape[0],1,signal_shape[1],1])
@@ -152,27 +172,39 @@ def getcnnfeature(signal,training):
 ############################################################################### 
 #   Residual layer x 50
 #    layer_num = 50
-#    layer_list = list()
-#    for i in range(layer_num):
+#    for i in range(1,layer_num):
 #        with tf.variable_scope('res_layer'+str(i+1)):
-#            layer_list.append(residual_layer(signal,out_channel = 256,training = training,i_bn = True))
-#    feashape = layer_list[-1].get_shape().as_list()
-#    fea = tf.reshape(layer_list[-1],[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+#            signal = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+#    feashape = signal.get_shape().as_list()
+#    fea = tf.reshape(signal,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
 #    return fea
 ###############################################################################            
-#   Residual Layer x 5
+#   Residual Layer x 3 (DNA_default)
+#    with tf.variable_scope('res_layer1'):
+#        res1 = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+#    with tf.variable_scope('res_layer2'):
+#        res2 = residual_layer(res1,out_channel = 256,training = training)
+#    with tf.variable_scope('res_layer3'):
+#        res3 = residual_layer(res2,out_channel = 256,training = training)
+#    feashape = res3.get_shape().as_list()
+#    fea = tf.reshape(res3,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+#    return fea
+############################################################################### 
+#   Dilate connection(Variant Wavenet)
+    res_layer = 1
+    dilate_layer = 7
+    dilate_repeat = 1
     with tf.variable_scope('res_layer1'):
-        res1 = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
-    with tf.variable_scope('res_layer2'):
-        res2 = residual_layer(res1,out_channel = 256,training = training)
-    with tf.variable_scope('res_layer3'):
-        res3 = residual_layer(res2,out_channel = 256,training = training)
-#    with tf.variable_scope('res_layer4'):
-#        res4 = residual_layer(res3,out_channel = 512,training = training)
-#    with tf.variable_scope('res_layer5'):
-#        res5 = residual_layer(res4,out_channel = 512,training = training)        
-    feashape = res3.get_shape().as_list()
-    fea = tf.reshape(res3,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+        net = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+    for i in range(1,res_layer):
+        with tf.variable_scope('res_layer'+str(i+1)):
+            net = residual_layer(net,out_channel = 256,training = training)
+    for block_idx in range(dilate_repeat):
+        for i in range(dilate_layer):
+            with tf.variable_scope('block'+str(block_idx+1)+'dilate_layer'+str(i+1)):
+                net = wavenet_layer(net,out_channel = 256,training = training,dilate=2**i,i_bn=True)
+    feashape = net.get_shape().as_list()
+    fea = tf.reshape(net,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
     return fea
 ############################################################################### 
 
