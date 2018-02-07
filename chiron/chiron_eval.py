@@ -140,6 +140,7 @@ def evaluation():
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
         saver = tf.train.Saver()
+        print(FLAGS.model)
         saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
         if os.path.isdir(FLAGS.input):
             file_list = os.listdir(FLAGS.input)
