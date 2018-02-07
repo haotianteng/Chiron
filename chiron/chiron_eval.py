@@ -115,7 +115,7 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
             total_time = time.time() - start_time
             out_meta.write("# Reading Basecalling assembly output total rate(bp/s)\n")
             out_meta.write("%5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n" % (
-            reading_time, basecall_time, assembly_time, output_time, total_time, total_len / total_time))
+                reading_time, basecall_time, assembly_time, output_time, total_time, total_len / total_time))
             out_meta.write("# read_len batch_size segment_len jump start_pos\n")
             out_meta.write(
                 "%d %d %d %d %d\n" % (total_len, FLAGS.batch_size, FLAGS.segment_len, FLAGS.jump, FLAGS.start))
@@ -140,7 +140,6 @@ def evaluation():
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
         saver = tf.train.Saver()
-        print("Model is at: {}".format(FLAGS.model))
         saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
         if os.path.isdir(FLAGS.input):
             file_list = os.listdir(FLAGS.input)
@@ -205,14 +204,10 @@ def evaluation():
             else:
                 consensus = simple_assembly(bpreads)
             if signals != eval_data.event:
-                print
-                len(signals)
-                print
-                signals
-                print
-                len(eval_data.event)
-                print
-                eval_data.event
+                print(len(signals))
+                print(signals)
+                print(len(eval_data.event))
+                print(eval_data.event)
             c_bpread = index2base(np.argmax(consensus, axis=0))
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
@@ -237,7 +232,7 @@ def run(args):
     with open(path_meta, 'a+') as out_meta:
         out_meta.write("# Wall_time Sys_time User_time Cpu_time\n")
         out_meta.write("%5.3f %5.3f %5.3f %5.3f\n" % (
-        time_dict['real'], time_dict['sys'], time_dict['user'], time_dict['sys'] + time_dict['user']))
+            time_dict['real'], time_dict['sys'], time_dict['user'], time_dict['sys'] + time_dict['user']))
 
 
 if __name__ == "__main__":
