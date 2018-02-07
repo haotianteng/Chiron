@@ -5,16 +5,17 @@ Created on Sun Apr 30 11:59:15 2017
 
 @author: haotianteng
 """
-import argparse, os, time, sys
+import argparse
+import os
+import time
+import sys
 import numpy as np
 import tensorflow as tf
-from chiron_input import read_data_for_eval
-from utils.easy_assembler import simple_assembly
-from utils.easy_assembler import simple_assembly_qs
-# from utils.easy_assembler import section_decoding
-from cnn import getcnnfeature
-from rnn import rnn_layers
-from utils.unix_time import unix_time
+from chiron.chiron_input import read_data_for_eval
+from chiron.utils.easy_assembler import simple_assembly, simple_assembly_qs
+from chiron.cnn import getcnnfeature
+from chiron.rnn import rnn_layers
+from chiron.utils.unix_time import unix_time
 
 
 def inference(x, seq_length, training):
@@ -22,8 +23,6 @@ def inference(x, seq_length, training):
     feashape = cnn_feature.get_shape().as_list()
     ratio = int(FLAGS.segment_len / feashape[1])
     logits = rnn_layers(cnn_feature, seq_length // ratio, training, class_n=5)
-    #    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
-    #    logits = getcnnlogit(cnn_feature)
     return logits, ratio
 
 
@@ -53,25 +52,25 @@ def index2base(read):
 
 def path_prob(logits):
     top2_logits = tf.nn.top_k(logits, k=2)[0]
-    logits_diff = tf.slice(top2_logits, [0, 0, 0], [FLAGS.batch_size, FLAGS.segment_len, 1]) - tf.slice(top2_logits,
-                                                                                                        [0, 0, 1], [
-                                                                                                            FLAGS.batch_size,
-                                                                                                            FLAGS.segment_len,
-                                                                                                            1])
+    logits_diff = tf.slice(top2_logits,
+                           [0, 0, 0],
+                           [FLAGS.batch_size,
+                            FLAGS.segment_len, 1]) - \
+                  tf.slice(top2_logits,
+                           [0, 0, 1],
+                           [FLAGS.batch_size,
+                            FLAGS.segment_len, 1])
     prob_logits = tf.reduce_mean(logits_diff, axis=-2)
     return prob_logits
 
 
 def qs(consensus, consensus_qs, output_standard='phred+33'):
     sort_ind = np.argsort(consensus, axis=0)
-    L = consensus.shape[1]
-    sorted_consensus = consensus[sort_ind, np.arange(L)[np.newaxis, :]]
-    sorted_consensus_qs = consensus_qs[sort_ind, np.arange(L)[np.newaxis, :]]
-    quality_score = 10 * (np.log10((sorted_consensus[3, :] + 1) / (sorted_consensus[2, :] + 1))) + sorted_consensus_qs[
-                                                                                                   3,
-                                                                                                   :] / sorted_consensus[
-                                                                                                        3, :] / np.log(
-        10)
+    l = consensus.shape[1]
+    sorted_consensus = consensus[sort_ind, np.arange(l)[np.newaxis, :]]
+    sorted_consensus_qs = consensus_qs[sort_ind, np.arange(l)[np.newaxis, :]]
+    quality_score = 10 * (np.log10((sorted_consensus[3, :] + 1) / (sorted_consensus[2, :] + 1))) + \
+                    sorted_consensus_qs[ 3,:] / sorted_consensus[3, :] / np.log(10)
     if output_standard == 'number':
         return quality_score.astype(int)
     elif output_standard == 'phred+33':
