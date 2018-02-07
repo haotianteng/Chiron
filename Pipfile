@@ -7,6 +7,10 @@ name = "pypi"
 
 [packages]
 
+numpy = "==1.13.1"
+"h5py" = "==2.6.0"
+statsmodels = "*"
+tensorflow = "==1.1.0"
 
 
 [dev-packages]

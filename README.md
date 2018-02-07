@@ -65,7 +65,7 @@ python chiron/entry.py call -i <input_fast5_folder> -o <output_folder>
 
 We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) in the GitHub repository which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
 ```
-python chiron/entry.py call -i chiron/example_folder/ -o <output_folder>
+python chiron/entry.py call -i chiron/example_data/ -o <output_folder>
 ```
 
 ### Decoder choice

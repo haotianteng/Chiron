@@ -33,11 +33,13 @@ if __name__ == '__main__':
         b = 1
         for i in xrange(iterations):
             b **= 2
-    print "test"
 
-    print(unix_time(test, (10, )))
-    print(unix_time(test, (100, )))
-    print(unix_time(test, (1000, )))
-    print(unix_time(test, (10000, )))
-    print(unix_time(test, (100000, )))
-    print(unix_time(test, (1000000, )))
+
+    print("test")
+
+    print(unix_time(test, (10,)))
+    print(unix_time(test, (100,)))
+    print(unix_time(test, (1000,)))
+    print(unix_time(test, (10000,)))
+    print(unix_time(test, (100000,)))
+    print(unix_time(test, (1000000,)))
