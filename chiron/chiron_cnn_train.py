@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 17 17:32:32 2017
@@ -10,8 +9,9 @@ from chiron.chiron_input import read_raw_data_sets
 from chiron.cnn import getcnnlogit
 
 
-class Flags():
+class Flags:
     def __init__(self):
+        # todo: remove hard-coding
         self.data_dir = "/home/haotianteng/UQ/deepBNS/data/Lambda_R9.4/raw/"
         self.sequence_len = 200
         self.batch_size = 1024
@@ -28,23 +28,30 @@ def inference(x):
 
 
 def loss(logits, seq_len, label):
-    return tf.reduce_mean(tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=False, time_major=False))
+    return tf.reduce_mean(tf.nn.ctc_loss(label, logits, seq_len,
+                                         ctc_merge_repeated=False,
+                                         time_major=False))
 
 
-def train_step(loss):
-    opt = tf.train.AdamOptimizer(FLAGS.step_rate).minimize(loss)
+def train_step(loss_param):
+    opt = tf.train.AdamOptimizer(FLAGS.step_rate).minimize(loss_param)
     return opt
 
 
 def prediction(logits, seq_length, label):
     logits = tf.transpose(logits, perm=[1, 0, 2])
-    predict = tf.to_int32(tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False)[0][0])
-    error = tf.reduce_sum(tf.edit_distance(predict, label, normalize=False)) / tf.to_float(tf.size(label.values))
+    predict = tf.to_int32(
+        tf.nn.ctc_beam_search_decoder(logits, seq_length,
+                                      merge_repeated=False)[0][0]
+    )
+    edit_dist = tf.edit_distance(predict, label, normalize=False)
+    error = tf.reduce_sum(edit_dist) / tf.to_float(tf.size(label.values))
     return error
 
 
 def train():
-    train_ds, valid_ds = read_raw_data_sets(FLAGS.data_dir, FLAGS.sequence_len, valid_reads_num=10000)
+    train_ds, valid_ds = read_raw_data_sets(FLAGS.data_dir,
+                                            seq_length=FLAGS.sequence_len)
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.sequence_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
     y_indexs = tf.placeholder(tf.int64)
@@ -66,16 +73,21 @@ def train():
         for i in range(FLAGS.max_steps):
             batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
             indxs, values, shape = batch_y
-            loss_val, _ = sess.run([ctc_loss, opt],
-                                   feed_dict={x: batch_x, seq_length: seq_len, y_indexs: indxs, y_values: values,
-                                              y_shape: shape})
+            feed_dict = {
+                x: batch_x,
+                seq_length: seq_len,
+                y_indexs: indxs,
+                y_values: values,
+                y_shape: shape
+            }
+            loss_val, _ = sess.run([ctc_loss, opt], feed_dict=feed_dict)
             if i % 10 == 0:
-                error_val = sess.run(error,
-                                     feed_dict={x: batch_x, seq_length: seq_len, y_indexs: indxs, y_values: values,
-                                                y_shape: shape})
+                error_val = sess.run(error, feed_dict=feed_dict)
                 print(
-                "Epoch %d, batch number %d, loss: %5.2f edit_distance: %5.2f" \
-                % (train_ds.epochs_completed, train_ds.index_in_epoch, loss_val, error_val))
+                    "Epoch %d, batch number %d, loss: %5.2f edit_distance: "
+                    "%5.2f" % (train_ds.epochs_completed,
+                               train_ds.index_in_epoch, loss_val, error_val)
+                )
                 saver.save(sess, "log/cnn/model.ckpt", i)
         saver.save(sess, "log/cnn/final.ckpt")
 
