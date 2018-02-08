@@ -70,7 +70,7 @@ def qs(consensus, consensus_qs, output_standard='phred+33'):
     sorted_consensus = consensus[sort_ind, np.arange(l)[np.newaxis, :]]
     sorted_consensus_qs = consensus_qs[sort_ind, np.arange(l)[np.newaxis, :]]
     quality_score = 10 * (np.log10((sorted_consensus[3, :] + 1) / (sorted_consensus[2, :] + 1))) + \
-                    sorted_consensus_qs[ 3,:] / sorted_consensus[3, :] / np.log(10)
+                    sorted_consensus_qs[3, :] / sorted_consensus[3, :] / np.log(10)
     if output_standard == 'number':
         return quality_score.astype(int)
     elif output_standard == 'phred+33':

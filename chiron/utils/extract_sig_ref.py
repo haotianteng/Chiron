@@ -7,7 +7,6 @@ Created on Thu May  4 10:57:35 2017
 """
 
 import h5py
-import numpy as np
 import os, argparse, sys
 
 

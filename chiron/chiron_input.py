@@ -460,6 +460,7 @@ def base2ind(base, alphabet_n=4, base_n=1):
 
 def main():
     ### Input Test ###
+    #todo: this is very dangerous! should not have hard-coded paths
     Data_dir = "/home/haotianteng/UQ/deepBNS/data/Lambda_R9.4/raw/"
     train = read_raw_data_sets(Data_dir, seq_length=400)
     for i in range(100):

@@ -9,11 +9,9 @@ Created on Mon Apr 17 17:32:32 2017
 # from tensorflow.contrib.training.python.training import hparam
 import tensorflow as tf
 from distutils.dir_util import copy_tree
-from chiron_input import read_raw_data_sets
-from cnn import getcnnfeature
-from cnn import getcnnlogit
-# from rnn import rnn_layers
-from rnn import rnn_layers_one_direction
+from chiron.chiron_input import read_raw_data_sets
+from chiron.cnn import getcnnfeature
+from chiron.cnn import getcnnlogit
 import time, os
 
 
@@ -108,19 +106,17 @@ def train():
                          training: True}
             error_val = sess.run(error, feed_dict=feed_dict)
             end = time.time()
-            print
+            print(
             "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f" \
             % (i, FLAGS.max_steps, train_ds.epochs_completed, train_ds.index_in_epoch, loss_val, error_val,
-               (end - start) / (i + 1))
+               (end - start) / (i + 1)))
             saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt', global_step=global_step_val)
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step_val)
             summary_writer.flush()
     global_step_val = tf.train.global_step(sess, global_step)
-    print
-    "Model %s saved." % (FLAGS.log_dir + FLAGS.model_name)
-    print
-    "Reads number %d" % (train_ds.reads_n)
+    print("Model %s saved." % (FLAGS.log_dir + FLAGS.model_name))
+    print("Reads number %d" % (train_ds.reads_n))
     saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt', global_step=global_step_val)
 
 

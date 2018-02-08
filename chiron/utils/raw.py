@@ -8,7 +8,7 @@ Created on Mon Apr 10 04:16:40 2017
 import os, argparse, sys
 
 
-def extract(raw_folder=None):
+def extract():
     count = 1
     root_folder = FLAGS.input + os.path.sep
     output_folder = FLAGS.output + os.path.sep

@@ -8,8 +8,8 @@ Created on Mon Aug 14 18:38:18 2017
 import argparse, sys, os
 import chiron_eval
 import chiron_rcnn_train
-from utils.extract_sig_ref import extract
-from utils import raw
+from chiron.utils.extract_sig_ref import extract
+from chiron.utils import raw
 
 
 def evaluation(args):

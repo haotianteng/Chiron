@@ -8,9 +8,8 @@ Created on Fri Apr 21 03:46:35 2017
 
 import tensorflow as tf
 import numpy as np
-# from tensorflow.contrib.rnn.python.ops.core_rnn_cell import LSTMCell
 from tensorflow.contrib.rnn import LSTMCell
-from utils.lstm import BNLSTMCell
+from chiron.utils.lstm import BNLSTMCell
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
 
 
