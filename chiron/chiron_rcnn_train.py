@@ -5,7 +5,7 @@ Created on Mon Apr 17 17:32:32 2017
 
 @author: haotianteng
 """
-
+# This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
 import os
 import time

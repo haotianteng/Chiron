@@ -19,24 +19,48 @@ from cnn import getcnnlogit
 
 
 def save_model(log_dir, model_name):
+    """Copy the training model folder into the log.
+    TODO: Need a more orgnaized way to save the Neural Network sturcture instead of copying the whole folder into log.
+    Args:
+        log_dir: String, the directory of the log.
+        model_name: String, the model name saved.
+
+
+    """
     copy_tree(os.path.dirname(os.path.abspath(__file__)), log_dir + model_name + '/model')
 
 
-def inference(x, sequence_len, training):
+def inference(x, seq_len, training):
+    """Infer a logits of the input signal batch.
+
+    Args:
+        x: Tensor of shape [batch_size, max_time], a batch of the input signal with a maximum length `max_time`.
+        seq_len: Scalar float, the maximum length of the sample in the batch.
+        training: Placeholder of Boolean, Ture if the inference is during training.
+
+    Returns:
+        logits: Tensor of shape [batch_size, max_time, class_num]
+        ratio: Scalar float, the scale factor between the output logits and the input maximum length.
+    """
     cnn_feature = getcnnfeature(x, training=training)
     feashape = cnn_feature.get_shape().as_list()
-    ratio = sequence_len / feashape[1]
+    ratio = seq_len / feashape[1]
     logits = getcnnlogit(cnn_feature)
     return logits, ratio
 
 
 def dense2sparse(label):
-    """
-    Transfer the dense tensor to sparse tensor
+    """Transfer the dense label tensor to sparse tensor, the padding value should be -1 for the input dense label.
+
     Input:
-        label 2D tensor [batch_size, LABEL_LEN], padded with -1.
+        label
     Output:
-        Sparse shape of the input tensor.
+        A tf.SparseTensor of the input tensor.
+    Args:
+        label: Tensor of shape [batch_size, LABEL_LEN], padded with -1.
+
+    Returns:
+        SparseTensor, the sparse format of the label.
     """
     idx = tf.where(tf.not_equal(label, -1))
     sparse = tf.SparseTensor(idx, tf.gather_nd(label, idx), label.get_shape())
@@ -44,6 +68,17 @@ def dense2sparse(label):
 
 
 def loss(logits, seq_len, label):
+    """Calculate a CTC loss from the input logits and label.
+
+    Args:
+        logits: Tensor of shape [batch_size,max_time,class_num], logits from last layer of the NN, usually from a
+            Fully connected layyer.
+        seq_len: Tensor of shape [batch_size], sequence length for each sample in the batch.
+        label: A Sparse Tensor of labels, sparse tensor of the true label.
+
+    Returns:
+        Tensor of shape [batch_size], losses of the batch.
+    """
     loss = tf.reduce_mean(tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True, time_major=False))
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
     tf.summary.scalar('loss', loss)
@@ -51,6 +86,16 @@ def loss(logits, seq_len, label):
 
 
 def train_step(loss, step_rate, global_step=None):
+    """Generate training op
+
+    Args:
+        loss: Tensor of shape [batch_size].
+        step_rate: Scalar tensor or float, the learning rate of the optimizer.
+        global_step: Scalar tensor, the global step recorded.
+
+    Returns:
+
+    """
     opt = tf.train.AdamOptimizer(step_rate).minimize(loss, global_step=global_step)
     #    Uncomment to use different optimizer
     #    opt = tf.train.GradientDescentOptimizer(FLAGS.step_rate).minimize(loss)
@@ -60,12 +105,16 @@ def train_step(loss, step_rate, global_step=None):
 
 
 def prediction(logits, seq_length, label, top_paths=1):
-    """
+    """Calculate the edit distance from a given a logits and label sequence.
+
     Args:
-        logits:Input logits from a RNN.Shape = [batch_size,max_time,class_num]
-        seq_length:sequence length of logits. Shape = [batch_size]
-        label:Sparse tensor of label.
-        top_paths:The number of top score path to choice from the decorder.
+        logits: Tensor of shape [batch_size,max_time,class_num], input logits.
+        seq_length: Tensor of shape [batch_size], sequence length of each sample in the batch.
+        label: Sparse tensor.
+        top_paths: Int, The number of top score path to choose from the decorder.
+
+    Returns:
+        Scalar Tensor, the mean edit distance(error rate) of the batch.
     """
     logits = tf.transpose(logits, perm=[1, 0, 2])
     predict = tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False, top_paths=top_paths)[0]
@@ -81,6 +130,13 @@ def prediction(logits, seq_length, label, top_paths=1):
 
 
 def train(hparam):
+    """Main training function.
+    This will train a Neural Network with the given dataset.
+
+    Args:
+        hparam: hyper parameter for training the neural network
+            TODO: Need a more detailed explanation here.
+    """
     training = tf.placeholder(tf.bool)
     global_step = tf.get_variable('global_step', trainable=False, shape=(), dtype=tf.int32,
                                   initializer=tf.zeros_initializer())
@@ -98,7 +154,7 @@ def train(hparam):
 
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     save_model(hparam.log_dir, hparam.model_name)
-    if hparam.retrain == False:
+    if not hparam.retrain:
         sess.run(init)
         print("Model init finished, begin training. \n")
     else:
