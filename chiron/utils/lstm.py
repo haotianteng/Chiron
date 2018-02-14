@@ -1,12 +1,15 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.rnn.python.ops.core_rnn_cell import RNNCell
 
+
 class LSTMCell(RNNCell):
     '''Vanilla LSTM implemented with same initializations as BN-LSTM'''
+
     def __init__(self, num_units):
         self.num_units = num_units
 
@@ -25,11 +28,11 @@ class LSTMCell(RNNCell):
             # Keep W_xh and W_hh separate here as well to reuse initialization methods
             x_size = x.get_shape().as_list()[1]
             W_xh = tf.get_variable('W_xh',
-                [x_size, 4 * self.num_units],
-                initializer=orthogonal_initializer())
+                                   [x_size, 4 * self.num_units],
+                                   initializer=orthogonal_initializer())
             W_hh = tf.get_variable('W_hh',
-                [self.num_units, 4 * self.num_units],
-                initializer=bn_lstm_identity_initializer(0.95))
+                                   [self.num_units, 4 * self.num_units],
+                                   initializer=bn_lstm_identity_initializer(0.95))
             bias = tf.get_variable('bias', [4 * self.num_units])
 
             # hidden = tf.matmul(x, W_xh) + tf.matmul(h, W_hh) + bias
@@ -45,8 +48,10 @@ class LSTMCell(RNNCell):
 
             return new_h, (new_c, new_h)
 
+
 class BNLSTMCell(RNNCell):
     '''Batch normalized LSTM as described in arxiv.org/abs/1603.09025'''
+
     def __init__(self, num_units, training):
         self.num_units = num_units
         self.training = training
@@ -65,11 +70,11 @@ class BNLSTMCell(RNNCell):
 
             x_size = x.get_shape().as_list()[1]
             W_xh = tf.get_variable('W_xh',
-                [x_size, 4 * self.num_units],
-                initializer=orthogonal_initializer())
+                                   [x_size, 4 * self.num_units],
+                                   initializer=orthogonal_initializer())
             W_hh = tf.get_variable('W_hh',
-                [self.num_units, 4 * self.num_units],
-                initializer=bn_lstm_identity_initializer(0.95))
+                                   [self.num_units, 4 * self.num_units],
+                                   initializer=bn_lstm_identity_initializer(0.95))
             bias = tf.get_variable('bias', [4 * self.num_units])
 
             xh = tf.matmul(x, W_xh)
@@ -90,13 +95,13 @@ class BNLSTMCell(RNNCell):
             return new_h, (new_c, new_h)
 
 
-
 def orthogonal(shape):
     flat_shape = (shape[0], np.prod(shape[1:]))
     a = np.random.normal(0.0, 1.0, flat_shape)
     u, _, v = np.linalg.svd(a, full_matrices=False)
     q = u if u.shape == flat_shape else v
     return q.reshape(shape)
+
 
 def bn_lstm_identity_initializer(scale):
     def _initializer(shape, dtype=tf.float32, partition_info=None):
@@ -112,10 +117,13 @@ def bn_lstm_identity_initializer(scale):
 
     return _initializer
 
+
 def orthogonal_initializer():
     def _initializer(shape, dtype=tf.float32, partition_info=None):
         return tf.constant(orthogonal(shape), dtype)
+
     return _initializer
+
 
 def batch_norm(x, name_scope, training, epsilon=1e-3, decay=0.99):
     '''Assume 2d [batch, values] tensor'''
@@ -123,11 +131,11 @@ def batch_norm(x, name_scope, training, epsilon=1e-3, decay=0.99):
     with tf.variable_scope(name_scope):
         size = x.get_shape().as_list()[1]
 
-        scale = tf.get_variable('scale', shape = [size], initializer=tf.constant_initializer(0.1))
-        offset = tf.get_variable('offset', shape = [size])
+        scale = tf.get_variable('scale', shape=[size], initializer=tf.constant_initializer(0.1))
+        offset = tf.get_variable('offset', shape=[size])
 
-        pop_mean = tf.get_variable('pop_mean', shape = [size], initializer=tf.zeros_initializer(), trainable=False)
-        pop_var = tf.get_variable('pop_var', shape = [size], initializer=tf.ones_initializer(), trainable=False)
+        pop_mean = tf.get_variable('pop_mean', shape=[size], initializer=tf.zeros_initializer(), trainable=False)
+        pop_var = tf.get_variable('pop_var', shape=[size], initializer=tf.ones_initializer(), trainable=False)
         batch_mean, batch_var = tf.nn.moments(x, [0])
 
         train_mean_op = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
