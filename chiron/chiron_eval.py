@@ -5,6 +5,8 @@ Created on Sun Apr 30 11:59:15 2017
 
 @author: haotianteng
 """
+from __future__ import absolute_import
+from __future__ import print_function
 import argparse
 import os
 import sys
@@ -13,12 +15,13 @@ import time
 import numpy as np
 import tensorflow as tf
 
-from chiron_input import read_data_for_eval
-from cnn import getcnnfeature
-from rnn import rnn_layers
-from utils.easy_assembler import simple_assembly
-from utils.easy_assembler import simple_assembly_qs
-from utils.unix_time import unix_time
+from .chiron_input import read_data_for_eval
+from .cnn import getcnnfeature
+from .rnn import rnn_layers
+from .utils.easy_assembler import simple_assembly
+from .utils.easy_assembler import simple_assembly_qs
+from .utils.unix_time import unix_time
+from six.moves import range
 
 
 def inference(x, seq_length, training):
@@ -224,9 +227,9 @@ def evaluation():
                 if FLAGS.extension == 'fastq':
                     qs_list = np.concatenate((qs_list, logits_prob))
                 reads += predict_read
-            print(
+            print((
                 "Segment reads base calling finished, begin to assembly. %5.2f seconds" % (
-                            time.time() - start_time))
+                            time.time() - start_time)))
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             if FLAGS.extension == 'fastq':
@@ -235,15 +238,15 @@ def evaluation():
             else:
                 consensus = simple_assembly(bpreads)
             if signals != eval_data.event:
-                print(len(signals))
+                print((len(signals)))
                 print(signals)
-                print(len(eval_data.event))
-                print(eval_data.event)
+                print((len(eval_data.event)))
+                print((eval_data.event))
             c_bpread = index2base(np.argmax(consensus, axis=0))
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
-            print("Assembly finished, begin output. %5.2f seconds" % (
-                        time.time() - start_time))
+            print(("Assembly finished, begin output. %5.2f seconds" % (
+                        time.time() - start_time)))
             list_of_time = [start_time, reading_time, basecall_time,
                             assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre,
@@ -255,9 +258,9 @@ def run(args):
     global FLAGS
     FLAGS = args
     time_dict = unix_time(evaluation)
-    print(FLAGS.output)
-    print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
-          (time_dict['real'], time_dict['sys'], time_dict['user']))
+    print((FLAGS.output))
+    print(('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
+          (time_dict['real'], time_dict['sys'], time_dict['user'])))
     meta_folder = os.path.join(FLAGS.output, 'meta')
     if os.path.isdir(FLAGS.input):
         file_pre = 'all'
