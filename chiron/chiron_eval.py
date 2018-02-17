@@ -14,7 +14,6 @@ import numpy as np
 import tensorflow as tf
 
 from chiron_input import read_data_for_eval
-# from utils.easy_assembler import section_decoding
 from cnn import getcnnfeature
 from rnn import rnn_layers
 from utils.easy_assembler import simple_assembly
@@ -27,8 +26,8 @@ def inference(x, seq_length, training):
     feashape = cnn_feature.get_shape().as_list()
     ratio = FLAGS.segment_len / feashape[1]
     logits = rnn_layers(cnn_feature, seq_length / ratio, training, class_n=5)
-    #    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
-    #    logits = getcnnlogit(cnn_feature)
+    # logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
+    # logits = getcnnlogit(cnn_feature)
     return logits, ratio
 
 
@@ -38,12 +37,14 @@ def sparse2dense(predict_val):
     uniq_list = list()
     for i in range(len(predict_val_top5)):
         predict_val = predict_val_top5[i]
-        unique, pre_counts = np.unique(predict_val.indices[:, 0], return_counts=True)
+        unique, pre_counts = np.unique(predict_val.indices[:, 0],
+                                       return_counts=True)
         uniq_list.append(unique)
         pos_predict = 0
         predict_read_temp = list()
         for indx, counts in enumerate(pre_counts):
-            predict_read_temp.append(predict_val.values[pos_predict:pos_predict + pre_counts[indx]])
+            predict_read_temp.append(
+                predict_val.values[pos_predict:pos_predict + pre_counts[indx]])
             pos_predict += pre_counts[indx]
         predict_read.append(predict_read_temp)
     return predict_read, uniq_list
@@ -58,11 +59,13 @@ def index2base(read):
 
 def path_prob(logits):
     top2_logits = tf.nn.top_k(logits, k=2)[0]
-    logits_diff = tf.slice(top2_logits, [0, 0, 0], [FLAGS.batch_size, FLAGS.segment_len, 1]) - tf.slice(top2_logits,
-                                                                                                        [0, 0, 1], [
-                                                                                                            FLAGS.batch_size,
-                                                                                                            FLAGS.segment_len,
-                                                                                                            1])
+    logits_diff = tf.slice(top2_logits, [0, 0, 0],
+                           [FLAGS.batch_size, FLAGS.segment_len, 1]) - tf.slice(
+        top2_logits,
+        [0, 0, 1], [
+            FLAGS.batch_size,
+            FLAGS.segment_len,
+            1])
     prob_logits = tf.reduce_mean(logits_diff, axis=-2)
     return prob_logits
 
@@ -72,10 +75,11 @@ def qs(consensus, consensus_qs, output_standard='phred+33'):
     L = consensus.shape[1]
     sorted_consensus = consensus[sort_ind, np.arange(L)[np.newaxis, :]]
     sorted_consensus_qs = consensus_qs[sort_ind, np.arange(L)[np.newaxis, :]]
-    quality_score = 10 * (np.log10((sorted_consensus[3, :] + 1) / (sorted_consensus[2, :] + 1))) + sorted_consensus_qs[
-                                                                                                   3,
-                                                                                                   :] / sorted_consensus[
-                                                                                                        3, :] / np.log(
+    quality_score = 10 * (np.log10((sorted_consensus[3, :] + 1) / (
+                sorted_consensus[2, :] + 1))) + sorted_consensus_qs[
+                                                3,
+                                                :] / sorted_consensus[
+                                                     3, :] / np.log(
         10)
     if output_standard == 'number':
         return quality_score.astype(int)
@@ -84,7 +88,8 @@ def qs(consensus, consensus_qs, output_standard='phred+33'):
         return ''.join(q_string)
 
 
-def write_output(segments, consensus, time_list, file_pre, concise=False, suffix='fasta', seg_q_score=None,
+def write_output(segments, consensus, time_list, file_pre, concise=False,
+                 suffix='fasta', seg_q_score=None,
                  q_score=None):
     """
     seg_q_score: A length seg_num string list. Quality score for the segments.
@@ -107,7 +112,8 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
                     out_f.write('+\n')
                     out_f.write(seg_q_score[indx] + '\n')
         if (suffix == 'fastq') and (q_score is not None):
-            out_con.write('@{}\n{}\n+\n{}\n'.format(file_pre, consensus, q_score))
+            out_con.write(
+                '@{}\n{}\n+\n{}\n'.format(file_pre, consensus, q_score))
         else:
             out_con.write('{}\n{}'.format(file_pre, consensus))
     if not concise:
@@ -118,12 +124,16 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
             basecall_time -= reading_time
             total_len = len(consensus)
             total_time = time.time() - start_time
-            out_meta.write("# Reading Basecalling assembly output total rate(bp/s)\n")
+            out_meta.write(
+                "# Reading Basecalling assembly output total rate(bp/s)\n")
             out_meta.write("%5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n" % (
-                reading_time, basecall_time, assembly_time, output_time, total_time, total_len / total_time))
+                reading_time, basecall_time, assembly_time, output_time,
+                total_time, total_len / total_time))
             out_meta.write("# read_len batch_size segment_len jump start_pos\n")
             out_meta.write(
-                "%d %d %d %d %d\n" % (total_len, FLAGS.batch_size, FLAGS.segment_len, FLAGS.jump, FLAGS.start))
+                "%d %d %d %d %d\n" % (
+                total_len, FLAGS.batch_size, FLAGS.segment_len, FLAGS.jump,
+                FLAGS.start))
             out_meta.write("# input_name model_name\n")
             out_meta.write("%s %s\n" % (FLAGS.input, FLAGS.model))
 
@@ -136,11 +146,15 @@ def evaluation():
     if FLAGS.extension == 'fastq':
         prob = path_prob(logits)
     if FLAGS.beam == 0:
-        predict = tf.nn.ctc_greedy_decoder(tf.transpose(logits, perm=[1, 0, 2]), seq_length, merge_repeated=True)
+        predict = tf.nn.ctc_greedy_decoder(tf.transpose(logits, perm=[1, 0, 2]),
+                                           seq_length, merge_repeated=True)
     else:
-        predict = tf.nn.ctc_beam_search_decoder(tf.transpose(logits, perm=[1, 0, 2]), seq_length, merge_repeated=False,
-                                                beam_width=FLAGS.beam)  # For beam_search_decoder, set the merge_repeated to false. 5-10 times slower than greedy decoder
-    config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
+        predict = tf.nn.ctc_beam_search_decoder(
+            tf.transpose(logits, perm=[1, 0, 2]), seq_length,
+            merge_repeated=False,
+            beam_width=FLAGS.beam)  # For beam_search_decoder, set the merge_repeated to false. 5-10 times slower than greedy decoder
+    config = tf.ConfigProto(allow_soft_placement=True,
+                            intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
@@ -151,7 +165,8 @@ def evaluation():
             file_dir = FLAGS.input
         else:
             file_list = [os.path.basename(FLAGS.input)]
-            file_dir = os.path.abspath(os.path.join(FLAGS.input, os.path.pardir))
+            file_dir = os.path.abspath(
+                os.path.join(FLAGS.input, os.path.pardir))
         # Make output folder.
         if not os.path.exists(FLAGS.output):
             os.makedirs(FLAGS.output)
@@ -168,7 +183,9 @@ def evaluation():
                 continue
             file_pre = os.path.splitext(name)[0]
             input_path = os.path.join(file_dir, name)
-            eval_data = read_data_for_eval(input_path, FLAGS.start, seg_length=FLAGS.segment_len, step=FLAGS.jump,
+            eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                           seg_length=FLAGS.segment_len,
+                                           step=FLAGS.jump,
                                            sig_norm=False)
             reads_n = eval_data.reads_n
             reading_time = time.time() - start_time
@@ -177,14 +194,21 @@ def evaluation():
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
             for i in range(0, reads_n, FLAGS.batch_size):
-                batch_x, seq_len, _ = eval_data.next_batch(FLAGS.batch_size, shuffle=False, sig_norm=False)
+                batch_x, seq_len, _ = eval_data.next_batch(FLAGS.batch_size,
+                                                           shuffle=False,
+                                                           sig_norm=False)
                 if not FLAGS.concise:
                     signals += batch_x
-                batch_x = np.pad(batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
-                seq_len = np.pad(seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
+                batch_x = np.pad(batch_x,
+                                 ((0, FLAGS.batch_size - len(batch_x)), (0, 0)),
+                                 mode='constant')
+                seq_len = np.pad(seq_len,
+                                 ((0, FLAGS.batch_size - len(seq_len))),
+                                 mode='constant')
                 feed_dict = {x: batch_x, seq_length: seq_len, training: False}
                 if FLAGS.extension == 'fastq':
-                    predict_val, logits_prob = sess.run([predict, prob], feed_dict=feed_dict)
+                    predict_val, logits_prob = sess.run([predict, prob],
+                                                        feed_dict=feed_dict)
                 else:
                     predict_val = sess.run(predict, feed_dict=feed_dict)
                 predict_read, unique = sparse2dense(predict_val)
@@ -200,7 +224,9 @@ def evaluation():
                 if FLAGS.extension == 'fastq':
                     qs_list = np.concatenate((qs_list, logits_prob))
                 reads += predict_read
-            print("Segment reads base calling finished, begin to assembly. %5.2f seconds" % (time.time() - start_time))
+            print(
+                "Segment reads base calling finished, begin to assembly. %5.2f seconds" % (
+                            time.time() - start_time))
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             if FLAGS.extension == 'fastq':
@@ -209,16 +235,19 @@ def evaluation():
             else:
                 consensus = simple_assembly(bpreads)
             if signals != eval_data.event:
-                print len(signals)
-                print signals
-                print len(eval_data.event)
-                print eval_data.event
+                print(len(signals))
+                print(signals)
+                print(len(eval_data.event))
+                print(eval_data.event)
             c_bpread = index2base(np.argmax(consensus, axis=0))
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
-            print("Assembly finished, begin output. %5.2f seconds" % (time.time() - start_time))
-            list_of_time = [start_time, reading_time, basecall_time, assembly_time]
-            write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
+            print("Assembly finished, begin output. %5.2f seconds" % (
+                        time.time() - start_time))
+            list_of_time = [start_time, reading_time, basecall_time,
+                            assembly_time]
+            write_output(bpreads, c_bpread, list_of_time, file_pre,
+                         concise=FLAGS.concise, suffix=FLAGS.extension,
                          q_score=qs_string)
 
 
@@ -227,7 +256,8 @@ def run(args):
     FLAGS = args
     time_dict = unix_time(evaluation)
     print(FLAGS.output)
-    print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' % (time_dict['real'], time_dict['sys'], time_dict['user']))
+    print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
+          (time_dict['real'], time_dict['sys'], time_dict['user']))
     meta_folder = os.path.join(FLAGS.output, 'meta')
     if os.path.isdir(FLAGS.input):
         file_pre = 'all'
@@ -237,22 +267,31 @@ def run(args):
     with open(path_meta, 'a+') as out_meta:
         out_meta.write("# Wall_time Sys_time User_time Cpu_time\n")
         out_meta.write("%5.3f %5.3f %5.3f %5.3f\n" % (
-            time_dict['real'], time_dict['sys'], time_dict['user'], time_dict['sys'] + time_dict['user']))
+            time_dict['real'], time_dict['sys'], time_dict['user'],
+            time_dict['sys'] + time_dict['user']))
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
+    parser = argparse.ArgumentParser(prog='chiron',
+                                     description='A deep neural network basecaller.')
     parser.add_argument('-i', '--input', default='example_data/output/raw',
                         help="File path or Folder path to the fast5 file.")
-    parser.add_argument('-o', '--output', default='example_data/output', help="Output Folder name")
-    parser.add_argument('-m', '--model', default='model/DNA_default', help="model folder")
-    parser.add_argument('-s', '--start', type=int, default=0, help="Start index of the signal file.")
+    parser.add_argument('-o', '--output', default='example_data/output',
+                        help="Output Folder name")
+    parser.add_argument('-m', '--model', default='model/DNA_default',
+                        help="model folder")
+    parser.add_argument('-s', '--start', type=int, default=0,
+                        help="Start index of the signal file.")
     parser.add_argument('-b', '--batch_size', type=int, default=1100,
                         help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
-    parser.add_argument('-l', '--segment_len', type=int, default=300, help="Segment length to be divided into.")
-    parser.add_argument('-j', '--jump', type=int, default=30, help="Step size for segment")
-    parser.add_argument('-t', '--threads', type=int, default=0, help="Threads number")
-    parser.add_argument('-e', '--extension', default='fastq', help="Output file extension.")
+    parser.add_argument('-l', '--segment_len', type=int, default=300,
+                        help="Segment length to be divided into.")
+    parser.add_argument('-j', '--jump', type=int, default=30,
+                        help="Step size for segment")
+    parser.add_argument('-t', '--threads', type=int, default=0,
+                        help="Threads number")
+    parser.add_argument('-e', '--extension', default='fastq',
+                        help="Output file extension.")
     parser.add_argument('--beam', type=int, default=0,
                         help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     parser.add_argument('--concise', action='store_true',
