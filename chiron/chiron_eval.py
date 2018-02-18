@@ -188,8 +188,7 @@ def evaluation():
             input_path = os.path.join(file_dir, name)
             eval_data = read_data_for_eval(input_path, FLAGS.start,
                                            seg_length=FLAGS.segment_len,
-                                           step=FLAGS.jump,
-                                           sig_norm=False)
+                                           step=FLAGS.jump)
             reads_n = eval_data.reads_n
             reading_time = time.time() - start_time
             reads = list()

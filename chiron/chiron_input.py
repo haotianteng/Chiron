@@ -234,7 +234,7 @@ class DataSet(object):
 
 
 def read_data_for_eval(file_path, start_index=0, step=20, seg_length=200,
-                       sig_norm=True):
+                       sig_norm='median'):
     """
     Input Args:
         file_path: file path to a signal file.
