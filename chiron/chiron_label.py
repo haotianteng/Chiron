@@ -4,7 +4,6 @@ Spyder Editor
 
 This is a temporary script file.
 """
-# todo: should this be deleted if it is a temporary script file? If we are keeping it then we need to add mappy to the dependencies
 from __future__ import absolute_import
 from __future__ import print_function
 import argparse
