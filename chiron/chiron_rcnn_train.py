@@ -7,15 +7,18 @@ Created on Mon Apr 17 17:32:32 2017
 """
 # This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import time
 from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 
-from chiron_input import read_raw_data_sets
-from cnn import getcnnfeature
-from cnn import getcnnlogit
+from .chiron_input import read_raw_data_sets
+from .cnn import getcnnfeature
+from .cnn import getcnnlogit
+from six.moves import range
 
 
 def save_model():
@@ -109,16 +112,16 @@ def train():
                          training: True}
             error_val = sess.run(error, feed_dict=feed_dict)
             end = time.time()
-            print "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f" \
+            print("Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f" \
                   % (i, FLAGS.max_steps, train_ds.epochs_completed, train_ds.index_in_epoch, loss_val, error_val,
-                     (end - start) / (i + 1))
+                     (end - start) / (i + 1)))
             saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt', global_step=global_step_val)
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step_val)
             summary_writer.flush()
     global_step_val = tf.train.global_step(sess, global_step)
-    print "Model %s saved." % (FLAGS.log_dir + FLAGS.model_name)
-    print "Reads number %d" % (train_ds.reads_n)
+    print("Model %s saved." % (FLAGS.log_dir + FLAGS.model_name))
+    print("Reads number %d" % (train_ds.reads_n))
     saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt', global_step=global_step_val)
 
 
