@@ -6,16 +6,16 @@ Created on Mon Apr 17 17:32:32 2017
 @author: haotianteng
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import time
 from distutils.dir_util import copy_tree
-
-# from tensorflow.contrib.training.python.training import hparam
 import tensorflow as tf
-
-from chiron_queue_input import inputs
-from cnn import getcnnfeature
-from cnn import getcnnlogit
+from .chiron_queue_input import inputs
+from .cnn import getcnnfeature
+from .cnn import getcnnlogit
+from six.moves import range
 
 
 def save_model(log_dir, model_name):
@@ -27,7 +27,8 @@ def save_model(log_dir, model_name):
 
 
     """
-    copy_tree(os.path.dirname(os.path.abspath(__file__)), log_dir + model_name + '/model')
+    copy_tree(os.path.dirname(os.path.abspath(__file__)),
+              log_dir + model_name + '/model')
 
 
 def inference(x, seq_len, training):
@@ -79,7 +80,9 @@ def loss(logits, seq_len, label):
     Returns:
         Tensor of shape [batch_size], losses of the batch.
     """
-    loss = tf.reduce_mean(tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True, time_major=False))
+    loss = tf.reduce_mean(
+        tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
+                       time_major=False))
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
     tf.summary.scalar('loss', loss)
     return loss
@@ -96,7 +99,8 @@ def train_step(loss, step_rate, global_step=None):
     Returns:
 
     """
-    opt = tf.train.AdamOptimizer(step_rate).minimize(loss, global_step=global_step)
+    opt = tf.train.AdamOptimizer(step_rate).minimize(loss,
+                                                     global_step=global_step)
     #    Uncomment to use different optimizer
     #    opt = tf.train.GradientDescentOptimizer(FLAGS.step_rate).minimize(loss)
     #    opt = tf.train.RMSPropOptimizer(FLAGS.step_rate).minimize(loss)
@@ -117,7 +121,9 @@ def prediction(logits, seq_length, label, top_paths=1):
         Scalar Tensor, the mean edit distance(error rate) of the batch.
     """
     logits = tf.transpose(logits, perm=[1, 0, 2])
-    predict = tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False, top_paths=top_paths)[0]
+    predict = \
+    tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False,
+                                  top_paths=top_paths)[0]
     edit_d = list()
     for i in range(top_paths):
         tmp_d = tf.edit_distance(tf.to_int32(predict[i]), label, normalize=True)
@@ -138,10 +144,12 @@ def train(hparam):
             TODO: Need a more detailed explanation here.
     """
     training = tf.placeholder(tf.bool)
-    global_step = tf.get_variable('global_step', trainable=False, shape=(), dtype=tf.int32,
+    global_step = tf.get_variable('global_step', trainable=False, shape=(),
+                                  dtype=tf.int32,
                                   initializer=tf.zeros_initializer())
 
-    x, seq_length, train_labels = inputs(hparam.data_dir, hparam.batch_size, for_valid=False)
+    x, seq_length, train_labels = inputs(hparam.data_dir, hparam.batch_size,
+                                         for_valid=False)
     y = dense2sparse(train_labels)
 
     logits, ratio = inference(x, hparam.sequence_len, training)
@@ -158,9 +166,11 @@ def train(hparam):
         sess.run(init)
         print("Model init finished, begin training. \n")
     else:
-        saver.restore(sess, tf.train.latest_checkpoint(hparam.log_dir + hparam.model_name))
+        saver.restore(sess, tf.train.latest_checkpoint(
+            hparam.log_dir + hparam.model_name))
         print("Model loaded finished, begin training. \n")
-    summary_writer = tf.summary.FileWriter(hparam.log_dir + hparam.model_name + '/summary/', sess.graph)
+    summary_writer = tf.summary.FileWriter(
+        hparam.log_dir + hparam.model_name + '/summary/', sess.graph)
 
     _ = tf.train.start_queue_runners(sess=sess)
 
@@ -173,15 +183,19 @@ def train(hparam):
             feed_dict = {training: True}
             error_val = sess.run(error, feed_dict=feed_dict)
             end = time.time()
-            print "Step %d/%d ,  loss: %5.3f edit_distance: %5.3f Elapsed Time/batch: %5.3f" \
-                  % (i, hparam.max_steps, loss_val, error_val, (end - start) / (i + 1))
-            saver.save(sess, hparam.log_dir + hparam.model_name + '/model.ckpt', global_step=global_step_val)
+            print(
+                "Step %d/%d ,  loss: %5.3f edit_distance: %5.3f Elapsed Time/batch: %5.3f" \
+                % (i, hparam.max_steps, loss_val, error_val,
+                   (end - start) / (i + 1)))
+            saver.save(sess, hparam.log_dir + hparam.model_name + '/model.ckpt',
+                       global_step=global_step_val)
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step_val)
             summary_writer.flush()
     global_step_val = tf.train.global_step(sess, global_step)
-    print "Model %s saved." % (hparam.log_dir + hparam.model_name)
-    saver.save(sess, hparam.log_dir + hparam.model_name + '/final.ckpt', global_step=global_step_val)
+    print("Model %s saved." % (hparam.log_dir + hparam.model_name))
+    saver.save(sess, hparam.log_dir + hparam.model_name + '/final.ckpt',
+               global_step=global_step_val)
 
 
 def run(hparam):
@@ -189,64 +203,9 @@ def run(hparam):
 
 
 if __name__ == "__main__":
-    #    parser = argparse.ArgumentParser()
-    #
-    #    parser.add_argument(
-    #            '--data-dir',
-    #            help='Location containing training data',
-    #            required=True
-    #            )
-    #
-    #    parser.add_argument(
-    #            '--log-dir',
-    #            help='Log dir location',
-    #            required=True
-    #            )
-    #    parser.add_argument(
-    #            '--sequence-len',
-    #            help='Sequence length of nucleotides',
-    #            default=500,
-    #            type=int
-    #            )
-    #    parser.add_argument(
-    #            '--batch-size',
-    #            help='Training batch size',
-    #            default=400,
-    #            type=int
-    #            )
-    #    parser.add_argument(
-    #            '--step-rate',
-    #            help='Step rate',
-    #            default=1e-3,
-    #            type=float
-    #            )
-    #    parser.add_argument(
-    #            '--max-steps',
-    #            help='Max training steps',
-    #            default=20000,
-    #            type=int
-    #            )
-    #    parser.add_argument(
-    #            '--kmer',
-    #            help='K-mer length',
-    #            default=1,
-    #            type=int
-    #            )
-    #    parser.add_argument(
-    #            '--model-name',
-    #            help='Model name',
-    #            required=True
-    #            )
-    #    parser.add_argument(
-    #            '--retrain',
-    #            help='Retrain the model',
-    #            default=False,
-    #            type=bool
-    #            )
-    #    args = parser.parse_args()
-    #    run(hparam.HParams(**args.__dict__))
     class Flags():
         def __init__(self):
+            # todo: remove hard-coded file paths
             self.data_dir = '/media/Linux_ex/Nanopore_Data/Lambda_R9.4/file_batch/'
             self.log_dir = '/media/Linux_ex/GVM_model/'
             self.sequence_len = 512
