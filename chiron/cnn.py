@@ -14,9 +14,11 @@ from six.moves import range
 
 
 def conv_layer(indata, ksize, padding, training, name, dilate=1,
-               strides=[1, 1, 1, 1], bias_term=False, active=True,
+               strides=None, bias_term=False, active=True,
                BN=True, active_function='relu'):
     """A standard convlotional layer"""
+    if strides is None:
+        strides = [1, 1, 1, 1]
     with tf.variable_scope(name):
         W = tf.get_variable("weights", dtype=tf.float32, shape=ksize,
                             initializer=tf.contrib.layers.xavier_initializer())
