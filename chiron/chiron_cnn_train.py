@@ -13,7 +13,7 @@ from cnn import getcnnlogit
 
 class Flags():
     def __init__(self):
-        self.data_dir = "/home/haotianteng/UQ/deepBNS/data/Lambda_R9.4/raw/"
+        self.data_dir = "/home/lee/Documents/Greg/Chiron/input_fast_folder"
         self.sequence_len = 200
         self.batch_size = 1024
         self.step_rate = 1e-3

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 17 17:32:32 2017
-
-@author: haotianteng
+Modified by Lee Yam Keng on Sat Feb 28 2018
+@author: haotianteng, Lee Yam Keng
 """
 # This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
@@ -13,7 +13,7 @@ from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 
-from chiron_input import read_raw_data_sets
+from chiron_input import read_raw_data_sets, read_tfrecord
 from cnn import getcnnfeature
 from cnn import getcnnlogit
 
@@ -77,7 +77,7 @@ def train():
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
     logits, ratio = inference(x, seq_length, training)
     ctc_loss = loss(logits, seq_length, y)
-    opt = train_step(ctc_loss, global_step=global_step)
+    opt = train_step(ctc_loss, FLAGS.step_rate, global_step=global_step)
     error = prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -93,7 +93,8 @@ def train():
         print("Model loaded finished, begin loading data. \n")
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
-    train_ds = read_raw_data_sets(FLAGS.data_dir, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -133,15 +134,16 @@ def run(args):
 if __name__ == "__main__":
     class Flags():
         def __init__(self):
-            self.data_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw/'
-            self.cache_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/cache/train.hdf5'
-            self.log_dir = '/media/haotianteng/Linux_ex/GVM_model'
-            self.sequence_len = 300
-            self.batch_size = 400
+            self.data_dir = '/home/lee/Documents/Greg/Chiron/output'
+            self.cache_dir = '/home/lee/Documents/Greg/Chiron/output/cache/train.hdf5'
+            self.log_dir = '/home/lee/Documents/Greg/Chiron/output/GVM_model'
+            self.sequence_len = 200
+            self.batch_size = 200
             self.step_rate = 1e-3
-            self.max_steps = 20000
+            self.max_steps = 200
             self.k_mer = 1
-            self.model_name = 'res50'
+            # self.model_name = 'lee_res50' # 1.0.1
+            self.model_name = 'lee_res50_1.4.0'
             self.retrain = False
 
 
