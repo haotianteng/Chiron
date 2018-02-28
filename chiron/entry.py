@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Aug 14 18:38:18 2017
-
-@author: haotianteng
+Modified by Lee Yam Keng on Sat Feb 28 2018
+@author: haotianteng, Lee Yam Keng
 """
 import argparse
 import sys
@@ -56,15 +56,17 @@ def main(arguments=sys.argv[1:]):
                                           help='Extract signal and label in the fast5 file.')
     parser_export.add_argument('-i', '--input', required=True, help='Input folder contain fast5 files.')
     parser_export.add_argument('-o', '--output', required=True, help='Output folder.')
-    parser.add_argument('--basecall_group', default='Basecall_1D_000',
+    parser_export.add_argument('-f', '--tffile', default="train.tfrecords", help="tfrecord file")
+    parser_export.add_argument('--basecall_group', default='Basecall_1D_000',
                         help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
-    parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
+    parser_export.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
     parser_export.set_defaults(func=export)
 
     # parser for 'train' command
     parser_train = subparsers.add_parser('train', description='Model training', help='Train a model.')
     parser_train.add_argument('-i', '--data_dir', required=True, help="Folder containing the labelled data.")
+    parser_train.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
     parser_train.add_argument('-o', '--log_dir', required=True, help="Log dir which save the trained model")
     parser_train.add_argument('-n', '--model_name', required=True, help="Model name saved.")
     parser_train.add_argument('-t', '--retrain', type=bool, default=False,

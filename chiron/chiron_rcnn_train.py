@@ -7,6 +7,8 @@ Modified by Lee Yam Keng on Sat Feb 28 2018
 """
 # This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
+import argparse
+import sys
 import os
 import time
 from distutils.dir_util import copy_tree
@@ -93,7 +95,7 @@ def train():
         print("Model loaded finished, begin loading data. \n")
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
-    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
 
     start = time.time()
     for i in range(FLAGS.max_steps):
@@ -132,20 +134,19 @@ def run(args):
 
 
 if __name__ == "__main__":
-    class Flags():
-        def __init__(self):
-            self.data_dir = '/home/lee/Documents/Greg/Chiron/output'
-            self.cache_dir = '/home/lee/Documents/Greg/Chiron/output/cache/train.hdf5'
-            self.log_dir = '/home/lee/Documents/Greg/Chiron/output/GVM_model'
-            self.sequence_len = 200
-            self.batch_size = 200
-            self.step_rate = 1e-3
-            self.max_steps = 200
-            self.k_mer = 1
-            # self.model_name = 'lee_res50' # 1.0.1
-            self.model_name = 'lee_res50_1.4.0'
-            self.retrain = False
 
+    parser = argparse.ArgumentParser(description='Training model with tfrecord file', help='Train a model.')
+    parser.add_argument('-i', '--data_dir', default="/home/lee/Documents/Greg/Chiron/output", help="Directory that store the tfrecord files.")
+    parser.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
+    parser.add_argument('-c', '--cache_dir', default="/home/lee/Documents/Greg/Chiron/output/cache/train.hdf5", help="Output folder")
+    parser.add_argument('-o', '--log_dir', default="/home/lee/Documents/Greg/Chiron/output/GVM_model", help="log directory")
+    parser.add_argument('-s', '--sequence_len', type=int, default=200, help='the length of sequence')
+    parser.add_argument('-b', '--batch_size', type=int, default=200, help='Batch size')
+    parser.add_argument('-t', '--step_rate', type=float, default=1e-3, help='Step rate')
+    parser.add_argument('-x', '--max_steps', type=int, default=200, help='Maximum step')
+    parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
+    parser.add_argument('-m', '--model_name', default='lee_res50_1.4.0', help='model_name')
+    parser.add_argument('-r', '--retrain', type=bool, default=False, help='flag if retrain or not')
 
-    flags = Flags()
-    run(flags)
+    args = parser.parse_args(sys.argv[1:])
+    run(args)

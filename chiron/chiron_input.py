@@ -266,7 +266,7 @@ def read_cache_dataset(h5py_file_path):
     return DataSet(event=event, event_length=event_length, label=label, label_length=label_length)
 
 
-def read_tfrecord(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
+def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
     ###Read from raw data
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
@@ -291,7 +291,7 @@ def read_tfrecord(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_re
         count = 0
         file_count = 0
 
-        tfrecords_filename = data_dir + 'train.tfrecords'
+        tfrecords_filename = data_dir + tfrecord
         record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
 
         for string_record in record_iterator:
