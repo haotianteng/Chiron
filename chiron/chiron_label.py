@@ -4,8 +4,6 @@ Spyder Editor
 
 This is a temporary script file.
 """
-from __future__ import absolute_import
-from __future__ import print_function
 import argparse
 import os
 import re
@@ -14,8 +12,7 @@ import sys
 import h5py
 import mappy as mp
 
-from .chiron_input import biglist
-from six.moves import map
+from chiron_input import biglist
 
 
 class alignments:
@@ -71,7 +68,7 @@ class alignments:
                 self.section.append(split_line[9])
 
     def mapping(self, query_path, ref_path):
-        if os.path.isdir(query_path):
+        if os.isdir(query_path):
             file_list = os.listdir(query_path)
         else:
             file_list = [query_path]
@@ -109,12 +106,12 @@ def label():
         for line in ref_h:
             if line.startswith('>'):
                 chrome = line.split()[0][1:]
-                reference[chrome] = next(ref_h)
+                reference[chrome] = ref_h.next()
 
     if FLAGS.alignment is None:
-        align.mapping(FLAGS.reads, FLAGS.reference)
+        alignments.mapping(FLAGS.reads)
     elif FLAGS.fastx is not None:
-        align.read_sam(FLAGS.alignment)
+        alignments.read_sam(FLAGS.alignment)
     else:
         raise ValueError("Either a sam file or a output file need to be givien.")
 
@@ -139,10 +136,10 @@ def label():
                 try:
                     read_index = align.names.index(strand_name)
                 except ValueError:
-                    print(strand_name + " is not find int the alignments.\n")
+                    print strand_name + " is not find int the alignments.\n"
                     continue
                 except:
-                    print("Unexpected error:", sys.exc_info()[0])
+                    print "Unexpected error:", sys.exc_info()[0]
                     continue
                 with open(FLAGS.segments + os.sep + name) as seg_h:
                     for line in seg_h:
@@ -154,8 +151,8 @@ def label():
                                 if key_pair[0] == 'length':
                                     lens.append(int(key_pair[1]))
                                 if key_pair[0] == 'signal':
-                                    signals.append(list(map(float, key_pair[1].split(','))))
-                            segments.append(next(seg_h))
+                                    signals.append(map(float, key_pair[1].split(',')))
+                            segments.append(seg_h.next())
             if read_index is not None:
                 ref = reference[align.section[read_index]][align.r_st[read_index]:align.r_end[read_index]]
                 tmp_event, tmp_event_length, tmp_label, tmp_label_length = get_label(ref, align, signals, lens,

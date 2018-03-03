@@ -53,29 +53,21 @@ def read_data(filename_queue):
     record.key, value = reader.read(filename_queue)
     vec = tf.decode_raw(value, tf.int8)
 
-    record.signal_len = tf.cast(
-        tf.bitcast(tf.strided_slice(vec, [0], [len_bytes]), type=tf.uint16),
-        dtype=tf.int32)
+    record.signal_len = tf.cast(tf.bitcast(tf.strided_slice(vec, [0], [len_bytes]), type=tf.uint16), dtype=tf.int32)
     record.signal_len.set_shape([])
-    signal_vec = tf.reshape(
-        tf.strided_slice(vec, [len_bytes], [len_bytes + signal_bytes]),
-        [SIGNAL_LEN, signal_unit])
+    signal_vec = tf.reshape(tf.strided_slice(vec, [len_bytes], [len_bytes + signal_bytes]), [SIGNAL_LEN, signal_unit])
     record.signal = tf.bitcast(signal_vec, type=tf.float32)
     record.signal.set_shape([SIGNAL_LEN])
     record.label_len = tf.cast(
-        tf.bitcast(tf.strided_slice(vec, [len_bytes + signal_bytes],
-                                    [len_bytes + signal_bytes + len_bytes]),
+        tf.bitcast(tf.strided_slice(vec, [len_bytes + signal_bytes], [len_bytes + signal_bytes + len_bytes]),
                    type=tf.uint16), dtype=tf.int32)
     record.label_len.set_shape([])
-    record.label = tf.cast(
-        tf.strided_slice(vec, [len_bytes + signal_bytes + len_bytes],
-                         [record_len]), dtype=tf.int32)
+    record.label = tf.cast(tf.strided_slice(vec, [len_bytes + signal_bytes + len_bytes], [record_len]), dtype=tf.int32)
     record.label.set_shape([LABEL_LEN])
     return record
 
 
-def _generate_signal_label_batch(signal, label, signal_len, batch_size, shuffle,
-                                 queue_capacity=500000,
+def _generate_signal_label_batch(signal, label, signal_len, batch_size, shuffle, queue_capacity=500000,
                                  min_queue_examples=200000, threads=16):
     """
     Generate a queue of signal-label batch.
@@ -130,9 +122,8 @@ def inputs(data_dir, batch_size, for_valid=False):
     filename_queue = tf.train.string_input_producer(filenames)
     read_input = read_data(filename_queue)
     if for_valid:
-        os.sys.stdout.write(
-            "Filling queue with %d signals before starting to validate. "
-            "This will take some time." % VALID_QUEUE_CAPACITY)
+        os.sys.stdout.write("Filling queue with %d signals before starting to validate. "
+                            "This will take some time." % VALID_QUEUE_CAPACITY)
         return _generate_signal_label_batch(
             read_input.signal,
             read_input.label,
@@ -141,9 +132,8 @@ def inputs(data_dir, batch_size, for_valid=False):
             queue_capacity=VALID_QUEUE_CAPACITY,
             shuffle=False)
     else:
-        os.sys.stdout.write(
-            "Filling queue with %d signals before starting to train. "
-            "This will take some time." % TRAIN_QUEUE_CAPACITY)
+        os.sys.stdout.write("Filling queue with %d signals before starting to train. "
+                            "This will take some time." % TRAIN_QUEUE_CAPACITY)
         return _generate_signal_label_batch(
             read_input.signal,
             read_input.label,
@@ -161,5 +151,4 @@ if __name__ == "__main__":
         q.close().run()
         result = read_data(q)
         key, label, label_len, signal, signal_len = sess.run([
-            result.key, result.label, result.label_len, result.signal,
-            result.signal_len])
+            result.key, result.label, result.label_len, result.signal, result.signal_len])
