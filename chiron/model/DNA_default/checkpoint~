@@ -1,6 +1,0 @@
-model_checkpoint_path: "/shares/coin/haotian.teng/deepBNS/chiron_package/model/crnn3+2_512+HE+L/final.ckpt-100000"
-all_model_checkpoint_paths: "/shares/coin/haotian.teng/deepBNS/chiron_package/model/crnn3+2_512+HE+L/model.ckpt-99961"
-all_model_checkpoint_paths: "/shares/coin/haotian.teng/deepBNS/chiron_package/model/crnn3+2_512+HE+L/model.ckpt-99971"
-all_model_checkpoint_paths: "/shares/coin/haotian.teng/deepBNS/chiron_package/model/crnn3+2_512+HE+L/model.ckpt-99981"
-all_model_checkpoint_paths: "/shares/coin/haotian.teng/deepBNS/chiron_package/model/crnn3+2_512+HE+L/model.ckpt-99991"
-all_model_checkpoint_paths: "/shares/coin/haotian.teng/deepBNS/chiron_package/model/crnn3+2_512+HE+L/final.ckpt-100000"
