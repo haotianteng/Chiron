@@ -17,6 +17,7 @@ import tensorflow as tf
 
 from chiron_input import read_data_for_eval
 from cnn import getcnnfeature
+from cnn import getcnnlogit
 from rnn import rnn_layers
 from utils.easy_assembler import simple_assembly
 from utils.easy_assembler import simple_assembly_qs
@@ -24,14 +25,14 @@ from utils.unix_time import unix_time
 from six.moves import range
 
 
-def inference(x, seq_length, training, rnn_layer_num=3):
+def inference(x, seq_length, training, rnn_layer_num=2):
     """Infer a logits of the input signal batch.
     The inference function is same as the function in chiron_train.py.
     Args:
         x (Float): Tensor of shape [batch_size, max_time], a batch of the input signal with a maximum length `max_time`
         seq_length (Float): Scalar, the maximum length of the sample in the x.
         training (Boolean): Scalar placeholder, True if training.
-        rnn_layer_num[Int]: Default is 3, the number of RNN layers, set to 0 when only CNN is used.
+        rnn_layer_num[Int]: Default is 2, the number of RNN layers, set to 0 when only CNN is used.
 
     Returns:
         logits: Tensor of shape [batch_size, max_time, class_num]
@@ -44,8 +45,8 @@ def inference(x, seq_length, training, rnn_layer_num=3):
     if rnn_layer_num == 0:
         logits = getcnnlogit(cnn_feature)
     else:
-        logits = rnn_layers(cnn_feature, seq_length,
-                            training, layer_num=rnn_layer_num)
+        logits = rnn_layers(cnn_feature, seq_length/ratio,
+                            training, layer_num=rnn_layer_num,cell='BNLSTM')
     return logits, ratio
 
 
@@ -75,7 +76,7 @@ def sparse2dense(predict_val):
         uniq_list.append(unique)
         pos_predict = 0
         predict_read_temp = list()
-        for indx, counts in enumerate(pre_counts):
+        for indx, _ in enumerate(pre_counts):
             predict_read_temp.append(
                 predict_val.values[pos_predict:pos_predict + pre_counts[indx]])
             pos_predict += pre_counts[indx]
@@ -214,7 +215,7 @@ def evaluation():
             tf.transpose(logits, perm=[1, 0, 2]),
             seq_length, merge_repeated=False,
             beam_width=FLAGS.beam)  # There will be a second merge operation after the decoding process
-        # if The merge_repeated for beam search decoder set to True.
+        # if the merge_repeated for beam search decoder set to True.
         # Check this issue https://github.com/tensorflow/tensorflow/issues/9550
     config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
@@ -251,14 +252,11 @@ def evaluation():
             reads_n = eval_data.reads_n
             reading_time = time.time() - start_time
             reads = list()
-            signals = np.empty((0, FLAGS.segment_len), dtype=np.float)
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
             for i in range(0, reads_n, FLAGS.batch_size):
                 batch_x, seq_len, _ = eval_data.next_batch(
                     FLAGS.batch_size, shuffle=False, sig_norm=False)
-                if not FLAGS.concise:
-                    signals += batch_x
                 batch_x = np.pad(
                     batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
                 seq_len = np.pad(
@@ -291,11 +289,6 @@ def evaluation():
                 qs_string = qs(consensus, qs_consensus)
             else:
                 consensus = simple_assembly(bpreads)
-            if signals != eval_data.event:
-                print len(signals)
-                print signals
-                print len(eval_data.event)
-                print eval_data.event
             c_bpread = index2base(np.argmax(consensus, axis=0))
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time

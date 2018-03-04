@@ -10,11 +10,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 import os
 import time
+import argparse
 from distutils.dir_util import copy_tree
 import tensorflow as tf
-from .chiron_queue_input import inputs
-from .cnn import getcnnfeature
-from .cnn import getcnnlogit
+from tensorflow.contrib.training.python.training import hparam
+from chiron_queue_input import inputs
+from cnn import getcnnfeature
+from cnn import getcnnlogit
 from six.moves import range
 
 
@@ -88,23 +90,23 @@ def loss(logits, seq_len, label):
     return loss
 
 
-def train_step(loss, step_rate, global_step=None):
+def train_step(loss, step_rate, global_step=None, opt_name="Adam"):
     """Generate training op
 
     Args:
         loss: Tensor of shape [batch_size].
         step_rate: Scalar tensor or float, the learning rate of the optimizer.
-        global_step: Scalar tensor, the global step recorded.
-
+        global_step: A optional Scalar tensor, the global step recorded, if None no global stop will be recorded.
+        opt_name: An optional string from : "Adam","SGD","RMSProp","Momentum". Defaults to "Adam". Specify the optimizer.
     Returns:
-
+        opt: Optimizing operation.
     """
-    opt = tf.train.AdamOptimizer(step_rate).minimize(loss,
-                                                     global_step=global_step)
-    #    Uncomment to use different optimizer
-    #    opt = tf.train.GradientDescentOptimizer(FLAGS.step_rate).minimize(loss)
-    #    opt = tf.train.RMSPropOptimizer(FLAGS.step_rate).minimize(loss)
-    #    opt = tf.train.MomentumOptimizer(FLAGS.step_rate,0.9).minimize(loss)
+    optimizers = {"Adam": tf.train.AdamOptimizer,
+                  "SGD": tf.train.GradientDescentOptimizer,
+                  "RMSProp": tf.train.RMSPropOptimizer,
+                  "Momentum": tf.train.MomentumOptimizer}
+    opt = optimizers[opt_name](step_rate).minimize(
+        loss, global_step=global_step)
     return opt
 
 
@@ -141,7 +143,16 @@ def train(hparam):
 
     Args:
         hparam: hyper parameter for training the neural network
-            TODO: Need a more detailed explanation here.
+            data-dir: String, the path of the data(binary batch files) directory.
+            log-dir: String, the path to save the trained model.
+            sequence-len: Int, length of input signal.
+            batch-size: Int.
+            step-rate: Float, step rate of the optimizer.
+            max-steps: Int, max training steps.
+            kmer: Int, size of the dna kmer.
+            model-name: String, model will be saved at log-dir/model-name.
+            retrain: Boolean, if True, the model will be reload from log-dir/model-name.
+
     """
     training = tf.placeholder(tf.bool)
     global_step = tf.get_variable('global_step', trainable=False, shape=(),
@@ -203,19 +214,59 @@ def run(hparam):
 
 
 if __name__ == "__main__":
-    class Flags():
-        def __init__(self):
-            # todo: remove hard-coded file paths
-            self.data_dir = '/media/Linux_ex/Nanopore_Data/Lambda_R9.4/file_batch/'
-            self.log_dir = '/media/Linux_ex/GVM_model/'
-            self.sequence_len = 512
-            self.batch_size = 100
-            self.step_rate = 1e-3
-            self.max_steps = 40000
-            self.kmer = 1
-            self.model_name = 'queue_res1+wavenet1x7_1x2filter'
-            self.retrain = False
+   parser = argparse.ArgumentParser()
 
-
-    flags = Flags()
-    run(flags)
+   parser.add_argument(
+           '--data-dir',
+           help='Location containing binary training data',
+           required=True
+           )
+   
+   parser.add_argument(
+           '--log-dir',
+           help='Log dir location',
+           required=True
+           )
+   parser.add_argument(
+           '--model-name',
+           help='Model name',
+           required=True
+           )
+   parser.add_argument(
+           '--sequence-len',
+           help='Sequence length of nucleotides',
+           default=512,
+           type=int
+           )
+   parser.add_argument(
+           '--batch-size',
+           help='Training batch size',
+           default=400,
+           type=int
+           )
+   parser.add_argument(
+           '--step-rate',
+           help='Step rate',
+           default=1e-3,
+           type=float
+           )
+   parser.add_argument(
+           '--max-steps',
+           help='Max training steps',
+           default=20000,
+           type=int
+           )
+   parser.add_argument(
+           '--kmer',
+           help='K-mer length',
+           default=1,
+           type=int
+           )
+   parser.add_argument(
+           '--retrain',
+           help='Retrain the model',
+           default=False,
+           type=bool
+           )
+   args = parser.parse_args()
+   run(hparam.HParams(**args.__dict__)) 

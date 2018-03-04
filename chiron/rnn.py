@@ -8,10 +8,9 @@ Created on Fri Apr 21 03:46:35 2017
 
 import numpy as np
 import tensorflow as tf
-# from tensorflow.contrib.rnn.python.ops.core_rnn_cell import LSTMCell
 from tensorflow.contrib.rnn import LSTMCell
+from tensorflow.contrib.rnn import GRUCell
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
-
 from utils.lstm import BNLSTMCell
 
 
@@ -43,15 +42,15 @@ def rnn_layers(x, seq_length, training, hidden_num=100, layer_num=3, class_n=5, 
             cell_fw = GRUCell(hidden_num)
             cell_bw = GRUCell(hidden_num)
         elif cell == 'BNLSTM':
-            cell_fw = BNLSTMCell(hidden_num)
-            cell_bw = BNLSTMCell(hidden_num)
+            cell_fw = BNLSTMCell(hidden_num,training = training)
+            cell_bw = BNLSTMCell(hidden_num,training = training)
         else:
             raise ValueError("Cell type unrecognized.")
         cells_fw.append(cell_fw)
         cells_bw.append(cell_bw)
     multi_cells_fw = tf.nn.rnn_cell.MultiRNNCell(cells_fw)
     multi_cells_bw = tf.nn.rnn_cell.MultiRNNCell(cells_bw)
-    with tf.variable_scope('BDLSTM_rnn') as scope:
+    with tf.variable_scope('BDGRU_rnn') as scope:
         outputs, _ = tf.nn.bidirectional_dynamic_rnn(
             cell_fw=multi_cells_fw, cell_bw=multi_cells_bw, inputs=x, sequence_length=seq_length, dtype=tf.float32, scope=scope)
         lasth = tf.concat(outputs, 2, name='birnn_output_concat')
