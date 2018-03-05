@@ -1,10 +1,11 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Mar 27 14:04:57 2017
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Mon Mar 27 14:04:57 2017
 
-@author: haotian.teng
-"""
 from __future__ import absolute_import
 import collections
 import os
@@ -16,6 +17,7 @@ import numpy as np
 from statsmodels import robust
 from six.moves import range
 from six.moves import zip
+import tensorflow as tf
 
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 
@@ -35,7 +37,11 @@ class biglist(object):
     biglist class, read into memory if reads number < MAXLEN, otherwise read into a hdf5 file.
     """
 
-    def __init__(self, data_handle, dtype='float32', length=0, cache=False,
+    def __init__(self, 
+                 data_handle, 
+				 dtype='float32', 
+				 length=0, 
+				 cache=False,
                  max_len=1e5):
         self.handle = data_handle
         self.dtype = dtype
@@ -173,8 +179,7 @@ class DataSet(object):
                                     [self._event_length[i] for i in index])))
         if not self.for_eval:
             label = np.asarray(list(zip([self._label[i] for i in index],
-                                        [self._label_length[i] for i in
-                                         index])))
+                                        [self._label_length[i] for i in index])))
         else:
             label = []
         return event, label
@@ -217,10 +222,8 @@ class DataSet(object):
                 event_batch = event_rest_part
                 label_batch = label_rest_part
             else:
-                event_batch = np.concatenate((event_rest_part, event_new_part),
-                                             axis=0)
-                label_batch = np.concatenate((label_rest_part, label_new_part),
-                                             axis=0)
+                event_batch = np.concatenate((event_rest_part, event_new_part), axis=0)
+                label_batch = np.concatenate((label_rest_part, label_new_part), axis=0)
         else:
             self._index_in_epoch += batch_size
             end = self._index_in_epoch
@@ -233,8 +236,11 @@ class DataSet(object):
             np.float32), seq_length, label_batch
 
 
-def read_data_for_eval(file_path, start_index=0, step=20, seg_length=200,
-                       sig_norm='median'):
+def read_data_for_eval(file_path, 
+					   start_index=0,
+                       step=20, 
+	                   seg_length=200, 
+                       sig_norm=True):
     """
     Input Args:
         file_path: file path to a signal file.
@@ -256,8 +262,11 @@ def read_data_for_eval(file_path, start_index=0, step=20, seg_length=200,
             padding(segment_sig, seg_length)
             event.append(segment_sig)
             event_len.append(segment_len)
-        evaluation = DataSet(event=event, event_length=event_len, label=label,
-                             label_length=label_len, for_eval=True)
+        evaluation = DataSet(event=event, 
+							 event_length=event_len, 
+							 label=label,
+                             label_length=label_len, 
+							 for_eval=True)
     return evaluation
 
 
@@ -284,8 +293,7 @@ def read_cache_dataset(h5py_file_path):
                    label_length=label_length)
 
 
-def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1,
-                       max_reads_num=FLAGS.max_reads_number):
+def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
     ###Read from raw data
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
@@ -297,12 +305,98 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1,
         if not os.path.isdir(os.path.dirname(os.path.abspath(h5py_file_path))):
             os.mkdir(os.path.dirname(os.path.abspath(h5py_file_path)))
     with h5py.File(h5py_file_path, "a") as hdf5_record:
-        event_h = hdf5_record.create_dataset('event/record', dtype='float32',
-                                             shape=(0, seq_length),
+        event_h = hdf5_record.create_dataset('event/record', dtype='float32', shape=(0, seq_length),
                                              maxshape=(None, seq_length))
-        event_length_h = hdf5_record.create_dataset('event/length',
-                                                    dtype='int32', shape=(0,),
-                                                    maxshape=(None,),
+        event_length_h = hdf5_record.create_dataset('event/length', dtype='int32', shape=(0,), maxshape=(None,),
+                                                    chunks=True)
+        label_h = hdf5_record.create_dataset('label/record', dtype='int32', shape=(0, 0), maxshape=(None, seq_length))
+        label_length_h = hdf5_record.create_dataset('label/length', dtype='int32', shape=(0,), maxshape=(None,))
+        event = biglist(data_handle=event_h, max_len=FLAGS.MAXLEN)
+        event_length = biglist(data_handle=event_length_h, max_len=FLAGS.MAXLEN)
+        label = biglist(data_handle=label_h, max_len=FLAGS.MAXLEN)
+        label_length = biglist(data_handle=label_length_h, max_len=FLAGS.MAXLEN)
+        count = 0
+        file_count = 0
+
+        tfrecords_filename = data_dir + tfrecord
+        record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
+
+        for string_record in record_iterator:
+            
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            
+            raw_data_string = (example.features.feature['raw_data']
+                                          .bytes_list
+                                          .value[0])
+            
+            features_string = (example.features.feature['features']
+                                        .bytes_list
+                                        .value[0])
+            
+            raw_data = np.fromstring(raw_data_string, dtype=np.int16)
+            
+            features_data = np.fromstring(features_string, dtype='S5')
+
+            # grouping the whole array into sub-array with size = 3
+            group_size = 3
+            features_data = [features_data[n:n+group_size] for n in range(0, len(features_data), group_size)]
+
+            f_signal = read_signal_tfrecord(raw_data)
+
+            if len(f_signal) == 0:
+                continue
+            try:
+                f_label = read_label_tfrecord(features_data, skip_start=10, window_n=(k_mer - 1) / 2)
+            except:
+                sys.stdout.write("Read the label fail.Skipped.")
+                continue
+
+            tmp_event, tmp_event_length, tmp_label, tmp_label_length = read_raw(f_signal, f_label, seq_length)
+            event += tmp_event
+            event_length += tmp_event_length
+            label += tmp_label
+            label_length += tmp_label_length
+            del tmp_event
+            del tmp_event_length
+            del tmp_label
+            del tmp_label_length
+            count = len(event)
+            if file_count % 10 == 0:
+                if FLAGS.max_reads_number is not None:
+                    sys.stdout.write("%d/%d events read.   \n" % (count, FLAGS.max_reads_number))
+                    if len(event) > FLAGS.max_reads_number:
+                        event.resize(FLAGS.max_reads_number)
+                        label.resize(FLAGS.max_reads_number)
+                        event_length.resize(FLAGS.max_reads_number)
+                        label_length.resize(FLAGS.max_reads_number)
+                        break
+                else:
+                    sys.stdout.write("%d lines read.   \n" % (count))
+            file_count += 1
+
+        if event.cache:
+            train = read_cache_dataset(h5py_file_path)
+        else:
+            train = DataSet(event=event, event_length=event_length, label=label, label_length=label_length)
+        return train
+            
+
+def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
+    ###Read from raw data
+    if h5py_file_path is None:
+        h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
+    else:
+        try:
+            os.remove(os.path.abspath(h5py_file_path))
+        except:
+            pass
+        if not os.path.isdir(os.path.dirname(os.path.abspath(h5py_file_path))):
+            os.mkdir(os.path.dirname(os.path.abspath(h5py_file_path)))
+    with h5py.File(h5py_file_path, "a") as hdf5_record:
+        event_h = hdf5_record.create_dataset('event/record', dtype='float32', shape=(0, seq_length),
+                                             maxshape=(None, seq_length))
+        event_length_h = hdf5_record.create_dataset('event/length', dtype='int32', shape=(0,), maxshape=(None,),
                                                     chunks=True)
         label_h = hdf5_record.create_dataset('label/record', dtype='int32',
                                              shape=(0, 0),
@@ -353,7 +447,7 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1,
                             label_length.resize(FLAGS.max_reads_number)
                             break
                     else:
-                        sys.stdout.write("%d lines read.   \n" % count)
+                        sys.stdout.write("%d lines read.   \n" % (count))
                 file_count += 1
     if event.cache:
         train = read_cache_dataset(h5py_file_path)
@@ -369,6 +463,17 @@ def read_signal(file_path, normalize="median"):
     for line in f_h:
         signal += [float(x) for x in line.split()]
     signal = np.asarray(signal)
+    if len(signal) == 0:
+        return signal.tolist()
+    if normalize == "mean":
+        signal = (signal - np.mean(signal)) / np.float(np.std(signal))
+    elif normalize == "median":
+        signal = (signal - np.median(signal)) / np.float(robust.mad(signal))
+    return signal.tolist()
+
+def read_signal_tfrecord(data_array, normalize="median"):
+
+    signal = data_array
     if len(signal) == 0:
         return signal.tolist()
     if normalize == "mean":
@@ -397,6 +502,29 @@ def read_label(file_path, skip_start=10, window_n=0):
             continue
         start.append(int(record[0]))
         length.append(int(record[1]) - int(record[0]))
+        k_mer = 0
+        for i in range(window_n * 2 + 1):
+            k_mer = k_mer * 4 + all_base[count + i - window_n]
+        base.append(k_mer)
+    return raw_labels(start=start, length=length, base=base)
+
+
+def read_label_tfrecord(raw_label_array, skip_start=10, window_n=0):
+    start = list()
+    length = list()
+    base = list()
+    all_base = list()
+    count = 0
+    if skip_start < window_n:
+        skip_start = window_n
+    for line in raw_label_array:
+        all_base.append(base2ind(line[2]))
+    file_len = len(all_base)
+    for count, line in enumerate(raw_label_array):
+        if count < skip_start or count > (file_len - skip_start - 1):
+            continue
+        start.append(int(line[0]))
+        length.append(int(line[1]) - int(line[0]))
         k_mer = 0
         for i in range(window_n * 2 + 1):
             k_mer = k_mer * 4 + all_base[count + i - window_n]

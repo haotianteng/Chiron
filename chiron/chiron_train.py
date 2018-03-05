@@ -1,10 +1,10 @@
-# !/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 17 17:32:32 2017
-
-@author: haotianteng
-"""
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Mon Apr 17 17:32:32 2017
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -17,6 +17,7 @@ from tensorflow.contrib.training.python.training import hparam
 from chiron_queue_input import inputs
 from cnn import getcnnfeature
 from cnn import getcnnlogit
+from rnn import rnn_layers
 from six.moves import range
 
 
@@ -33,23 +34,28 @@ def save_model(log_dir, model_name):
               log_dir + model_name + '/model')
 
 
-def inference(x, seq_len, training):
+def inference(x,sequence_len,training,full_sequence_len,rnn_layer_num = 3):
     """Infer a logits of the input signal batch.
 
     Args:
         x: Tensor of shape [batch_size, max_time], a batch of the input signal with a maximum length `max_time`.
-        seq_len: Scalar float, the maximum length of the sample in the batch.
+        sequence_len: Tensor of shape [batch_size], given the real lenghs of the segments.
         training: Placeholder of Boolean, Ture if the inference is during training.
+        full_sequence_len: Scalar float, the maximum length of the sample in the batch.
+        rnn_layer_num:Scalar Int, default is 3, the number of layer of RNN in the network.
 
     Returns:
         logits: Tensor of shape [batch_size, max_time, class_num]
         ratio: Scalar float, the scale factor between the output logits and the input maximum length.
     """
-    cnn_feature = getcnnfeature(x, training=training)
+    cnn_feature = getcnnfeature(x,training = training)
     feashape = cnn_feature.get_shape().as_list()
-    ratio = seq_len / feashape[1]
-    logits = getcnnlogit(cnn_feature)
-    return logits, ratio
+    ratio = full_sequence_len/feashape[1]
+    if rnn_layer_num == 0:
+        logits = getcnnlogit(cnn_feature)
+    else:
+        logits = rnn_layers(cnn_feature,sequence_len,training,layer_num = rnn_layer_num)
+    return logits,ratio
 
 
 def dense2sparse(label):
@@ -163,7 +169,7 @@ def train(hparam):
                                          for_valid=False)
     y = dense2sparse(train_labels)
 
-    logits, ratio = inference(x, hparam.sequence_len, training)
+    logits, ratio = inference(x,seq_length,training,hparam.sequence_len)
     ctc_loss = loss(logits, seq_length, y)
     opt = train_step(ctc_loss, hparam.step_rate, global_step=global_step)
     error = prediction(logits, seq_length, y)
@@ -182,7 +188,6 @@ def train(hparam):
         print("Model loaded finished, begin training. \n")
     summary_writer = tf.summary.FileWriter(
         hparam.log_dir + hparam.model_name + '/summary/', sess.graph)
-
     _ = tf.train.start_queue_runners(sess=sess)
 
     start = time.time()
@@ -217,56 +222,56 @@ if __name__ == "__main__":
    parser = argparse.ArgumentParser()
 
    parser.add_argument(
+           '-i',
            '--data-dir',
            help='Location containing binary training data',
-           required=True
-           )
+           required=True)
    
    parser.add_argument(
+           '-o',
            '--log-dir',
            help='Log dir location',
-           required=True
-           )
+           required=True)
    parser.add_argument(
+           '-m',
            '--model-name',
            help='Model name',
-           required=True
-           )
+           required=True)
    parser.add_argument(
+           '-s',
            '--sequence-len',
            help='Sequence length of nucleotides',
            default=512,
-           type=int
-           )
+           type=int)
    parser.add_argument(
+           '-b',
            '--batch-size',
            help='Training batch size',
            default=400,
-           type=int
-           )
+           type=int)
    parser.add_argument(
+           '-t',
            '--step-rate',
            help='Step rate',
            default=1e-3,
-           type=float
-           )
+           type=float)
    parser.add_argument(
+           '-x',
            '--max-steps',
            help='Max training steps',
            default=20000,
-           type=int
-           )
+           type=int)
    parser.add_argument(
+           '-k'
            '--kmer',
            help='K-mer length',
            default=1,
-           type=int
-           )
+           type=int)
    parser.add_argument(
+           '-r',
            '--retrain',
-           help='Retrain the model',
+           help='Flag if retrain the model',
            default=False,
-           type=bool
-           )
+           type=bool)
    args = parser.parse_args()
    run(hparam.HParams(**args.__dict__)) 
