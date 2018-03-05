@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Modified by Lee Yam Keng on Sat Feb 24 2018
+@author: haotianteng, Lee Yam Keng
+"""
+
 import h5py
 import numpy as np
 
