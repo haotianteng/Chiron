@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Modified by Lee Yam Keng on Sat Feb 24 2018
-@author: haotianteng, Lee Yam Keng
-"""
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import h5py
 import numpy as np

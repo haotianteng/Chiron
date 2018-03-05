@@ -1,0 +1,2 @@
+model_checkpoint_path: "final.ckpt-100000"
+

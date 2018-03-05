@@ -1,10 +1,11 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 10 04:16:40 2017
-Modified by Lee Yam Keng on Sat Feb 28 2018
-@author: haotianteng, Lee Yam Keng
-"""
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Mon Apr 10 04:16:40 2017
+
 import argparse
 import os
 import sys

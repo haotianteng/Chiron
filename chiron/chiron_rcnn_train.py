@@ -1,10 +1,12 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 17 17:32:32 2017
-Modified by Lee Yam Keng on Sat Feb 28 2018
-@author: haotianteng, Lee Yam Keng
-"""
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Mon Mar 27 14:04:57 2017
 # This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
 import argparse
@@ -15,7 +17,8 @@ from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 
-from chiron_input import read_raw_data_sets, read_tfrecord
+from chiron_input import read_raw_data_sets
+from chiron_input import read_tfrecord
 from cnn import getcnnfeature
 from cnn import getcnnlogit
 
@@ -130,23 +133,24 @@ def run(args):
     FLAGS = args
     FLAGS.data_dir = FLAGS.data_dir + os.path.sep
     FLAGS.log_dir = FLAGS.log_dir + os.path.sep
-    train()
+    train()required=True
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Training model with tfrecord file', help='Train a model.')
-    parser.add_argument('-i', '--data_dir', default="/home/lee/Documents/Greg/Chiron/output", help="Directory that store the tfrecord files.")
+    parser = argparse.ArgumentParser(description='Training model with tfrecord file')
+    parser.add_argument('-i', '--data_dir', required=True, help="Directory that store the tfrecord files.")
+    parser.add_argument('-o', '--log_dir', required=True, help="log directory that store the training model.")
+    parser.add_argument('-m', '--model_name', required=True, help='model_name')
     parser.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
-    parser.add_argument('-c', '--cache_dir', default="/home/lee/Documents/Greg/Chiron/output/cache/train.hdf5", help="Output folder")
-    parser.add_argument('-o', '--log_dir', default="/home/lee/Documents/Greg/Chiron/output/GVM_model", help="log directory")
-    parser.add_argument('-s', '--sequence_len', type=int, default=200, help='the length of sequence')
+    parser.add_argument('-c', '--cache_dir', default=None, help="Output folder")
+    parser.add_argument('-s', '--sequence_len', type=int, default=400, help='the length of sequence')
     parser.add_argument('-b', '--batch_size', type=int, default=200, help='Batch size')
     parser.add_argument('-t', '--step_rate', type=float, default=1e-3, help='Step rate')
-    parser.add_argument('-x', '--max_steps', type=int, default=200, help='Maximum step')
+    parser.add_argument('-x', '--max_steps', type=int, default=1000, help='Maximum step')
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
-    parser.add_argument('-m', '--model_name', default='lee_res50_1.4.0', help='model_name')
     parser.add_argument('-r', '--retrain', type=bool, default=False, help='flag if retrain or not')
-
     args = parser.parse_args(sys.argv[1:])
+    if args.cache_dir is None:
+        args.cache_dir = args.data_dir + '/cache.hdf5'
     run(args)

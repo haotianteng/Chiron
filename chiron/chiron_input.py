@@ -38,7 +38,7 @@ class biglist(object):
     """
 
     def __init__(self, 
-				 data_handle, 
+                 data_handle, 
 				 dtype='float32', 
 				 length=0, 
 				 cache=False,
@@ -369,7 +369,6 @@ def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer
                         event.resize(FLAGS.max_reads_number)
                         label.resize(FLAGS.max_reads_number)
                         event_length.resize(FLAGS.max_reads_number)
-
                         label_length.resize(FLAGS.max_reads_number)
                         break
                 else:

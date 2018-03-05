@@ -1,2 +1,0 @@
-model_checkpoint_path: "/home/lee/Documents/Greg/Chiron/output/GVM_model/lee_res50_1.4.0/model.ckpt-1"
-all_model_checkpoint_paths: "/home/lee/Documents/Greg/Chiron/output/GVM_model/lee_res50_1.4.0/model.ckpt-1"

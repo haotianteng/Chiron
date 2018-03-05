@@ -1,10 +1,10 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jun 10 03:44:44 2017
-
-@author: haotianteng
-"""
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Sat Jun 10 03:44:44 2017
 
 from resource import getrusage as resource_usage, RUSAGE_SELF
 from time import time as timestamp
