@@ -6,11 +6,12 @@
 #
 #Created on Mon Apr 10 04:16:40 2017
 
+from __future__ import absolute_import
 import argparse
 import os
 import sys
 
-import labelop
+from chiron.utils import labelop
 import tensorflow as tf
 import numpy as np
 
