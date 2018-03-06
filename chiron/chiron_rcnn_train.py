@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 # Copyright 2017 The Chiron Authors. All Rights Reserved.
 #
-#This Source Code Form is subject to the terms of the Mozilla Public
-#License, v. 2.0. If a copy of the MPL was not distributed with this
-#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-#Created on Mon Mar 27 14:04:57 2017
+# Created on Mon Mar 27 14:04:57 2017
 # This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
+from __future__ import absolute_import
+from __future__ import print_function
 import argparse
 import sys
 import os
@@ -17,14 +19,16 @@ from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 
-from chiron_input import read_raw_data_sets
-from chiron_input import read_tfrecord
-from cnn import getcnnfeature
-from cnn import getcnnlogit
+from .chiron_input import read_raw_data_sets
+from .chiron_input import read_tfrecord
+from .cnn import getcnnfeature
+from .cnn import getcnnlogit
+from six.moves import range
 
 
 def save_model():
-    copy_tree(os.path.dirname(os.path.abspath(__file__)), FLAGS.log_dir + FLAGS.model_name + '/model')
+    copy_tree(os.path.dirname(os.path.abspath(__file__)),
+              FLAGS.log_dir + FLAGS.model_name + '/model')
 
 
 def inference(x, seq_length, training):
@@ -38,14 +42,17 @@ def inference(x, seq_length, training):
 
 
 def loss(logits, seq_len, label):
-    loss = tf.reduce_mean(tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True, time_major=False))
+    loss = tf.reduce_mean(
+        tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
+                       time_major=False))
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
     tf.summary.scalar('loss', loss)
     return loss
 
 
 def train_step(loss, step_rate, global_step=None):
-    opt = tf.train.AdamOptimizer(step_rate).minimize(loss, global_step=global_step)
+    opt = tf.train.AdamOptimizer(step_rate).minimize(loss,
+                                                     global_step=global_step)
     return opt
 
 
@@ -58,7 +65,9 @@ def prediction(logits, seq_length, label, top_paths=1):
         top_paths:The number of top score path to choice from the decorder.
     """
     logits = tf.transpose(logits, perm=[1, 0, 2])
-    predict = tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False, top_paths=top_paths)[0]
+    predict = \
+    tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False,
+                                  top_paths=top_paths)[0]
     edit_d = list()
     for i in range(top_paths):
         tmp_d = tf.edit_distance(tf.to_int32(predict[i]), label, normalize=True)
@@ -72,7 +81,8 @@ def prediction(logits, seq_length, label, top_paths=1):
 
 def train():
     training = tf.placeholder(tf.bool)
-    global_step = tf.get_variable('global_step', trainable=False, shape=(), dtype=tf.int32,
+    global_step = tf.get_variable('global_step', trainable=False, shape=(),
+                                  dtype=tf.int32,
                                   initializer=tf.zeros_initializer())
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.sequence_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
@@ -94,38 +104,47 @@ def train():
         sess.run(init)
         print("Model init finished, begin loading data. \n")
     else:
-        saver.restore(sess, tf.train.latest_checkpoint(FLAGS.log_dir + FLAGS.model_name))
+        saver.restore(sess, tf.train.latest_checkpoint(
+            FLAGS.log_dir + FLAGS.model_name))
         print("Model loaded finished, begin loading data. \n")
-    summary_writer = tf.summary.FileWriter(FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
+    summary_writer = tf.summary.FileWriter(
+        FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
-    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir,
+                             FLAGS.sequence_len, k_mer=FLAGS.k_mer)
 
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
         indxs, values, shape = batch_y
-        feed_dict = {x: batch_x, seq_length: seq_len / ratio, y_indexs: indxs, y_values: values, y_shape: shape,
+        feed_dict = {x: batch_x, seq_length: seq_len / ratio, y_indexs: indxs,
+                     y_values: values, y_shape: shape,
                      training: True}
         loss_val, _ = sess.run([ctc_loss, opt], feed_dict=feed_dict)
         if i % 10 == 0:
             global_step_val = tf.train.global_step(sess, global_step)
             valid_x, valid_len, valid_y = train_ds.next_batch(FLAGS.batch_size)
             indxs, values, shape = valid_y
-            feed_dict = {x: valid_x, seq_length: valid_len / ratio, y_indexs: indxs, y_values: values, y_shape: shape,
+            feed_dict = {x: valid_x, seq_length: valid_len / ratio,
+                         y_indexs: indxs, y_values: values, y_shape: shape,
                          training: True}
             error_val = sess.run(error, feed_dict=feed_dict)
             end = time.time()
-            print "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f" \
-                  % (i, FLAGS.max_steps, train_ds.epochs_completed, train_ds.index_in_epoch, loss_val, error_val,
-                     (end - start) / (i + 1))
-            saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt', global_step=global_step_val)
+            print(
+            "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f" \
+            % (i, FLAGS.max_steps, train_ds.epochs_completed,
+               train_ds.index_in_epoch, loss_val, error_val,
+               (end - start) / (i + 1)))
+            saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt',
+                       global_step=global_step_val)
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step_val)
             summary_writer.flush()
     global_step_val = tf.train.global_step(sess, global_step)
-    print "Model %s saved." % (FLAGS.log_dir + FLAGS.model_name)
-    print "Reads number %d" % (train_ds.reads_n)
-    saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt', global_step=global_step_val)
+    print("Model %s saved." % (FLAGS.log_dir + FLAGS.model_name))
+    print("Reads number %d" % (train_ds.reads_n))
+    saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt',
+               global_step=global_step_val)
 
 
 def run(args):
@@ -133,23 +152,33 @@ def run(args):
     FLAGS = args
     FLAGS.data_dir = FLAGS.data_dir + os.path.sep
     FLAGS.log_dir = FLAGS.log_dir + os.path.sep
-    train()required=True
+    train()
+    required = True
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Training model with tfrecord file')
-    parser.add_argument('-i', '--data_dir', required=True, help="Directory that store the tfrecord files.")
-    parser.add_argument('-o', '--log_dir', required=True, help="log directory that store the training model.")
+    parser = argparse.ArgumentParser(
+        description='Training model with tfrecord file')
+    parser.add_argument('-i', '--data_dir', required=True,
+                        help="Directory that store the tfrecord files.")
+    parser.add_argument('-o', '--log_dir', required=True,
+                        help="log directory that store the training model.")
     parser.add_argument('-m', '--model_name', required=True, help='model_name')
-    parser.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
+    parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
+                        help='tfrecord file')
     parser.add_argument('-c', '--cache_dir', default=None, help="Output folder")
-    parser.add_argument('-s', '--sequence_len', type=int, default=400, help='the length of sequence')
-    parser.add_argument('-b', '--batch_size', type=int, default=200, help='Batch size')
-    parser.add_argument('-t', '--step_rate', type=float, default=1e-3, help='Step rate')
-    parser.add_argument('-x', '--max_steps', type=int, default=1000, help='Maximum step')
+    parser.add_argument('-s', '--sequence_len', type=int, default=400,
+                        help='the length of sequence')
+    parser.add_argument('-b', '--batch_size', type=int, default=200,
+                        help='Batch size')
+    parser.add_argument('-t', '--step_rate', type=float, default=1e-3,
+                        help='Step rate')
+    parser.add_argument('-x', '--max_steps', type=int, default=1000,
+                        help='Maximum step')
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
-    parser.add_argument('-r', '--retrain', type=bool, default=False, help='flag if retrain or not')
+    parser.add_argument('-r', '--retrain', type=bool, default=False,
+                        help='flag if retrain or not')
     args = parser.parse_args(sys.argv[1:])
     if args.cache_dir is None:
         args.cache_dir = args.data_dir + '/cache.hdf5'
