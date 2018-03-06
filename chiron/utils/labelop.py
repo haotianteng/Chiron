@@ -1,41 +1,44 @@
 # Copyright 2017 The Chiron Authors. All Rights Reserved.
 #
-#This Source Code Form is subject to the terms of the Mozilla Public
-#License, v. 2.0. If a copy of the MPL was not distributed with this
-#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import absolute_import
+from __future__ import print_function
 import h5py
 import numpy as np
+from six.moves import zip
 
 
 def get_label_segment(fast5_fn, basecall_group, basecall_subgroup):
     try:
         fast5_data = h5py.File(fast5_fn, 'r')
     except IOError:
-        raise IOError, 'Error opening file. Likely a corrupted file.'
+        raise IOError('Error opening file. Likely a corrupted file.')
 
     # Get samping rate
     try:
         fast5_info = fast5_data['UniqueGlobalKey/channel_id'].attrs
         sampling_rate = fast5_info['sampling_rate'].astype('int_')
     except:
-        raise RuntimeError, ('Could not get channel info')
+        raise RuntimeError(('Could not get channel info'))
 
     # Read raw data
     try:
-        raw_dat = fast5_data['/Raw/Reads/'].values()[0]
+        raw_dat = list(fast5_data['/Raw/Reads/'].values())[0]
         raw_attrs = raw_dat.attrs
     except:
-        raise RuntimeError, (
-                'Raw data is not stored in Raw/Reads/Read_[read#] so ' +
-                'new segments cannot be identified.')
+        raise RuntimeError(
+            'Raw data is not stored in Raw/Reads/Read_[read#] so ' +
+            'new segments cannot be identified.')
     raw_start_time = raw_attrs['start_time']
 
     # Read segmented data
     try:
         segment_dat = fast5_data[
             '/Analyses/' + basecall_group + '/' + basecall_subgroup + '/Events']
-        segment_attrs = dict(segment_dat.attrs.items())
+        segment_attrs = dict(list(segment_dat.attrs.items()))
         segment_dat = segment_dat.value
 
         total = len(segment_dat)
@@ -53,24 +56,27 @@ def get_label_segment(fast5_fn, basecall_group, basecall_subgroup):
         segment_clength = np.zeros(segment_starts.shape)
 
         segment_data = np.array(
-            zip(segment_means, segment_stdv, segment_starts, segment_lengths, segment_kmer, segment_move,
-                segment_cstart, segment_clength),
-            dtype=[('mean', 'float64'), ('stdv', 'float64'), ('start', '<u4'), ('length', '<u4'), ('kmer', 'S5'),
+            list(zip(segment_means, segment_stdv, segment_starts,
+                     segment_lengths, segment_kmer, segment_move,
+                     segment_cstart, segment_clength)),
+            dtype=[('mean', 'float64'), ('stdv', 'float64'), ('start', '<u4'),
+                   ('length', '<u4'), ('kmer', 'S5'),
                    ('move', '<u4'), ('cstart', '<u4'), ('clength', '<u4')])
 
     except:
-        raise RuntimeError, (
-                'No events or corrupted events in file. Likely a ' +
-                'segmentation error or mis-specified basecall-' +
-                'subgroups (--2d?).')
+        raise RuntimeError(
+            'No events or corrupted events in file. Likely a ' +
+            'segmentation error or mis-specified basecall-' +
+            'subgroups (--2d?).')
     try:
         # Read corrected data
-        corr_dat = fast5_data['/Analyses/RawGenomeCorrected_000/' + basecall_subgroup + '/Events']
-        corr_attrs = dict(corr_dat.attrs.items())
+        corr_dat = fast5_data[
+            '/Analyses/RawGenomeCorrected_000/' + basecall_subgroup + '/Events']
+        corr_attrs = dict(list(corr_dat.attrs.items()))
         corr_dat = corr_dat.value
     except:
-        raise RuntimeError, (
-            'Corrected data now found.')
+        raise RuntimeError((
+            'Corrected data now found.'))
 
     corr_start_time = corr_attrs['read_start_rel_to_raw']
     corr_starts = corr_dat['start'] + corr_start_time
@@ -129,26 +135,27 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup):
     try:
         fast5_data = h5py.File(fast5_fn, 'r')
     except IOError:
-        raise IOError, 'Error opening file. Likely a corrupted file.'
+        raise IOError('Error opening file. Likely a corrupted file.')
 
     # Get raw data
     try:
-        raw_dat = fast5_data['/Raw/Reads/'].values()[0]
+        raw_dat = list(fast5_data['/Raw/Reads/'].values())[0]
         # raw_attrs = raw_dat.attrs
         raw_dat = raw_dat['Signal'].value
     except:
-        raise RuntimeError, (
-                'Raw data is not stored in Raw/Reads/Read_[read#] so ' +
-                'new segments cannot be identified.')
+        raise RuntimeError(
+            'Raw data is not stored in Raw/Reads/Read_[read#] so ' +
+            'new segments cannot be identified.')
 
     # Read corrected data
     try:
-        corr_data = fast5_data['/Analyses/RawGenomeCorrected_000/' + basecall_subgroup + '/Events']
-        corr_attrs = dict(corr_data.attrs.items())
+        corr_data = fast5_data[
+            '/Analyses/RawGenomeCorrected_000/' + basecall_subgroup + '/Events']
+        corr_attrs = dict(list(corr_data.attrs.items()))
         corr_data = corr_data.value
     except:
-        raise RuntimeError, (
-            'Corrected data not found.')
+        raise RuntimeError((
+            'Corrected data not found.'))
 
     fast5_info = fast5_data['UniqueGlobalKey/channel_id'].attrs
     # sampling_rate = fast5_info['sampling_rate'].astype('int_')
@@ -158,8 +165,8 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup):
 
     if any(len(vals) <= 1 for vals in (
             corr_data, raw_dat)):
-        raise NotImplementedError, (
-            'One or no segments or signal present in read.')
+        raise NotImplementedError((
+            'One or no segments or signal present in read.'))
 
     event_starts = corr_data['start'] + corr_start_rel_to_raw
     event_lengths = corr_data['length']
@@ -167,7 +174,7 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup):
 
     fast5_data.close()
     label_data = np.array(
-        zip(event_starts, event_lengths, event_bases),
+        list(zip(event_starts, event_lengths, event_bases)),
         dtype=[('start', '<u4'), ('length', '<u4'), ('base', 'S1')])
 
     return (raw_dat, label_data, event_starts, event_lengths)
@@ -204,18 +211,23 @@ if __name__ == '__main__':
     fast5_fn = "/home/haotianteng/UQ/deepBNS/data/test/pass/test.fast5"
 
     basecall_subgroup = 'BaseCalled_template'
-    basecall_group = 'Basecall_1D_000';
+    basecall_group = 'Basecall_1D_000'
 
     # Get segment data
-    (segment_label, first_segment, last_segment, total) = get_label_segment(fast5_fn, basecall_group, basecall_subgroup)
+    (segment_label, first_segment, last_segment, total) = get_label_segment(
+        fast5_fn, basecall_group, basecall_subgroup)
 
     # segment_label is the numpy array containing labeling of the segment
-    print (
-        "There are {} segments, and {} are labeled ({},{})".format(total, last_segment - first_segment, first_segment,
-                                                                   last_segment))
+    print((
+        "There are {} segments, and {} are labeled ({},{})".format(total,
+                                                                   last_segment - first_segment,
+                                                                   first_segment,
+                                                                   last_segment)))
 
     # get raw data
-    (raw_data, raw_label, raw_start, raw_length) = get_label_raw(fast5_fn, basecall_group, basecall_subgroup)
+    (raw_data, raw_label, raw_start, raw_length) = get_label_raw(fast5_fn,
+                                                                 basecall_group,
+                                                                 basecall_subgroup)
 
     # You can write the labels back to the fast5 file for easy viewing with hdfviewer
     # write_label_segment(fast5_fn, raw_label, segment_label, first, last)
