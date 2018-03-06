@@ -19,10 +19,9 @@ from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 
-from .chiron_input import read_raw_data_sets
-from .chiron_input import read_tfrecord
-from .cnn import getcnnfeature
-from .cnn import getcnnlogit
+# from .chiron_input import read_raw_data_sets
+from chiron.chiron_input import read_tfrecord
+from chiron.cnn import getcnnfeature, getcnnlogit
 from six.moves import range
 
 
@@ -68,7 +67,7 @@ def prediction(logits, seq_length, label, top_paths=1):
     predict = \
     tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False,
                                   top_paths=top_paths)[0]
-    edit_d = list()
+    edit_d = []
     for i in range(top_paths):
         tmp_d = tf.edit_distance(tf.to_int32(predict[i]), label, normalize=True)
         edit_d.append(tmp_d)
