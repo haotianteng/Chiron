@@ -6,6 +6,8 @@
 #
 #Created on Sat Apr 15 02:48:26 2017
 
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
@@ -256,7 +258,7 @@ def getcnnfeature(signal, training):
     # TODO: Read the structure hyper parameters from Json file.
     signal_shape = signal.get_shape().as_list()
     signal = tf.reshape(signal, [signal_shape[0], 1, signal_shape[1], 1])
-    print(signal.get_shape())
+    print((signal.get_shape()))
 #    #Conv layer x 4
 #    with tf.variable_scope('conv_layer1'):
 #        net = conv_layer(signal,ksize=[1,3,1,64],strides=[1,1,1,1],padding='SAME',training = training,name = 'conv')
@@ -357,7 +359,7 @@ def getcnnlogit(fea, outnum=5):
     """
 
     feashape = fea.get_shape().as_list()
-    print feashape
+    print(feashape)
     fea_len = feashape[-1]
     fea = tf.reshape(fea, [-1, fea_len])
     W = tf.get_variable("logit_weights", shape=[
