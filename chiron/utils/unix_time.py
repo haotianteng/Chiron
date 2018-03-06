@@ -6,8 +6,11 @@
 #
 #Created on Sat Jun 10 03:44:44 2017
 
+from __future__ import absolute_import
+from __future__ import print_function
 from resource import getrusage as resource_usage, RUSAGE_SELF
 from time import time as timestamp
+from six.moves import range
 
 
 def unix_time(function, args=tuple(), kwargs={}):
@@ -31,15 +34,15 @@ def unix_time(function, args=tuple(), kwargs={}):
 if __name__ == '__main__':
     def test(iterations):
         b = 1
-        for i in xrange(iterations):
+        for i in range(iterations):
             b **= 2
 
 
-    print "test"
+    print("test")
 
-    print(unix_time(test, (10,)))
-    print(unix_time(test, (100,)))
-    print(unix_time(test, (1000,)))
-    print(unix_time(test, (10000,)))
-    print(unix_time(test, (100000,)))
-    print(unix_time(test, (1000000,)))
+    print((unix_time(test, (10,))))
+    print((unix_time(test, (100,))))
+    print((unix_time(test, (1000,))))
+    print((unix_time(test, (10000,))))
+    print((unix_time(test, (100000,))))
+    print((unix_time(test, (1000000,))))
