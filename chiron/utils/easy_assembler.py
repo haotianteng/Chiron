@@ -1,11 +1,13 @@
 # Copyright 2017 The Chiron Authors. All Rights Reserved.
 #
-#This Source Code Form is subject to the terms of the Mozilla Public
-#License, v. 2.0. If a copy of the MPL was not distributed with this
-#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-#Created on Tue May  2 15:39:29 2017
+# Created on Tue May  2 15:39:29 2017
 
+from __future__ import absolute_import
+from __future__ import print_function
 import difflib
 import math
 import operator
@@ -14,6 +16,8 @@ from collections import Counter
 from itertools import groupby
 
 import numpy as np
+import six
+from six.moves import range
 
 
 def mapping(full_path, blank_pos=4):
@@ -83,7 +87,8 @@ def section_decoding(logits, blank_thres=0.6, base_type=0):
                 continue
             bpread.append(4)
             #            most_prob_path = best_path(prob[batch_i,group,:],base_type = base_type)
-            most_mc_path = mc_path(logits[batch_i, group, :], base_type=base_type)
+            most_mc_path = mc_path(logits[batch_i, group, :],
+                                   base_type=base_type)
             most_prob_path = string2list(most_mc_path[0])
             bpread += most_prob_path
         bpreads.append(list2string(mapping(bpread), base_type=base_type))
@@ -106,7 +111,8 @@ def best_path(logits, base_type):
             key = list2string(index_list, base_type=base_type)
             accum_prob.setdefault(key, 0)
             accum_prob[key] += prob
-    most_prob_path = max(accum_prob.iteritems(), key=operator.itemgetter(1))[0]
+    most_prob_path = max(six.iteritems(accum_prob), key=operator.itemgetter(1))[
+        0]
     return string2list(most_prob_path, base_type=base_type)
 
 
@@ -132,7 +138,8 @@ def mc_path(logits, base_type, sample_n=300):
     sample_index = np.zeros((sample_n, T))
     sample = np.random.random((sample_n, T))
     for j in range(T):
-        sample_index[:, j] = np.searchsorted(interval[i, j, :], sample[:, j], side='left')
+        sample_index[:, j] = np.searchsorted(interval[i, j, :], sample[:, j],
+                                             side='left')
     merge_path = list()
     for repeat_i in range(sample_n):
         ###This step may be slow, considering implemented in C
@@ -140,7 +147,7 @@ def mc_path(logits, base_type, sample_n=300):
         ###
         merge_path.append(list2string(temp_path, base_type=base_type))
     path_count = Counter(merge_path)
-    print path_count
+    print(path_count)
     max2path = path_count.most_common(2)
     p1 = max2path[0][1] / float(sample_n)
     p2 = max2path[1][1] / float(sample_n)
@@ -175,10 +182,11 @@ def mc_decoding(logits, base_type, sample_n=300):
 
     sample_index = np.zeros((sample_n, T))
     for i in range(batch_size):
-        print i
+        print(i)
         sample = np.random.random((sample_n, T))
         for j in range(T):
-            sample_index[:, j] = np.searchsorted(interval[i, j, :], sample[:, j], side='left')
+            sample_index[:, j] = np.searchsorted(interval[i, j, :],
+                                                 sample[:, j], side='left')
         merge_path = list()
         for repeat_i in range(sample_n):
             ###This step may be slow, considering implemented in C
@@ -186,7 +194,7 @@ def mc_decoding(logits, base_type, sample_n=300):
             ###
             merge_path.append(list2string(temp_path, base_type=base_type))
         path_count = Counter(merge_path)
-        print path_count
+        print(path_count)
         max2path = path_count.most_common(2)
         p1 = max2path[0][1] / float(sample_n)
         p2 = max2path[1][1] / float(sample_n)
@@ -211,7 +219,8 @@ def simple_assembly(bpreads):
         match_block = max(d.get_matching_blocks(), key=lambda x: x[2])
         disp = match_block[0] - match_block[1]
         if disp + pos + len(bpreads[indx]) > census_len:
-            concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)), mode='constant', constant_values=0)
+            concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
+                                   mode='constant', constant_values=0)
             census_len += 1000
         add_count(concensus, pos + disp, bpreads[indx])
         pos += disp
@@ -246,8 +255,10 @@ def simple_assembly_qs(bpreads, qs_list):
         match_block = max(d.get_matching_blocks(), key=lambda x: x[2])
         disp = match_block[0] - match_block[1]
         if disp + pos + len(bpread) > census_len:
-            concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)), mode='constant', constant_values=0)
-            concensus_qs = np.lib.pad(concensus_qs, ((0, 0), (0, 1000)), mode='constant', constant_values=0)
+            concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
+                                   mode='constant', constant_values=0)
+            concensus_qs = np.lib.pad(concensus_qs, ((0, 0), (0, 1000)),
+                                      mode='constant', constant_values=0)
             census_len += 1000
         add_count_qs(concensus, concensus_qs, pos + disp, bpread, qs_list[indx])
         pos += disp
