@@ -2,18 +2,20 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 17 17:32:32 2017
-
-@author: haotianteng
+Modified by Lee Yam Keng on Sat Feb 28 2018
+@author: haotianteng, Lee Yam Keng
 """
 # This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
+import argparse
+import sys
 import os
 import time
 from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 
-from chiron_input import read_raw_data_sets
+from chiron_input import read_raw_data_sets, read_tfrecord
 from cnn import getcnnfeature
 from cnn import getcnnlogit
 
@@ -77,7 +79,7 @@ def train():
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
     logits, ratio = inference(x, seq_length, training)
     ctc_loss = loss(logits, seq_length, y)
-    opt = train_step(ctc_loss, global_step=global_step)
+    opt = train_step(ctc_loss, FLAGS.step_rate, global_step=global_step)
     error = prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -93,7 +95,8 @@ def train():
         print("Model loaded finished, begin loading data. \n")
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
-    train_ds = read_raw_data_sets(FLAGS.data_dir, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir, FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -131,19 +134,19 @@ def run(args):
 
 
 if __name__ == "__main__":
-    class Flags():
-        def __init__(self):
-            self.data_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/raw/'
-            self.cache_dir = '/media/haotianteng/Linux_ex/Nanopore_data/Lambda_R9.4/cache/train.hdf5'
-            self.log_dir = '/media/haotianteng/Linux_ex/GVM_model'
-            self.sequence_len = 300
-            self.batch_size = 400
-            self.step_rate = 1e-3
-            self.max_steps = 20000
-            self.k_mer = 1
-            self.model_name = 'res50'
-            self.retrain = False
 
+    parser = argparse.ArgumentParser(description='Training model with tfrecord file')
+    parser.add_argument('-i', '--data_dir', default="/home/lee/Documents/Greg/Chiron-ms2/output", help="Directory that store the tfrecord files.")
+    parser.add_argument('-f', '--tfrecord', default="train_light.tfrecords", help='tfrecord file')
+    parser.add_argument('-c', '--cache_dir', default="/home/lee/Documents/Greg/Chiron-ms2/output/cache/train.hdf5", help="Output folder")
+    parser.add_argument('-o', '--log_dir', default="/home/lee/Documents/Greg/Chiron-ms2/output/GVM_model", help="log directory")
+    parser.add_argument('-s', '--sequence_len', type=int, default=200, help='the length of sequence')
+    parser.add_argument('-b', '--batch_size', type=int, default=10, help='Batch size')
+    parser.add_argument('-t', '--step_rate', type=float, default=1e-3, help='Step rate')
+    parser.add_argument('-x', '--max_steps', type=int, default=20, help='Maximum step')
+    parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
+    parser.add_argument('-m', '--model_name', default='lee_res50_1.4.0', help='model_name')
+    parser.add_argument('-r', '--retrain', type=bool, default=False, help='flag if retrain or not')
 
-    flags = Flags()
-    run(flags)
+    args = parser.parse_args(sys.argv[1:])
+    run(args)
