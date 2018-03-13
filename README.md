@@ -186,3 +186,68 @@ or run directly by
 ```
 python chiron/chiron_rcnn_train.py  
 ```
+
+## Train on Google Cloud ML engine
+
+
+### local testing
+
+Before training the model on cloud ml engine, please check if it is working on local machine or not by following commands
+
+```
+gcloud ml-engine local train \
+    --module-name chiron.utils.raw \
+    --package-path chiron.utils/  \
+    -- --input input_fast_folder \
+    --output output
+
+gcloud ml-engine local train \
+    --module-name chiron.utils.raw \
+    --package-path chiron.utils/  \
+    -- --input input_fast_folder \
+    --output output
+
+gcloud ml-engine local train \
+    --module-name chiron.chiron_rcnn_train \
+    --package-path chiron/
+```
+
+If it is working well, please go to next step.
+
+### create a new bucket
+
+```
+BUCKET_NAME=chiron-ml
+REGION=us-central1
+gsutil mb -l $REGION gs://$BUCKET_NAME
+```
+
+### Use gsutil to copy the all fast5 files to your Cloud Storage bucket.
+
+```
+gsutil cp -r raw_fast_folder gs://$BUCKET_NAME/data
+```
+
+### Create job name
+
+```
+JOB_NAME=chiron_single_1
+OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
+INPUT_PATH=gs://$BUCKET_NAME/train_tfdata
+```
+
+### Train model on google cloud ML engine
+
+```
+gcloud ml-engine jobs submit training $JOB_NAME \
+    --staging-bucket gs://chiron-ml \
+    --module-name chiron.chiron_rcnn_train \
+    --package-path chiron/ \
+    --region $REGION \
+    --config config.yaml \
+    -- \
+    --data_dir gs://$BUCKET_NAME/train_tfdata \
+    --cache_dir gs://$BUCKET_NAME/cache/train.hdf5 \
+    --log_dir gs://$BUCKET_NAME/GVM_model
+```
+

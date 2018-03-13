@@ -369,6 +369,7 @@ def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer
                         event.resize(FLAGS.max_reads_number)
                         label.resize(FLAGS.max_reads_number)
                         event_length.resize(FLAGS.max_reads_number)
+
                         label_length.resize(FLAGS.max_reads_number)
                         break
                 else:
@@ -381,7 +382,6 @@ def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer
             train = DataSet(event=event, event_length=event_length, label=label, label_length=label_length)
         return train
             
-
 def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
     ###Read from raw data
     if h5py_file_path is None:
@@ -414,6 +414,7 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, m
             if name.endswith(".signal"):
                 file_pre = os.path.splitext(name)[0]
                 f_signal = read_signal(data_dir + name)
+
                 if len(f_signal) == 0:
                     continue
                 try:
@@ -492,7 +493,10 @@ def read_label(file_path, skip_start=10, window_n=0):
     if skip_start < window_n:
         skip_start = window_n
     for line in f_h:
+        print ('line', line)
         record = line.split()
+        print ('record', record)
+        exit()
         all_base.append(base2ind(record[2]))
     f_h.seek(0, 0)  # Back to the start
     file_len = len(all_base)

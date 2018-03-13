@@ -18,10 +18,10 @@ import time
 from distutils.dir_util import copy_tree
 
 import tensorflow as tf
-
-# from .chiron_input import read_raw_data_sets
-from chiron.chiron_input import read_tfrecord
-from chiron.cnn import getcnnfeature, getcnnlogit
+from chiron_input import read_raw_data_sets
+from chiron_input import read_tfrecord
+from cnn import getcnnfeature
+from cnn import getcnnlogit
 from six.moves import range
 
 
@@ -68,7 +68,7 @@ def prediction(logits, seq_length, label, top_paths=1):
     tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False,
                                   top_paths=top_paths)[0]
     edit_d = []
-    for i in range(top_paths):
+    for i in range(top_paths):<<<<<<< ms4-singlegpu
         tmp_d = tf.edit_distance(tf.to_int32(predict[i]), label, normalize=True)
         edit_d.append(tmp_d)
     tf.stack(edit_d, axis=0)
@@ -111,7 +111,6 @@ def train():
 
     train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir,
                              FLAGS.sequence_len, k_mer=FLAGS.k_mer)
-
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -156,7 +155,6 @@ def run(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description='Training model with tfrecord file')
     parser.add_argument('-i', '--data_dir', required=True,
