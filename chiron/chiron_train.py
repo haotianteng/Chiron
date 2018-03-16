@@ -14,12 +14,12 @@ import argparse
 from distutils.dir_util import copy_tree
 import tensorflow as tf
 from tensorflow.contrib.training.python.training import hparam
-from chiron_queue_input import inputs
-from cnn import getcnnfeature
-from cnn import getcnnlogit
-from rnn import rnn_layers
+from .chiron_queue_input import inputs
+from .cnn import getcnnfeature
+from .cnn import getcnnlogit
+from .rnn import rnn_layers
+from .rnn import cudnn_rnn
 from six.moves import range
-
 
 def save_model(log_dir, model_name):
     """Copy the training model folder into the log.
@@ -38,7 +38,7 @@ def inference(x,sequence_len,training,full_sequence_len,rnn_layer_num = 3):
     """Infer a logits of the input signal batch.
 
     Args:
-        x: Tensor of shape [batch_size, max_time], a batch of the input signal with a maximum length `max_time`.
+        x: Tensor of shape [batch_size, max_time,channel], a batch of the input signal with a maximum length `max_time`.
         sequence_len: Tensor of shape [batch_size], given the real lenghs of the segments.
         training: Placeholder of Boolean, Ture if the inference is during training.
         full_sequence_len: Scalar float, the maximum length of the sample in the batch.
@@ -55,6 +55,7 @@ def inference(x,sequence_len,training,full_sequence_len,rnn_layer_num = 3):
         logits = getcnnlogit(cnn_feature)
     else:
         logits = rnn_layers(cnn_feature,sequence_len,training,layer_num = rnn_layer_num)
+        #logits = cudnn_rnn(cnn_feature,rnn_layer_num)
     return logits,ratio
 
 

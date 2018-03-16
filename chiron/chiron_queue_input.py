@@ -123,7 +123,7 @@ def inputs(data_dir, batch_size, for_valid=False):
     
     """
     filenames = list()
-    for file_name in os.listdir(data_dir):
+    for file_name in tf.gfile.ListDirectory(data_dir):
         if file_name.endswith('bin'):
             filenames.append(os.path.join(data_dir, file_name))
 
