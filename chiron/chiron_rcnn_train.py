@@ -68,7 +68,7 @@ def prediction(logits, seq_length, label, top_paths=1):
     tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False,
                                   top_paths=top_paths)[0]
     edit_d = []
-    for i in range(top_paths):<<<<<<< ms4-singlegpu
+    for i in range(top_paths):
         tmp_d = tf.edit_distance(tf.to_int32(predict[i]), label, normalize=True)
         edit_d.append(tmp_d)
     tf.stack(edit_d, axis=0)
