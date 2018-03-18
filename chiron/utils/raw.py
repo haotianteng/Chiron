@@ -11,7 +11,7 @@ import argparse
 import os
 import sys
 
-import labelop
+from . import labelop
 import tensorflow as tf
 import numpy as np
 

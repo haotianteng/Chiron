@@ -25,7 +25,7 @@ from utils.unix_time import unix_time
 from six.moves import range
 
 
-def inference(x, seq_length, training, rnn_layer_num=2):
+def inference(x, seq_length, training, rnn_layer_num=3):
     """Infer a logits of the input signal batch.
     The inference function is same as the function in chiron_train.py.
     Args:
@@ -46,7 +46,7 @@ def inference(x, seq_length, training, rnn_layer_num=2):
         logits = getcnnlogit(cnn_feature)
     else:
         logits = rnn_layers(cnn_feature, seq_length/ratio,
-                            training, layer_num=rnn_layer_num,cell='BNLSTM')
+                            training, layer_num=rnn_layer_num,cell='LSTM')
     return logits, ratio
 
 
