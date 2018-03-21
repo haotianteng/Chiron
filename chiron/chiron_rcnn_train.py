@@ -15,9 +15,12 @@ import argparse
 import sys
 import os
 import time
+
 from distutils.dir_util import copy_tree
 
 import tensorflow as tf
+import chiron_model as model
+
 from chiron_input import read_raw_data_sets
 from chiron_input import read_tfrecord
 from cnn import getcnnfeature
@@ -28,54 +31,6 @@ from six.moves import range
 def save_model():
     copy_tree(os.path.dirname(os.path.abspath(__file__)),
               FLAGS.log_dir + FLAGS.model_name + '/model')
-
-
-def inference(x, seq_length, training):
-    cnn_feature = getcnnfeature(x, training=training)
-    feashape = cnn_feature.get_shape().as_list()
-    ratio = FLAGS.sequence_len / feashape[1]
-    #    logits = rnn_layers(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
-    #    logits = rnn_layers_one_direction(cnn_feature,seq_length/ratio,training,class_n = 4**FLAGS.k_mer+1 )
-    logits = getcnnlogit(cnn_feature)
-    return logits, ratio
-
-
-def loss(logits, seq_len, label):
-    loss = tf.reduce_mean(
-        tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
-                       time_major=False))
-    """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
-    tf.summary.scalar('loss', loss)
-    return loss
-
-
-def train_step(loss, step_rate, global_step=None):
-    opt = tf.train.AdamOptimizer(step_rate).minimize(loss,
-                                                     global_step=global_step)
-    return opt
-
-
-def prediction(logits, seq_length, label, top_paths=1):
-    """
-    Args:
-        logits:Input logits from a RNN.Shape = [batch_size,max_time,class_num]
-        seq_length:sequence length of logits. Shape = [batch_size]
-        label:Sparse tensor of label.
-        top_paths:The number of top score path to choice from the decorder.
-    """
-    logits = tf.transpose(logits, perm=[1, 0, 2])
-    predict = \
-    tf.nn.ctc_beam_search_decoder(logits, seq_length, merge_repeated=False,
-                                  top_paths=top_paths)[0]
-    edit_d = []
-    for i in range(top_paths):
-        tmp_d = tf.edit_distance(tf.to_int32(predict[i]), label, normalize=True)
-        edit_d.append(tmp_d)
-    tf.stack(edit_d, axis=0)
-    d_min = tf.reduce_min(edit_d, axis=0)
-    error = tf.reduce_mean(d_min, axis=0)
-    tf.summary.scalar('Error_rate', error)
-    return error
 
 
 def train():
@@ -89,10 +44,10 @@ def train():
     y_values = tf.placeholder(tf.int32)
     y_shape = tf.placeholder(tf.int64)
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
-    logits, ratio = inference(x, seq_length, training)
-    ctc_loss = loss(logits, seq_length, y)
-    opt = train_step(ctc_loss, FLAGS.step_rate, global_step=global_step)
-    error = prediction(logits, seq_length, y)
+    logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len)
+    ctc_loss = model.loss(logits, seq_length, y)
+    opt = model.train_step(ctc_loss, FLAGS.step_rate, global_step=global_step)
+    error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
     summary = tf.summary.merge_all()

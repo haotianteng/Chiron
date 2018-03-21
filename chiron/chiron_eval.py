@@ -14,6 +14,7 @@ import time
 
 import numpy as np
 import tensorflow as tf
+import chiron_model
 
 from chiron_input import read_data_for_eval
 from cnn import getcnnfeature
@@ -23,32 +24,6 @@ from utils.easy_assembler import simple_assembly
 from utils.easy_assembler import simple_assembly_qs
 from utils.unix_time import unix_time
 from six.moves import range
-
-
-def inference(x, seq_length, training, rnn_layer_num=3):
-    """Infer a logits of the input signal batch.
-    The inference function is same as the function in chiron_train.py.
-    Args:
-        x (Float): Tensor of shape [batch_size, max_time], a batch of the input signal with a maximum length `max_time`
-        seq_length (Float): Scalar, the maximum length of the sample in the x.
-        training (Boolean): Scalar placeholder, True if training.
-        rnn_layer_num[Int]: Default is 2, the number of RNN layers, set to 0 when only CNN is used.
-
-    Returns:
-        logits: Tensor of shape [batch_size, max_time, class_num]
-        ratio: Scalar float, the scale factor between the output logits and the input maximum length.
-    """
-
-    cnn_feature = getcnnfeature(x, training=training)
-    feashape = cnn_feature.get_shape().as_list()
-    ratio = FLAGS.segment_len / feashape[1]
-    if rnn_layer_num == 0:
-        logits = getcnnlogit(cnn_feature)
-    else:
-        logits = rnn_layers(cnn_feature, seq_length/ratio,
-                            training, layer_num=rnn_layer_num,cell='LSTM')
-    return logits, ratio
-
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -204,7 +179,11 @@ def evaluation():
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
     training = tf.placeholder(tf.bool)
-    logits, _ = inference(x, seq_length, training=training)
+    logits, _ = chiron_model.inference(
+                                    x, 
+                                    seq_length, 
+                                    training=training,
+                                    full_sequence_len = FLAGS.segment_len)
     if FLAGS.extension == 'fastq':
         prob = path_prob(logits)
     if FLAGS.beam == 0:

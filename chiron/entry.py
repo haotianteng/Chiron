@@ -69,6 +69,7 @@ def main(arguments=sys.argv[1:]):
     parser_train.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
     parser_train.add_argument('-o', '--log_dir', required=True, help="Log dir which save the trained model")
     parser_train.add_argument('-n', '--model_name', required=True, help="Model name saved.")
+    parser_train.add_argument('-c', '--cache_dir', default=None, help="Output folder")
     parser_train.add_argument('-t', '--retrain', type=bool, default=False,
                               help="If retrain is true, the previous trained model will be loaded from LOG_DIR before training.")
     parser_train.add_argument('-l', '--sequence_len', type=int, default=300, help="Segment length to be divided into.")

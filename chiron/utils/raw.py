@@ -30,19 +30,17 @@ def extract(raw_folder=None):
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
     if output_folder is None:
-        output_folder = os.path.abspath(
-            os.path.join(root_folder, os.pardir)) + '/raw/'
+        output_folder = os.path.abspath(os.path.join(root_folder, os.pardir)) + '/raw/'
     if not os.path.isdir(output_folder):
-        os.mkdir(output_folder)
+            os.mkdir(output_folder)
 
     tfrecords_filename = output_folder + FLAGS.tffile
 
     writer = tf.python_io.TFRecordWriter(tfrecords_filename)
 
-    for file_n in os.listdir(root_folder):
+    for file_n in tf.gfile.ListDirectory(root_folder):
         if file_n.endswith('fast5'):
-            output_file = output_folder + os.path.sep + \
-                          os.path.splitext(file_n)[0]
+            output_file = output_folder + os.path.splitext(file_n)[0]
             success, (raw_data, raw_data_array) = extract_file(
                 root_folder + os.path.sep + file_n)
             if success:
@@ -84,9 +82,9 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Transfer fast5 to raw_pair file.')
-    parser.add_argument('-i', '--input',
+    parser.add_argument('-i', '--input', required = True,
                         help="Directory that store the fast5 files.")
-    parser.add_argument('-o', '--output', default=None, help="Output folder")
+    parser.add_argument('-o', '--output', required = True, help="Output folder")
     parser.add_argument('-f', '--tffile', default="train.tfrecords",
                         help="tfrecord file")
     parser.add_argument('--basecall_group', default='Basecall_1D_000',
