@@ -283,8 +283,9 @@ SEGMENT_LEN=512
 python utils/file_batch.py --input $FAST5_FOLDER --output $OUTPUT_FOLDER --length $SEGMENT_LEN
 ```
 **Copy to Google Cloud**
+```
 gsutil cp -r $OUTPUT_FOLDER gs://$BUCKET_NAME/file_batch
-
+```
 ### Submit training request
 ```
 JOB_NAME=chiron_multi_4
