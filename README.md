@@ -30,6 +30,10 @@ If you found Chiron useful, please consider to cite:
     - [Copy fast5 files to your Cloud Storage bucket](#copy-fsat5-files-to-your-cloud-storage-bucket)
     - [Transfer fast5 files to tfrecord](#transfer-fast5-files-to-tfrecord)
     - [Train model on Google Cloud ML engine](#train-model-on-google-cloud-ml-engine)
+- [Distributed training on Google CLoud ML Engine](#distributed-training-on-google-cloud-ml-engine)
+    - [Configure](#configure)
+    - [Transfer fast5 files](#transfer-fast5-files)
+    - [Submit training request](#submit-training-request)
 ## Install
 ### Install using `pip` (recommended)
 If you currently have TensorFlow installed on your system, we would advise you to create a virtual environment to install Chiron into, this way there is no clash of versions etc.
