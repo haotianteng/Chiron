@@ -277,8 +277,9 @@ FAST5_FOLDER=/my/fast5/
 OTUPUT_FOLDER=/my/file_batch/
 SEGMENT_LEN=512
 ```
-```
+
 **Transfer fast5 to file batch**
+```
 python utils/file_batch.py --input $FAST5_FOLDER --output $OUTPUT_FOLDER --length $SEGMENT_LEN
 ```
 **Copy to Google Cloud**
