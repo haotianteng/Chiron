@@ -255,38 +255,44 @@ gcloud ml-engine jobs submit training $JOB_NAME \
 
 ## Distributed training on Google Cloud ML Engine
 
-### Configure
-Change configure.yaml according to [GCloud Docs](https://cloud.google.com/ml-engine/docs/training-overview)
-For example the following configure.yaml:
+### Configure 
+```
+Change configure.yaml according to [GCloud Docs](https://cloud.google.com/ml-engine/docs/training-overview) 
+For example the following configure.yaml: 
+ 
+trainingInput: 
+  scaleTier: CUSTOM 
+  masterType: standard_p100 
+  workerType: standard_p100 
+  parameterServerType: large_model 
+  workerCount: 3 
+  parameterServerCount: 3 
+ 
+Will enable 3 workers + 1 master worker with one P-100 GPU in each worker. 
+```
 
-trainingInput:
-  scaleTier: CUSTOM
-  masterType: standard_p100
-  workerType: standard_p100
-  parameterServerType: large_model
-  workerCount: 3
-  parameterServerCount: 3
-
-Will enable 3 workers + 1 master worker with one P-100 GPU in each worker.
-
-### Transfer fast5 files
+### Transfer fast5 files 
+```
 FAST5_FOLDER=/my/fast5/
 OTUPUT_FOLDER=/my/file_batch/
 SEGMENT_LEN=512
+```
+```
 **Transfer fast5 to file batch**
 python utils/file_batch.py --input $FAST5_FOLDER --output $OUTPUT_FOLDER --length $SEGMENT_LEN
-
+```
 **Copy to Google Cloud**
 gsutil cp -r $OUTPUT_FOLDER gs://$BUCKET_NAME/file_batch
 
 ### Submit training request
+```
 JOB_NAME=chiron_multi_4
 DATA_BUCKET=chiron-training-data
 MODEL_BUCKET=chiron-model
 REGION=us-central1
 MODEL_NAME=test_model1
 GPU_NUM=4
-
+```
 ```
 gcloud ml-engine jobs submit training ${JOB_NAME} \
     --runtime-version 1.6 \
