@@ -145,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
     parser.add_argument('-l', '--length', default=512, help="Length of the signal segment")
-    parser.add_argument('-b', '--batch', default=500, help="Number of record in one file.")
+    parser.add_argument('-b', '--batch', default=10000, help="Number of record in one file.")
     parser.add_argument('-n', '--normalization', default='median',
                         help="The method of normalization applied to signal, Median(default):robust median normalization, 'mean': mean normalization, 'None': no normalizaion")
     parser.add_argument('-m', '--max', default=10, help="Maximum number of batch files generated.")
