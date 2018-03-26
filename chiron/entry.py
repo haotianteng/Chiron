@@ -1,10 +1,10 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 14 18:38:18 2017
-
-@author: haotianteng
-"""
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Mon Aug 14 18:38:18 2017
 import argparse
 import sys
 
@@ -31,6 +31,7 @@ def main(arguments=sys.argv[1:]):
     parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
     subparsers = parser.add_subparsers(title='sub command', help='sub command help')
     model_default_path = __file__ + '/../model/DNA_default'
+    print ("model_default_path", model_default_path)
     # parser for 'call' command
     parser_call = subparsers.add_parser('call', description='Perform basecalling', help='Perform basecalling.')
     parser_call.add_argument('-i', '--input', required=True, help="File path or Folder path to the fast5 file.")
@@ -55,17 +56,20 @@ def main(arguments=sys.argv[1:]):
                                           help='Extract signal and label in the fast5 file.')
     parser_export.add_argument('-i', '--input', required=True, help='Input folder contain fast5 files.')
     parser_export.add_argument('-o', '--output', required=True, help='Output folder.')
-    parser.add_argument('--basecall_group', default='Basecall_1D_000',
+    parser_export.add_argument('-f', '--tffile', default="train.tfrecords", help="tfrecord file")
+    parser_export.add_argument('--basecall_group', default='Basecall_1D_000',
                         help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
-    parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
+    parser_export.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
     parser_export.set_defaults(func=export)
 
     # parser for 'train' command
     parser_train = subparsers.add_parser('train', description='Model training', help='Train a model.')
     parser_train.add_argument('-i', '--data_dir', required=True, help="Folder containing the labelled data.")
+    parser_train.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
     parser_train.add_argument('-o', '--log_dir', required=True, help="Log dir which save the trained model")
     parser_train.add_argument('-n', '--model_name', required=True, help="Model name saved.")
+    parser_train.add_argument('-c', '--cache_dir', default=None, help="Output folder")
     parser_train.add_argument('-t', '--retrain', type=bool, default=False,
                               help="If retrain is true, the previous trained model will be loaded from LOG_DIR before training.")
     parser_train.add_argument('-l', '--sequence_len', type=int, default=300, help="Segment length to be divided into.")

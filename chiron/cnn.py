@@ -1,23 +1,50 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 15 02:48:26 2017
+# Copyright 2017 The Chiron Authors. All Rights Reserved.
+#
+#This Source Code Form is subject to the terms of the Mozilla Public
+#License, v. 2.0. If a copy of the MPL was not distributed with this
+#file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+#Created on Sat Apr 15 02:48:26 2017
 
-@author: haotianteng
-"""
-
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 import tensorflow as tf
+from utils.variable import _variable_on_cpu
+from utils.variable import _variable_with_weight_decay
 
+def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, bias_term=False, active=True,
+               BN=True, active_function='relu',wd = None):
+    """A convolutional layer
 
-def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=[1, 1, 1, 1], bias_term=False, active=True,
-               BN=True, active_function='relu'):
-    """A standard convlotional layer"""
+    Args:
+        indata: A input 4D-Tensor of shape [batch_size, Height, Width, Channel].
+        ksize: A length 4 list.
+        padding: A String from: "SAME","VALID"
+        training: Scalar Tensor of type boolean, indicate if in training or not.
+        name: A String give the name of this layer, other variables and options created in this layer will have this name as prefix.
+        dilate (int, optional): Defaults to 1. Dilation of the width.
+        strides (list, optional): Defaults to [1, 1, 1, 1]. A list of length 4.
+        bias_term (bool, optional): Defaults to False. If True, a bais Tensor is added.
+        active (bool, optional): Defaults to True. If True, output is activated by a activation function.
+        BN (bool, optional): Defaults to True. If True, batch normalization will be applied. 
+        active_function (str, optional): Defaults to 'relu'. A String from 'relu','sigmoid','tanh'.
+        wd: weight decay, if None no weight decay will be added.
+
+    Returns:
+        conv_out: A output 4D-Tensor.
+    """
+    if strides is None:
+        strides = [1, 1, 1, 1]
     with tf.variable_scope(name):
-        W = tf.get_variable("weights", dtype=tf.float32, shape=ksize,
-                            initializer=tf.contrib.layers.xavier_initializer())
+        W = _variable_with_weight_decay("weights", 
+                                        shape=ksize,
+                                        wd=wd,
+                                        initializer = tf.contrib.layers.xavier_initializer(uniform = False, ))
         if bias_term:
-            b = tf.get_variable("bias", dtype=tf.float32, shape=[ksize[-1]])
+            b = _variable_on_cpu("bias", 
+                                shape=[ksize[-1]],
+                                initializer = tf.constant_initializer(0.0))
         if dilate > 1:
             if bias_term:
                 conv_out = b + tf.nn.convolution(input=indata, filter=W, dilation_rate=np.asarray([1, dilate]),
@@ -27,13 +54,17 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=[1, 1, 
                                              padding=padding, name=name)
         else:
             if bias_term:
-                conv_out = b + tf.nn.conv2d(indata, W, strides=strides, padding=padding, name=name)
+                conv_out = b + \
+                    tf.nn.conv2d(indata, W, strides=strides,
+                                 padding=padding, name=name)
             else:
-                conv_out = tf.nn.conv2d(indata, W, strides=strides, padding=padding, name=name)
+                conv_out = tf.nn.conv2d(
+                    indata, W, strides=strides, padding=padding, name=name)
     if BN:
         with tf.variable_scope(name + '_bn') as scope:
-            #            conv_out = batchnorm(conv_out,scope=scope,training = training)
+            #conv_out = batchnorm(conv_out,scope=scope,training = training)
             conv_out = simple_global_bn(conv_out, name=name + '_bn')
+            #conv_out = tf.layers.batch_normalization(conv_out,axis = -1,training = training,name = 'bn')
     if active:
         if active_function == 'relu':
             with tf.variable_scope(name + '_relu'):
@@ -48,17 +79,35 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=[1, 1, 
 
 
 def batchnorm(inp, scope, training, decay=0.99, epsilon=1e-5):
+    """Applied batch normalization on the last axis of the tensor.
+
+    Args:
+        inp: A input Tensor
+        scope: A string or tf.VariableScope.
+        training (Boolean)): A scalar boolean tensor.
+        decay (float, optional): Defaults to 0.99. The mean renew as follow: mean = pop_mean * (1- decay) + decay * old_mean
+        epsilon (float, optional): Defaults to 1e-5. A small float number to avoid dividing by 0.
+
+    Returns:
+        The normalized, scaled, offset tensor.
+    """
+
     with tf.variable_scope(scope):
         size = inp.get_shape().as_list()[-1]
-        scale = tf.get_variable('scale', shape=[size], initializer=tf.constant_initializer(0.1))
+        scale = tf.get_variable(
+            'scale', shape=[size], initializer=tf.constant_initializer(0.1))
         offset = tf.get_variable('offset', shape=[size])
 
-        pop_mean = tf.get_variable('pop_mean', shape=[size], initializer=tf.zeros_initializer(), trainable=False)
-        pop_var = tf.get_variable('pop_var', shape=[size], initializer=tf.ones_initializer(), trainable=False)
+        pop_mean = tf.get_variable(
+            'pop_mean', shape=[size], initializer=tf.zeros_initializer(), trainable=False)
+        pop_var = tf.get_variable(
+            'pop_var', shape=[size], initializer=tf.ones_initializer(), trainable=False)
         batch_mean, batch_var = tf.nn.moments(inp, [0, 1, 2])
 
-        train_mean_op = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
-        train_var_op = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+        train_mean_op = tf.assign(
+            pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+        train_var_op = tf.assign(
+            pop_var, pop_var * decay + batch_var * (1 - decay))
 
         def batch_statistics():
             with tf.control_dependencies([train_mean_op, train_var_op]):
@@ -71,19 +120,40 @@ def batchnorm(inp, scope, training, decay=0.99, epsilon=1e-5):
 
 
 def simple_global_bn(inp, name):
+    """Global batch normalization
+    This tensor is nomalized by the global mean of the input tensor along the last axis.
+
+    Args:
+        inp : A 4D-Tensor.
+        name (str): Name of the operation.
+
+    Returns:
+        global batch normalized tensor.
+    """
+
     ksize = inp.get_shape().as_list()
     ksize = [ksize[-1]]
     mean, variance = tf.nn.moments(inp, [0, 1, 2], name=name + '_moments')
-    scale = tf.get_variable(name + "_scale",
-                            shape=ksize)  # ,initializer=tf.contrib.layers.variance_scaling_initializer())
-    offset = tf.get_variable(name + "_offset",
-                             shape=ksize)  # ,initializer=tf.contrib.layers.variance_scaling_initializer())
+    scale = _variable_on_cpu(name + "_scale",
+                            shape=ksize,
+                            initializer=tf.contrib.layers.variance_scaling_initializer())
+    offset = _variable_on_cpu(name + "_offset",
+                             shape=ksize,
+                             initializer=tf.contrib.layers.variance_scaling_initializer())
     return tf.nn.batch_normalization(inp, mean=mean, variance=variance, scale=scale, offset=offset,
                                      variance_epsilon=1e-5)
 
 
 def inception_layer(indata, training, times=16):
-    """Inception module with dilate conv layer from http://arxiv.org/abs/1512.00567"""
+    """Inception module with dilate conv layer from http://arxiv.org/abs/1512.00567
+    Args:
+        indata: A 4D-Tensor.
+        training: Boolean.
+        times: The base channel nubmer.
+    Returns:
+        A 4D-Tensor, the output of the inception layer.
+    """
+
     fea_shape = indata.get_shape().as_list()
     in_channel = fea_shape[-1]
     with tf.variable_scope('branch1_AvgPooling'):
@@ -118,6 +188,18 @@ def inception_layer(indata, training, times=16):
 
 
 def residual_layer(indata, out_channel, training, i_bn=False):
+    """An inplementation of the residual layer from https://arxiv.org/abs/1512.03385
+
+    Args:
+        indata: A 4-D Tensor
+        out_channel (Int): The number of out channel
+        training (Boolean): 0-D Boolean Tensor indicate if it's in training.
+        i_bn (bool, optional): Defaults to False. If the identity layer being batch nomalized.
+
+    Returns:
+        relu_out: A 4-D Tensor of shape [batch_size, Height, Weight, out_channel]
+    """
+
     fea_shape = indata.get_shape().as_list()
     in_channel = fea_shape[-1]
     with tf.variable_scope('branch1'):
@@ -136,11 +218,20 @@ def residual_layer(indata, out_channel, training, i_bn=False):
 
 
 def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, i_bn=True):
-    """
-    An implementation of a variant of the Wavenet layer, input Args:
-    dilate: dilate gap, an positive int is required.
+    """    An implementation of a variant of the Wavenet layer. https://arxiv.org/abs/1609.03499
 
+    Args:
+        indata: A 4D-Tensor.
+        out_channel (Int): The number of output channel.
+        training (Boolean): A scalar Boolean Tensor.
+        dilate (Int): Dilation rate of the width.
+        gated_activation (bool, optional): Defaults to True. If the gated activation is used.
+        i_bn (bool, optional): Defaults to True. If the identity addition operation in residual layer is normalized.
+
+    Returns:
+        relu_out: A 4-D Tensor of shape [batch_size, Width, Height, out_channel]
     """
+
     in_shape = indata.get_shape().as_list()
     in_channel = in_shape[-1]
     with tf.variable_scope('identity_branch'):
@@ -162,98 +253,126 @@ def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, 
 
 
 def getcnnfeature(signal, training):
+    """Compute the CNN feature given the signal input.  
+
+    Args:
+        signal (Float): A 2D-Tensor of shape [batch_size,max_time]
+        training (Boolean): A 0-D Boolean Tensor indicate if it's in training.      
+
+    Returns:
+        cnn_fea: A 3D-Tensor of shape [batch_size, max_time, channel]
+    """
+
+    # TODO: Read the structure hyper parameters from Json file.
     signal_shape = signal.get_shape().as_list()
     signal = tf.reshape(signal, [signal_shape[0], 1, signal_shape[1], 1])
-    print(signal.get_shape())
-    #    #Conv layer x 4
-    #    with tf.variable_scope('conv_layer1'):
-    #        conv1 = conv_layer(signal,ksize=[1,3,1,256],strides=[1,1,1,1],padding='SAME',training = training,name = 'conv')
-    #    with tf.variable_scope('conv_layer2'):
-    #        conv2 = conv_layer(conv1,ksize=[1,5,256,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
-    #    with tf.variable_scope('conv_layer3'):
-    #        conv3 = conv_layer(conv2,ksize=[1,5,256,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
-    #    with tf.variable_scope('conv_layer4'):
-    #        conv4 = conv_layer(conv3,ksize=[1,5,256,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
-    #    with tf.variable_scope('conv_layer5'):
-    #        conv5 = conv_layer(conv4,ksize=[1,5,256,256],strides=[1,1,2,1],padding='SAME',training= training,name = 'conv')
+    print((signal.get_shape()))
+#    #Conv layer x 4
+#    with tf.variable_scope('conv_layer1'):
+#        net = conv_layer(signal,ksize=[1,3,1,64],strides=[1,1,1,1],padding='SAME',training = training,name = 'conv')
+#    with tf.variable_scope('conv_layer2'):
+#        net = conv_layer(net,ksize=[1,3,64,128],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
+#    with tf.variable_scope('conv_layer3'):
+#        net = conv_layer(net,ksize=[1,3,128,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
+#    feashape = net.get_shape().as_list()
+#    fea = tf.reshape(net,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+#    return fea
 
-    #    Inception layer x 9
-    #    with tf.variable_scope('incp_layer1'):
-    #        incp5 = inception_layer(conv4,training)
-    #    with tf.variable_scope('incp_layer2'):
-    #        incp6 = inception_layer(incp5,training)
-    #
-    #    with tf.variable_scope('max_pool_1'):
-    #        max_pool1 = tf.nn.max_pool(incp6,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
-    #
-    #    with tf.variable_scope('incp_layer3'):
-    #        incp7 = inception_layer(max_pool1,training)
-    #    with tf.variable_scope('incp_layer4'):
-    #        incp8 = inception_layer(incp7,training)
-    #    with tf.variable_scope('incp_layer5'):
-    #        incp9 = inception_layer(incp8,training)
-    #    with tf.variable_scope('incp_layer6'):
-    #        incp10 = inception_layer(incp9,training)
-    #    with tf.variable_scope('incp_layer7'):
-    #        incp11 = inception_layer(incp10,training)
-    #
-    #    with tf.variable_scope('max_pool_2'):
-    #        max_pool2 = tf.nn.max_pool(incp11,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
-    #
-    #    with tf.variable_scope('incp_layer8'):
-    #        incp12 = inception_layer(max_pool2,training)
-    #    with tf.variable_scope('incp_layer9'):
-    #        incp13 = inception_layer(incp12,training)
-    #
-    #    with tf.variable_scope('avg_pool_1'):
-    #        avg_pool1 = tf.nn.avg_pool(incp13,ksize = [1,1,7,1],strides = [1,1,1,1],padding = 'SAME',name='ap_1x7_s1')
-    ###############################################################################
-    #   Residual layer x 50
-    #    layer_num = 50
-    #    for i in range(1,layer_num):
-    #        with tf.variable_scope('res_layer'+str(i+1)):
-    #            signal = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
-    #    feashape = signal.get_shape().as_list()
-    #    fea = tf.reshape(signal,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
-    #    return fea
-    ###############################################################################
-    #   Residual Layer x 3 (DNA_default)
-    #    with tf.variable_scope('res_layer1'):
-    #        res1 = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
-    #    with tf.variable_scope('res_layer2'):
-    #        res2 = residual_layer(res1,out_channel = 256,training = training)
-    #    with tf.variable_scope('res_layer3'):
-    #        res3 = residual_layer(res2,out_channel = 256,training = training)
-    #    feashape = res3.get_shape().as_list()
-    #    fea = tf.reshape(res3,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
-    #    return fea
-    ###############################################################################
-    #   Dilate connection(Variant Wavenet)
-    res_layer = 1
-    dilate_layer = 7
-    dilate_repeat = 1
+#    with tf.variable_scope('conv_layer4'):
+#        conv4 = conv_layer(conv3,ksize=[1,5,256,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
+#    with tf.variable_scope('conv_layer5'):
+#        conv5 = conv_layer(conv4,ksize=[1,5,256,256],strides=[1,1,2,1],padding='SAME',training= training,name = 'conv')
+
+#    Inception layer x 9
+#    with tf.variable_scope('incp_layer1'):
+#        incp5 = inception_layer(conv4,training)
+#    with tf.variable_scope('incp_layer2'):
+#        incp6 = inception_layer(incp5,training)
+#
+#    with tf.variable_scope('max_pool_1'):
+#        max_pool1 = tf.nn.max_pool(incp6,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
+#
+#    with tf.variable_scope('incp_layer3'):
+#        incp7 = inception_layer(max_pool1,training)
+#    with tf.variable_scope('incp_layer4'):
+#        incp8 = inception_layer(incp7,training)
+#    with tf.variable_scope('incp_layer5'):
+#        incp9 = inception_layer(incp8,training)
+#    with tf.variable_scope('incp_layer6'):
+#        incp10 = inception_layer(incp9,training)
+#    with tf.variable_scope('incp_layer7'):
+#        incp11 = inception_layer(incp10,training)
+#
+#    with tf.variable_scope('max_pool_2'):
+#        max_pool2 = tf.nn.max_pool(incp11,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
+#
+#    with tf.variable_scope('incp_layer8'):
+#        incp12 = inception_layer(max_pool2,training)
+#    with tf.variable_scope('incp_layer9'):
+#        incp13 = inception_layer(incp12,training)
+#
+#    with tf.variable_scope('avg_pool_1'):
+#        avg_pool1 = tf.nn.avg_pool(incp13,ksize = [1,1,7,1],strides = [1,1,1,1],padding = 'SAME',name='ap_1x7_s1')
+###############################################################################
+#   Residual layer x 50
+#    layer_num = 50
+#    for i in range(1,layer_num):
+#        with tf.variable_scope('res_layer'+str(i+1)):
+#            signal = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+#    feashape = signal.get_shape().as_list()
+#    fea = tf.reshape(signal,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+#    return fea
+###############################################################################
+#   Residual Layer x 3 (DNA_default)
     with tf.variable_scope('res_layer1'):
-        net = residual_layer(signal, out_channel=256, training=training, i_bn=True)
-    for i in range(1, res_layer):
-        with tf.variable_scope('res_layer' + str(i + 1)):
-            net = residual_layer(net, out_channel=256, training=training)
-    for block_idx in range(dilate_repeat):
-        for i in range(dilate_layer):
-            with tf.variable_scope('block' + str(block_idx + 1) + 'dilate_layer' + str(i + 1)):
-                net = wavenet_layer(net, out_channel=256, training=training, dilate=2 ** i, i_bn=True)
-    feashape = net.get_shape().as_list()
-    fea = tf.reshape(net, [feashape[0], feashape[2], feashape[3]], name='fea_rs')
+        res1 = residual_layer(signal, out_channel=256,
+                              training=training, i_bn=True)
+    with tf.variable_scope('res_layer2'):
+        res2 = residual_layer(res1, out_channel=256, training=training)
+    with tf.variable_scope('res_layer3'):
+        res3 = residual_layer(res2, out_channel=256, training=training)
+    feashape = res3.get_shape().as_list()
+    fea = tf.reshape(res3, [feashape[0], feashape[2],
+                            feashape[3]], name='fea_rs')
     return fea
-
-
+###############################################################################
+#   Dilate connection(Variant Wavenet) (res3_dilate7)
+#    res_layer = 3
+#    dilate_layer = 7
+#    dilate_repeat = 1
+#    with tf.variable_scope('res_layer1'):
+#        net = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+#    for i in range(1,res_layer):
+#        with tf.variable_scope('res_layer'+str(i+1)):
+#            net = residual_layer(net,out_channel = 256,training = training)
+#    for block_idx in range(dilate_repeat):
+#        for i in range(dilate_layer):
+#            with tf.variable_scope('block'+str(block_idx+1)+'dilate_layer'+str(i+1)):
+#                net = wavenet_layer(net,out_channel = 256,training = training,dilate=2**i,i_bn=True)
+#    feashape = net.get_shape().as_list()
+#    fea = tf.reshape(net,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
+#    return fea
 ###############################################################################
 
+
 def getcnnlogit(fea, outnum=5):
+    """Get the logits from CNN feature.
+
+    Args:
+        fea (Float): A 3D-Tensor of shape [batch_size,max_time,channel]
+        outnum (int, optional): Defaults to 5. Output class number, A,G,C,T,<ctc-blank>.
+
+    Returns:
+        A 3D-Tensor of shape [batch_size,max_time,outnum]
+    """
+
     feashape = fea.get_shape().as_list()
-    print feashape
+    print(feashape)
     fea_len = feashape[-1]
     fea = tf.reshape(fea, [-1, fea_len])
-    W = tf.get_variable("logit_weights", shape=[fea_len, outnum], initializer=tf.contrib.layers.xavier_initializer())
-    b = tf.get_variable("logit_bias", shape=[outnum], initializer=tf.contrib.layers.xavier_initializer())
+    W = tf.get_variable("logit_weights", shape=[
+                        fea_len, outnum], initializer=tf.contrib.layers.xavier_initializer())
+    b = tf.get_variable("logit_bias", shape=[
+                        outnum], initializer=tf.contrib.layers.xavier_initializer())
     return tf.reshape(tf.nn.bias_add(tf.matmul(fea, W), b, name='cnn_logits'), [feashape[0], feashape[1], outnum],
                       name='cnnlogits_rs')

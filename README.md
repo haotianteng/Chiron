@@ -7,7 +7,33 @@ If you found Chiron useful, please consider to cite:
 > Teng, H., et al. (2017). Chiron: Translating nanopore raw signal directly into nucleotide sequence using deep learning. [bioRxiv 179531] (https://www.biorxiv.org/content/early/2017/09/12/179531)
 
 ---
+## Table of contents
 
+- [Install](#Install)
+    - [Install using `pip`](#install-using-pip)
+    - [Install from GitHub](#install-from-github)
+- [Basecall](#basecall)
+    - [If installed from `pip`](#if-installed-from-pip)
+    - [If installed from GitHub](#if-installed-from-github)
+    - [Test run](#test-run)
+    - [Decoder choice](#decoder-choice)
+    - [Output](#output)
+    - [Output format](#output-format)
+- [Training](#training)
+    - [Hardware request](#hardware-request)
+    - [Prepare training data set](#prepare-training-data-set)
+    - [Train a model](#train-a-model)
+    - [Training parameters](#training-parameters)
+- [Train on Google Cloud ML engine](#train-on-google-cloud-ml-engine)
+    - [Local testing](#local-testing)
+    - [Create a new bucket](#create-a-new-bucket)
+    - [Copy fast5 files to your Cloud Storage bucket](#copy-fsat5-files-to-your-cloud-storage-bucket)
+    - [Transfer fast5 files to tfrecord](#transfer-fast5-files-to-tfrecord)
+    - [Train model on Google Cloud ML engine](#train-model-on-google-cloud-ml-engine)
+- [Distributed training on Google CLoud ML Engine](#distributed-training-on-google-cloud-ml-engine)
+    - [Configure](#configure)
+    - [Transfer fast5 files](#transfer-fast5-files)
+    - [Submit training request](#submit-training-request)
 ## Install
 ### Install using `pip` (recommended)
 If you currently have TensorFlow installed on your system, we would advise you to create a virtual environment to install Chiron into, this way there is no clash of versions etc.
@@ -106,7 +132,7 @@ The default DNA model trained on R9.4 protocol with a mix of Lambda and E.coli d
 #### Hardware request:  
 Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.  
 
-#### Prepare the training data set.  
+#### Prepare training data set.  
 Using raw.py script to extract the signal and label from the re-squiggled fast5 file.
 (For how to re-squiggle fast5 file, check [here, nanoraw re-squiggle](https://nanoraw.readthedocs.io/en/latest/resquiggle.html#example-commands))
 
@@ -143,35 +169,8 @@ Each line represents a DNA base pair in the Pore.
 * 2nd column: End position of the current nucleotide.  
 * 3rd column: Nucleotide, for DNA: A, G, C, or T. Although, there is no reason you could not use other labels.
 
-#### Adjust Chiron parameters
-Go in to `chiron/chiron_rcnn_train.py` and change the hyper parameters in the `FLAGS` class.
 
-```py
-class Flags():  
-    def __init__(self):  
-        self.home_dir = "/home/haotianteng/UQ/deepBNS/"  
-        self.data_dir = self.home_dir + 'data/Lambda_R9.4/raw/'  
-        self.log_dir = self.home_dir+'/chiron/log/'  
-        self.sequence_len = 200  
-        self.batch_size = 100  
-        self.step_rate = 1e-3   
-        self.max_steps = 2500  
-        self.k_mer = 1  
-        self.model_name = 'crnn5+5_res_moving_norm'  
-        self.retrain = False  
-```
-
-`data_dir`: The folder containing your signal and label files.  
-`log_dir`: The folder where you want to save the model.  
-`sequence_len`: The length of the segment you want to separate the sequence into. Longer length requires larger RAM.  
-`batch_size`: The batch size.  
-`step_rate`: Learning rate of the optimizer.  
-`max_step`: Maximum step of the optimizer.  
-`k_mer`: Chiron supports learning based on k-mer instead of a single nucleotide, this should be an odd number, even numbers will cause an error.  
-`model_name`: The name of the model. The record will be stored in the directory `log_dir/model_name/`
-`retrain`: If this is a new model, or you want to load the model you trained before. The model will be loaded from  `log_dir/model_name/`  
-
-### Train
+### Train a model
 
 ```
 source activate tensorflow   
@@ -184,5 +183,130 @@ chiron train --data_dir <signal_label folder> --log_dir <model_log_folder> --mod
 or run directly by  
 
 ```
-python chiron/chiron_rcnn_train.py  
+python chiron/chiron_rcnn_train.py  --data_dir <signal_label folder/ tfrecord file> --log_dir <model_log>
 ```
+### Training parameters
+Following parameters can be passed to Chiron when training
+
+`data_dir`(Required): The folder containing your signal and label files.  
+`log_dir`(Required): The folder where you want to save the model.  
+`model_name`(Required): The name of the model. The record will be stored in the directory `log_dir/model_name/`
+`tfrecord`: File name of tfrecord. Default is train.tfrecords.
+`sequence_len`: The length of the segment you want to separate the sequence into. Longer length requires larger RAM.  
+`batch_size`: The batch size.  
+`step_rate`: Learning rate of the optimizer.  
+`max_step`: Maximum step of the optimizer.  
+`k_mer`: Chiron supports learning based on k-mer instead of a single nucleotide, this should be an odd number, even numbers will cause an error.  
+`retrain`: If this is a new model, or you want to load the model you trained before. The model will be loaded from  `log_dir/model_name/`  
+
+## Train on Google Cloud ML engine
+
+
+### local testing
+
+Before training the model on cloud ml engine, please check if it is working on local machine or not by following commands
+
+```
+gcloud ml-engine local train \
+    --module-name chiron.utils.raw \
+    --package-path chiron.utils/  \
+    -- --input input_fast5_folder \
+    --output output
+
+gcloud ml-engine local train \
+    --module-name chiron.chiron_rcnn_train \
+    --package-path chiron/
+```
+
+If it is working well, please go to next step.
+
+### create a new bucket
+
+```
+BUCKET_NAME=chiron-ml
+REGION=us-central1
+gsutil mb -l $REGION gs://$BUCKET_NAME
+```
+
+### Use gsutil to copy the all fast5 files to your Cloud Storage bucket.
+
+```
+gsutil cp -r raw_fast_folder gs://$BUCKET_NAME/fast5-data
+```
+
+### Train model on google cloud ML engine
+```
+JOB_NAME=chiron_single_1
+OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
+INPUT_PATH=gs://$BUCKET_NAME/train_tfdata
+```
+```
+gcloud ml-engine jobs submit training $JOB_NAME \
+    --staging-bucket gs://chiron-ml \
+    --module-name chiron.chiron_rcnn_train \
+    --package-path chiron/ \
+    --region $REGION \
+    --config config.yaml \
+    -- \
+    --data_dir gs://$BUCKET_NAME/train_tfdata \
+    --cache_dir gs://$BUCKET_NAME/cache/train.hdf5 \
+    --log_dir gs://$BUCKET_NAME/GVM_model
+```
+
+## Distributed training on Google Cloud ML Engine
+
+### Configure 
+```
+Change configure.yaml according to [GCloud Docs](https://cloud.google.com/ml-engine/docs/training-overview) 
+For example the following configure.yaml: 
+ 
+trainingInput: 
+  scaleTier: CUSTOM 
+  masterType: standard_p100 
+  workerType: standard_p100 
+  parameterServerType: large_model 
+  workerCount: 3 
+  parameterServerCount: 3 
+ 
+Will enable 3 workers + 1 master worker with one P-100 GPU in each worker. 
+```
+
+### Transfer fast5 files 
+```
+FAST5_FOLDER=/my/fast5/
+OTUPUT_FOLDER=/my/file_batch/
+SEGMENT_LEN=512
+```
+
+**Transfer fast5 to file batch**
+```
+python utils/file_batch.py --input $FAST5_FOLDER --output $OUTPUT_FOLDER --length $SEGMENT_LEN
+```
+**Copy to Google Cloud**
+```
+gsutil cp -r $OUTPUT_FOLDER gs://$BUCKET_NAME/file_batch
+```
+### Submit training request
+```
+JOB_NAME=chiron_multi_4
+DATA_BUCKET=chiron-training-data
+MODEL_BUCKET=chiron-model
+REGION=us-central1
+MODEL_NAME=test_model1
+GPU_NUM=4
+```
+```
+gcloud ml-engine jobs submit training ${JOB_NAME} \
+    --runtime-version 1.6 \
+    --staging-bucket gs://chiron-model/ \
+    --module-name chiron.chiron_multi_gpu_train \
+    --package-path chiron \
+    --region $REGION \
+    --config config.yaml \
+    -- \
+    -i gs://$DATA_BUCKET/file_batch \
+    -o gs://$MODEL_BUCKET/ \
+    -m ${MODEL_NAME} \
+    -n ${GPU_NUM}
+```
+
