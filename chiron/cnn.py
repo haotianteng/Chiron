@@ -10,10 +10,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
-
+from utils.variable import _variable_on_cpu
+from utils.variable import _variable_with_weight_decay
 
 def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, bias_term=False, active=True,
-               BN=True, active_function='relu'):
+               BN=True, active_function='relu',wd = None):
     """A convolutional layer
 
     Args:
@@ -28,6 +29,7 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
         active (bool, optional): Defaults to True. If True, output is activated by a activation function.
         BN (bool, optional): Defaults to True. If True, batch normalization will be applied. 
         active_function (str, optional): Defaults to 'relu'. A String from 'relu','sigmoid','tanh'.
+        wd: weight decay, if None no weight decay will be added.
 
     Returns:
         conv_out: A output 4D-Tensor.
@@ -35,10 +37,14 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
     if strides is None:
         strides = [1, 1, 1, 1]
     with tf.variable_scope(name):
-        W = tf.get_variable("weights", dtype=tf.float32, shape=ksize,
-                            initializer=tf.contrib.layers.xavier_initializer())
+        W = _variable_with_weight_decay("weights", 
+                                        shape=ksize,
+                                        wd=wd,
+                                        initializer = tf.contrib.layers.xavier_initializer(uniform = False, ))
         if bias_term:
-            b = tf.get_variable("bias", dtype=tf.float32, shape=[ksize[-1]])
+            b = _variable_on_cpu("bias", 
+                                shape=[ksize[-1]],
+                                initializer = tf.constant_initializer(0.0))
         if dilate > 1:
             if bias_term:
                 conv_out = b + tf.nn.convolution(input=indata, filter=W, dilation_rate=np.asarray([1, dilate]),
@@ -128,10 +134,12 @@ def simple_global_bn(inp, name):
     ksize = inp.get_shape().as_list()
     ksize = [ksize[-1]]
     mean, variance = tf.nn.moments(inp, [0, 1, 2], name=name + '_moments')
-    scale = tf.get_variable(name + "_scale",
-                            shape=ksize)  # ,initializer=tf.contrib.layers.variance_scaling_initializer())
-    offset = tf.get_variable(name + "_offset",
-                             shape=ksize)  # ,initializer=tf.contrib.layers.variance_scaling_initializer())
+    scale = _variable_on_cpu(name + "_scale",
+                            shape=ksize,
+                            initializer=tf.contrib.layers.variance_scaling_initializer())
+    offset = _variable_on_cpu(name + "_offset",
+                             shape=ksize,
+                             initializer=tf.contrib.layers.variance_scaling_initializer())
     return tf.nn.batch_normalization(inp, mean=mean, variance=variance, scale=scale, offset=offset,
                                      variance_epsilon=1e-5)
 

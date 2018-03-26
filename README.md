@@ -30,6 +30,10 @@ If you found Chiron useful, please consider to cite:
     - [Copy fast5 files to your Cloud Storage bucket](#copy-fsat5-files-to-your-cloud-storage-bucket)
     - [Transfer fast5 files to tfrecord](#transfer-fast5-files-to-tfrecord)
     - [Train model on Google Cloud ML engine](#train-model-on-google-cloud-ml-engine)
+- [Distributed training on Google CLoud ML Engine](#distributed-training-on-google-cloud-ml-engine)
+    - [Configure](#configure)
+    - [Transfer fast5 files](#transfer-fast5-files)
+    - [Submit training request](#submit-training-request)
 ## Install
 ### Install using `pip` (recommended)
 If you currently have TensorFlow installed on your system, we would advise you to create a virtual environment to install Chiron into, this way there is no clash of versions etc.
@@ -230,25 +234,6 @@ gsutil mb -l $REGION gs://$BUCKET_NAME
 gsutil cp -r raw_fast_folder gs://$BUCKET_NAME/fast5-data
 ```
 
-### Transfer fast5 files to tfrecord
-```
-JOB_NAME=chiron_transfer_1
-OUTPUT_PATH=gs://$BUCKET_NAME/tfrecord
-INPUT_PATH=gs://$BUCKET_NAME/fast5-data
-```
-```
-gcloud ml-engine jobs submit training $JOB_NAME \
-    --staging-bucket gs://chiron-ml \
-    --module-name chiron.utils.raw \
-    --package-path chiron/ \
-    --region us-east1 \
-    --config config.yaml \
-    -- \
-    --input gs://$BUCKET_NAME/fast5-data \
-    --output gs://$BUCKET_NAME/tfrecord/
-```
-
-
 ### Train model on google cloud ML engine
 ```
 JOB_NAME=chiron_single_1
@@ -266,5 +251,62 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --data_dir gs://$BUCKET_NAME/train_tfdata \
     --cache_dir gs://$BUCKET_NAME/cache/train.hdf5 \
     --log_dir gs://$BUCKET_NAME/GVM_model
+```
+
+## Distributed training on Google Cloud ML Engine
+
+### Configure 
+```
+Change configure.yaml according to [GCloud Docs](https://cloud.google.com/ml-engine/docs/training-overview) 
+For example the following configure.yaml: 
+ 
+trainingInput: 
+  scaleTier: CUSTOM 
+  masterType: standard_p100 
+  workerType: standard_p100 
+  parameterServerType: large_model 
+  workerCount: 3 
+  parameterServerCount: 3 
+ 
+Will enable 3 workers + 1 master worker with one P-100 GPU in each worker. 
+```
+
+### Transfer fast5 files 
+```
+FAST5_FOLDER=/my/fast5/
+OTUPUT_FOLDER=/my/file_batch/
+SEGMENT_LEN=512
+```
+
+**Transfer fast5 to file batch**
+```
+python utils/file_batch.py --input $FAST5_FOLDER --output $OUTPUT_FOLDER --length $SEGMENT_LEN
+```
+**Copy to Google Cloud**
+```
+gsutil cp -r $OUTPUT_FOLDER gs://$BUCKET_NAME/file_batch
+```
+### Submit training request
+```
+JOB_NAME=chiron_multi_4
+DATA_BUCKET=chiron-training-data
+MODEL_BUCKET=chiron-model
+REGION=us-central1
+MODEL_NAME=test_model1
+GPU_NUM=4
+```
+```
+gcloud ml-engine jobs submit training ${JOB_NAME} \
+    --runtime-version 1.6 \
+    --staging-bucket gs://chiron-model/ \
+    --module-name chiron.chiron_multi_gpu_train \
+    --package-path chiron \
+    --region $REGION \
+    --config config.yaml \
+    -- \
+    -i gs://$DATA_BUCKET/file_batch \
+    -o gs://$MODEL_BUCKET/ \
+    -m ${MODEL_NAME} \
+    -n ${GPU_NUM}
 ```
 
