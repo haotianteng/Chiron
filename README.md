@@ -59,12 +59,12 @@ You will also need to install dependencies.
 
 For CPU-version:
 ```
-pip install tensorflow==1.0.1  
+pip install tensorflow  
 pip install h5py
 ```
 For GPU-version(Nvidia GPU required):
 ```
-pip install tensorflow-gpu==1.0.1  
+pip install tensorflow-gpu  
 pip install h5py
 ```
 
