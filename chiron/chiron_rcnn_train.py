@@ -46,7 +46,7 @@ def train():
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len)
     ctc_loss = model.loss(logits, seq_length, y)
-    opt = model.train_step(ctc_loss, FLAGS.step_rate, global_step=global_step)
+    opt = model.train_opt(ctc_loss, FLAGS.step_rate, global_step=global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -89,7 +89,7 @@ def train():
                train_ds.index_in_epoch, loss_val, error_val,
                (end - start) / (i + 1)))
             saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt',
-                       global_step=global_step_val)
+                       global_step=global_step_val)            
             summary_str = sess.run(summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step_val)
             summary_writer.flush()
@@ -98,6 +98,8 @@ def train():
     print("Reads number %d" % (train_ds.reads_n))
     saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt',
                global_step=global_step_val)
+    # write the graph.pb model
+    tf.train.write_graph(sess.graph_def, FLAGS.log_dir + FLAGS.model_name, 'graph.pb')
 
 
 def run(args):
@@ -117,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--log_dir', required=True,
                         help="log directory that store the training model.")
     parser.add_argument('-m', '--model_name', required=True, help='model_name')
-    parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
+    parser.add_argument('-f', '--tfrecord', default="train_light.tfrecords",
                         help='tfrecord file')
     parser.add_argument('-c', '--cache_dir', default=None, help="Output folder")
     parser.add_argument('-s', '--sequence_len', type=int, default=400,
