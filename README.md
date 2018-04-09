@@ -310,3 +310,23 @@ gcloud ml-engine jobs submit training ${JOB_NAME} \
     -n ${GPU_NUM}
 ```
 
+### Submit batch prediction request
+```
+DATA_FORMAT=TEXT
+INPUT_PATHS=gs://path/to/your/input/data/*
+OUTPUT_PATH=gs://your/desired/output/location
+MODEL_NAME=test_model1
+REGION=us-central1
+now=$(date +"%Y%m%d_%H%M%S")
+JOB_NAME="chiron_batch_predict_$now"
+MAX_WORKER_COUNT="20"
+
+```
+```
+gcloud ml-engine jobs submit prediction $JOB_NAME \
+    --model $MODEL_NAME \
+    --input-paths $INPUT_PATHS \
+    --output-path $OUTPUT_PATH \
+    --region $REGION \
+    --data-format $DATA_FORMAT
+```
