@@ -200,8 +200,12 @@ def evaluation():
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
-        saver = tf.train.Saver()
-        saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
+        print("load graph")
+        with gfile.FastGFile(FLAGS.model + "/graph.pb",'rb') as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+            persisted_sess.graph.as_default()
+            tf.import_graph_def(graph_def, name='')
         if os.path.isdir(FLAGS.input):
             file_list = os.listdir(FLAGS.input)
             file_dir = FLAGS.input
