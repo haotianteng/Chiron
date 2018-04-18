@@ -78,7 +78,7 @@ def train(hparam):
     logits, _ = model.inference(x,seq_length,training,hparam.sequence_len)
     ctc_loss = model.loss(logits, seq_length, y)
     opt = model.train_opt(hparam.step_rate,hparam.max_steps,global_step = global_step)
-    step = opt.minimize(loss,global_step = global_step)
+    step = opt.minimize(ctc_loss,global_step = global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -100,7 +100,7 @@ def train(hparam):
     start = time.time()
     for i in range(hparam.max_steps):
         feed_dict = {training: True}
-        loss_val, _ = sess.run([ctc_loss, opt], feed_dict=feed_dict)
+        loss_val, _ = sess.run([ctc_loss, step], feed_dict=feed_dict)
         if i % 10 == 0:
             global_step_val = tf.train.global_step(sess, global_step)
             feed_dict = {training: True}

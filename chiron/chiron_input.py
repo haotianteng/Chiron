@@ -348,11 +348,11 @@ def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer
 
             if len(f_signal) == 0:
                 continue
-            try:
-                f_label = read_label_tfrecord(features_data, skip_start=10, window_n=(k_mer - 1) / 2)
-            except:
-                sys.stdout.write("Read the label fail.Skipped.")
-                continue
+            #try:
+            f_label = read_label_tfrecord(features_data, skip_start=10, window_n=(k_mer - 1) / 2)
+            #except:
+            #    sys.stdout.write("Read the label fail.Skipped.")
+            #    continue
 
             tmp_event, tmp_event_length, tmp_label, tmp_label_length = read_raw(f_signal, f_label, seq_length)
             event += tmp_event
@@ -521,6 +521,7 @@ def read_label_tfrecord(raw_label_array, skip_start=10, window_n=0):
     base = list()
     all_base = list()
     count = 0
+    window_n = int(window_n)
     if skip_start < window_n:
         skip_start = window_n
     for line in raw_label_array:

@@ -46,7 +46,8 @@ def train():
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len)
     ctc_loss = model.loss(logits, seq_length, y)
-    opt = model.train_step(ctc_loss, FLAGS.step_rate, global_step=global_step)
+    opt = model.train_opt(ctc_loss, FLAGS.step_rate, global_step=global_step)
+    step = opt.minimize(ctc_loss,global_step = global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -73,7 +74,7 @@ def train():
         feed_dict = {x: batch_x, seq_length: seq_len / ratio, y_indexs: indxs,
                      y_values: values, y_shape: shape,
                      training: True}
-        loss_val, _ = sess.run([ctc_loss, opt], feed_dict=feed_dict)
+        loss_val, _ = sess.run([ctc_loss, step], feed_dict=feed_dict)
         if i % 10 == 0:
             global_step_val = tf.train.global_step(sess, global_step)
             valid_x, valid_len, valid_y = train_ds.next_batch(FLAGS.batch_size)
