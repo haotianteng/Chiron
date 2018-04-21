@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import logging
+from tqdm import tqdm
 
 import numpy as np
 import tensorflow as tf
@@ -221,7 +222,7 @@ def evaluation():
         if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
             os.makedirs(os.path.join(FLAGS.output, 'meta'))
 
-        for name in file_list:
+        for name in tqdm(file_list):
             start_time = time.time()
             if not name.endswith('.signal'):
                 continue
