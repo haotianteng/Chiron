@@ -11,7 +11,6 @@ import os
 import sys
 
 import h5py
-from pprint import pprint
 import logging
 
 
