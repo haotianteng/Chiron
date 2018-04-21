@@ -14,10 +14,10 @@ import re
 import time
 import argparse
 import tensorflow as tf
-import chiron_model as model
+import chiron.chiron_model as model
 
 from six.moves import range
-from chiron_queue_input import inputs
+from chiron.chiron_queue_input import inputs
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.training.python.training import hparam
 

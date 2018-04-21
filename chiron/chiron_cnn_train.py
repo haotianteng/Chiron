@@ -9,8 +9,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 import tensorflow as tf
 
-from .chiron_input import read_raw_data_sets
-from .cnn import getcnnlogit
+from chiron.chiron_input import read_raw_data_sets
+from chiron.cnn import getcnnlogit
 from six.moves import range
 
 

@@ -11,19 +11,22 @@ import argparse
 import os
 import sys
 import time
+import logging
+from tqdm import tqdm
 
 import numpy as np
 import tensorflow as tf
-import chiron_model
+from chiron import chiron_model
 
-from chiron_input import read_data_for_eval
-from cnn import getcnnfeature
-from cnn import getcnnlogit
-from rnn import rnn_layers
-from utils.easy_assembler import simple_assembly
-from utils.easy_assembler import simple_assembly_qs
-from utils.unix_time import unix_time
+from chiron.chiron_input import read_data_for_eval
+from chiron.cnn import getcnnfeature
+from chiron.cnn import getcnnlogit
+from chiron.rnn import rnn_layers
+from chiron.utils.easy_assembler import simple_assembly
+from chiron.utils.easy_assembler import simple_assembly_qs
+from chiron.utils.unix_time import unix_time
 from six.moves import range
+from pprint import pformat
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -219,7 +222,7 @@ def evaluation():
         if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
             os.makedirs(os.path.join(FLAGS.output, 'meta'))
 
-        for name in file_list:
+        for name in tqdm(file_list):
             start_time = time.time()
             if not name.endswith('.signal'):
                 continue
@@ -282,6 +285,7 @@ def evaluation():
 def run(args):
     global FLAGS
     FLAGS = args
+    logging.debug("Flags:\n%s", pformat(vars(args)))
     time_dict = unix_time(evaluation)
     print(FLAGS.output)
     print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %

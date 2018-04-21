@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from chiron_input import read_raw_data_sets
-from cnn import getcnnfeature
-from rnn import rnn_layers
+from chiron.chiron_input import read_raw_data_sets
+from chiron.cnn import getcnnfeature
+from chiron.rnn import rnn_layers
 
 
 class Flags():

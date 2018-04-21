@@ -7,11 +7,13 @@
 #Created on Mon Aug 14 18:38:18 2017
 import argparse
 import sys
+import logging
+from os import path
 
-import chiron_eval
-import chiron_rcnn_train
-from utils import raw
-from utils.extract_sig_ref import extract
+from chiron import chiron_eval
+from chiron import chiron_rcnn_train
+from chiron.utils import raw
+from chiron.utils.extract_sig_ref import extract
 
 
 def evaluation(args):
@@ -30,8 +32,8 @@ def export(args):
 def main(arguments=sys.argv[1:]):
     parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
     subparsers = parser.add_subparsers(title='sub command', help='sub command help')
-    model_default_path = __file__ + '/../model/DNA_default'
-    print ("model_default_path", model_default_path)
+    model_default_path = path.join(path.abspath(path.dirname(__file__)), 'model', 'DNA_default')
+    print("model_default_path", model_default_path)
     # parser for 'call' command
     parser_call = subparsers.add_parser('call', description='Perform basecalling', help='Perform basecalling.')
     parser_call.add_argument('-i', '--input', required=True, help="File path or Folder path to the fast5 file.")
@@ -82,9 +84,13 @@ def main(arguments=sys.argv[1:]):
     parser_train.set_defaults(func=chiron_rcnn_train.run)
 
     args = parser.parse_args(arguments)
-    args.func(args)
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     print(sys.argv[1:])
     main()

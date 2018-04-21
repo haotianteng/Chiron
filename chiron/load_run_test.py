@@ -11,8 +11,8 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
-from chiron_eval import inference
-from chiron_input import read_data_for_eval
+from chiron.chiron_eval import inference
+from chiron.chiron_input import read_data_for_eval
 
 
 def input_output_list():
