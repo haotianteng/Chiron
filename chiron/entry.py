@@ -82,7 +82,10 @@ def main(arguments=sys.argv[1:]):
     parser_train.set_defaults(func=chiron_rcnn_train.run)
 
     args = parser.parse_args(arguments)
-    args.func(args)
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == '__main__':
