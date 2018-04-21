@@ -1,4 +1,5 @@
 from setuptools import setup
+import os
 
 print("""
 *******************************************************************
@@ -8,6 +9,21 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 (c) 2017 Haotian Teng
 *******************************************************************
 """)
+
+install_requires=[
+  'h5py>=2.7.0',
+  'mappy>=2.10.0',
+  'numpy>=1.13.3',
+  'statsmodels>=0.8.0',
+  'tqdm>=4.23.0',
+]
+
+tf_version=">=1.5.0"
+
+if os.environ.get("TENSORFLOW_GPU", ""):
+  install_requires.append('tensorflow-gpu' + tf_version)
+else:
+  install_requires.append('tensorflow' + tf_version)
 
 setup(
   name = 'chiron',
@@ -22,6 +38,6 @@ setup(
   keywords = ['basecaller', 'nanopore', 'sequencing','neural network'], # arbitrary keywords
   license="MPL 2.0",
   classifiers = ['License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)'],
-  install_requires=['tensorflow>=1.5.0','h5py>=2.7.0', 'numpy>=1.13.3', 'statsmodels>=0.8.0', 'tqdm>=4.23.0', 'mappy>=2.10.0'],
+  install_requires=install_requires,
   entry_points={'console_scripts':['chiron=chiron.entry:main'],}
 )
