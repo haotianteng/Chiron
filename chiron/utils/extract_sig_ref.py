@@ -11,9 +11,12 @@ import os
 import sys
 
 import h5py
+from pprint import pprint
+import logging
 
 
 def extract(FLAGS):
+    logger = logging.getLogger(__name__)
     count = 1
     root_folder = FLAGS.input_dir
     out_folder = FLAGS.output_dir
@@ -37,10 +40,10 @@ def extract(FLAGS):
                 raw_signal, reference = extract_file(root_folder + os.path.sep + file_n)
                 count += 1
                 if len(raw_signal) == 0:
-                    print ("Failed in extracting " + (
+                    raise ValueError("Failed in extracting " + (
                         os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
-                    continue
             except:
+                logging.getLogger(__name__).error("Cannot extact file %s", file_n, exc_info=True)
                 continue
             signal_file = open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+')
             signal_file.write(" ".join([str(val) for val in raw_signal]))
@@ -58,7 +61,7 @@ def extract_file(input_file):
     except:
         return False
     raw_attr = input_data['Raw/Reads/']
-    read_name = raw_attr.keys()[0]
+    read_name = list(raw_attr.keys())[0]
     raw_signal = raw_attr[read_name + '/Signal'].value
     try:
         reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
