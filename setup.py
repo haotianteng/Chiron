@@ -22,6 +22,6 @@ setup(
   keywords = ['basecaller', 'nanopore', 'sequencing','neural network'], # arbitrary keywords
   license="MPL 2.0",
   classifiers = ['License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)'],
-  install_requires=['tensorflow>=1.5.0','h5py>=2.7.0', 'numpy>=1.13.3'],
+  install_requires=['tensorflow>=1.5.0','h5py>=2.7.0', 'numpy>=1.13.3', 'statsmodels>=0.8.0'],
   entry_points={'console_scripts':['chiron=chiron.entry:main'],}
 )
