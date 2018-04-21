@@ -14,15 +14,15 @@ import time
 
 import numpy as np
 import tensorflow as tf
-import chiron_model
+from chiron import chiron_model
 
-from chiron_input import read_data_for_eval
-from cnn import getcnnfeature
-from cnn import getcnnlogit
-from rnn import rnn_layers
-from utils.easy_assembler import simple_assembly
-from utils.easy_assembler import simple_assembly_qs
-from utils.unix_time import unix_time
+from chiron.chiron_input import read_data_for_eval
+from chiron.cnn import getcnnfeature
+from chiron.cnn import getcnnlogit
+from chiron.rnn import rnn_layers
+from chiron.utils.easy_assembler import simple_assembly
+from chiron.utils.easy_assembler import simple_assembly_qs
+from chiron.utils.unix_time import unix_time
 from six.moves import range
 
 def sparse2dense(predict_val):
