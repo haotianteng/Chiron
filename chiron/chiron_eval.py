@@ -24,6 +24,7 @@ from chiron.utils.easy_assembler import simple_assembly
 from chiron.utils.easy_assembler import simple_assembly_qs
 from chiron.utils.unix_time import unix_time
 from six.moves import range
+from pprint import pprint
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -282,6 +283,7 @@ def evaluation():
 def run(args):
     global FLAGS
     FLAGS = args
+    pprint(vars(args))
     time_dict = unix_time(evaluation)
     print(FLAGS.output)
     print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %

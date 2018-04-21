@@ -7,6 +7,7 @@
 #Created on Mon Aug 14 18:38:18 2017
 import argparse
 import sys
+from os import path
 
 from chiron import chiron_eval
 from chiron import chiron_rcnn_train
@@ -30,7 +31,7 @@ def export(args):
 def main(arguments=sys.argv[1:]):
     parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
     subparsers = parser.add_subparsers(title='sub command', help='sub command help')
-    model_default_path = __file__ + '/../model/DNA_default'
+    model_default_path = path.join(path.abspath(path.dirname(__file__)), 'model', 'DNA_default')
     print ("model_default_path", model_default_path)
     # parser for 'call' command
     parser_call = subparsers.add_parser('call', description='Perform basecalling', help='Perform basecalling.')
