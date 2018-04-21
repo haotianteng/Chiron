@@ -283,6 +283,7 @@ def evaluation():
 def run(args):
     global FLAGS
     FLAGS = args
+    print("FLAGS:")
     pprint(vars(args))
     time_dict = unix_time(evaluation)
     print(FLAGS.output)

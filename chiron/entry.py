@@ -32,7 +32,7 @@ def main(arguments=sys.argv[1:]):
     parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
     subparsers = parser.add_subparsers(title='sub command', help='sub command help')
     model_default_path = path.join(path.abspath(path.dirname(__file__)), 'model', 'DNA_default')
-    print ("model_default_path", model_default_path)
+    print("model_default_path", model_default_path)
     # parser for 'call' command
     parser_call = subparsers.add_parser('call', description='Perform basecalling', help='Perform basecalling.')
     parser_call.add_argument('-i', '--input', required=True, help="File path or Folder path to the fast5 file.")
