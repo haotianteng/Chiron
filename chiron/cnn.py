@@ -10,8 +10,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
-from utils.variable import _variable_on_cpu
-from utils.variable import _variable_with_weight_decay
+from chiron.utils.variable import _variable_on_cpu
+from chiron.utils.variable import _variable_with_weight_decay
 
 def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, bias_term=False, active=True,
                BN=True, active_function='relu',wd = None):
