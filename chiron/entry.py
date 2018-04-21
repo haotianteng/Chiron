@@ -7,6 +7,7 @@
 #Created on Mon Aug 14 18:38:18 2017
 import argparse
 import sys
+import logging
 from os import path
 
 from chiron import chiron_eval
@@ -90,5 +91,6 @@ def main(arguments=sys.argv[1:]):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     print(sys.argv[1:])
     main()
