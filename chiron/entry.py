@@ -8,10 +8,10 @@
 import argparse
 import sys
 
-import chiron_eval
-import chiron_rcnn_train
-from utils import raw
-from utils.extract_sig_ref import extract
+from chiron import chiron_eval
+from chiron import chiron_rcnn_train
+from chiron.utils import raw
+from chiron.utils.extract_sig_ref import extract
 
 
 def evaluation(args):
