@@ -9,9 +9,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
-from cnn import getcnnfeature
-from cnn import getcnnlogit
-from rnn import rnn_layers
+from chiron.cnn import getcnnfeature
+from chiron.cnn import getcnnlogit
+from chiron.rnn import rnn_layers
 
 MOVING_AVERAGE_DECAY = 0.9999
 

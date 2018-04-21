@@ -19,12 +19,12 @@ import time
 from distutils.dir_util import copy_tree
 
 import tensorflow as tf
-import chiron_model as model
+import chiron.chiron_model as model
 
-from chiron_input import read_raw_data_sets
-from chiron_input import read_tfrecord
-from cnn import getcnnfeature
-from cnn import getcnnlogit
+from chiron.chiron_input import read_raw_data_sets
+from chiron.chiron_input import read_tfrecord
+from chiron.cnn import getcnnfeature
+from chiron.cnn import getcnnlogit
 from six.moves import range
 
 
