@@ -46,7 +46,7 @@ def train():
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len)
     ctc_loss = model.loss(logits, seq_length, y)
-    opt = model.train_opt(ctc_loss, FLAGS.step_rate, global_step=global_step)
+    opt = model.train_opt(FLAGS.step_rate,FLAGS.max_steps, global_step=global_step)
     step = opt.minimize(ctc_loss,global_step = global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
