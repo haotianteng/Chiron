@@ -26,7 +26,7 @@ raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = None
+        self.max_reads_number = 20000
         self.MAXLEN = 1e5  # Maximum Length of the holder in biglist. 1e5 by default
 
 

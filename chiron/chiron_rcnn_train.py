@@ -107,25 +107,24 @@ def run(args):
     FLAGS.data_dir = FLAGS.data_dir + os.path.sep
     FLAGS.log_dir = FLAGS.log_dir + os.path.sep
     train()
-    required = True
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Training model with tfrecord file')
-    parser.add_argument('-i', '--data_dir', required=True,
+    parser.add_argument('-i', '--data_dir', default ='/media/Linux_ex/Nanopore_Data/RNA/tfrecord',
                         help="Directory that store the tfrecord files.")
-    parser.add_argument('-o', '--log_dir', required=True,
+    parser.add_argument('-o', '--log_dir', default = '/media/Linux_ex/model_test',
                         help="log directory that store the training model.")
-    parser.add_argument('-m', '--model_name', required=True, help='model_name')
+    parser.add_argument('-m', '--model_name', default = 'test1', help='model_name')
     parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
                         help='tfrecord file')
     parser.add_argument('-c', '--cache_dir', default=None, help="Output folder")
-    parser.add_argument('-s', '--sequence_len', type=int, default=400,
+    parser.add_argument('-s', '--sequence_len', type=int, default=2000,
                         help='the length of sequence')
-    parser.add_argument('-b', '--batch_size', type=int, default=200,
+    parser.add_argument('-b', '--batch_size', type=int, default=40,
                         help='Batch size')
-    parser.add_argument('-t', '--step_rate', type=float, default=1e-3,
+    parser.add_argument('-t', '--step_rate', type=float, default=1e-4,
                         help='Step rate')
     parser.add_argument('-x', '--max_steps', type=int, default=1000,
                         help='Maximum step')

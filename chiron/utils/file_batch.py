@@ -57,6 +57,9 @@ def extract():
         except:
             fail_list.append(input_file_path)
             return False
+        if mode=='rna':
+            print(type(raw_data))
+            raw_data = raw_data[::-1]
         if FLAGS.normalization == 'mean':
             raw_data = (raw_data - np.median(raw_data)) / np.float(np.std(raw_data))
         elif FLAGS.normalization == 'median':
@@ -135,10 +138,9 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Transfer fast5 to file batch.')
-    parser.add_argument('-i', '--input', default="/media/haotianteng/Linux_ex/Nanopore_Data/Lambda_R9.4/pass/",
+    parser.add_argument('-i', '--input', required = True,
                         help="Directory that store the fast5 files.")
-    parser.add_argument('-o', '--output',
-                        default="/media/haotianteng/Linux_ex/Nanopore_Data/Lambda_R9.4/file_batch_test/",
+    parser.add_argument('-o', '--output', required = True,
                         help="Output folder")
     parser.add_argument('--basecall_group', default='RawGenomeCorrected_000',
                         help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
@@ -149,6 +151,6 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--normalization', default='median',
                         help="The method of normalization applied to signal, Median(default):robust median normalization, 'mean': mean normalization, 'None': no normalizaion")
     parser.add_argument('-m', '--max', default=10, help="Maximum number of batch files generated.")
-    parser.add_argument('--mode', default='DNA', help="Sequecing data type. Default is DNA.")
+    parser.add_argument('--mode', default='dna', help="Sequecing data type. Default is DNA.")
     args = parser.parse_args(sys.argv[1:])
     run(args)
