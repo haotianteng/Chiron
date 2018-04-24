@@ -99,6 +99,7 @@ def _generate_signal_label_batch(signal, label, signal_len, batch_size, shuffle,
     else:
         signal_batch, signal_len_batch, label_batch = tf.train.batch(
             [signal, signal_len, label],
+            batch_size = batch_size,
             num_threads=threads,
             capacity=queue_capacity)
     # Display the training signals in the visualizer.
@@ -134,10 +135,10 @@ def inputs(data_dir, batch_size, for_valid=False):
             "Filling queue with %d signals before starting to validate. "
             "This will take some time." % VALID_QUEUE_CAPACITY)
         return _generate_signal_label_batch(
-            read_input.signal,
-            read_input.label,
-            read_input.signal_len,
-            batch_size,
+            signal = read_input.signal,
+            label = read_input.label,
+            signal_len = read_input.signal_len,
+            batch_size = batch_size,
             queue_capacity=VALID_QUEUE_CAPACITY,
             shuffle=False)
     else:
@@ -145,10 +146,10 @@ def inputs(data_dir, batch_size, for_valid=False):
             "Filling queue with %d signals before starting to train. "
             "This will take some time." % TRAIN_QUEUE_CAPACITY)
         return _generate_signal_label_batch(
-            read_input.signal,
-            read_input.label,
-            read_input.signal_len,
-            batch_size,
+            signal = read_input.signal,
+            label = read_input.label,
+            signal_len = read_input.signal_len,
+            batch_size = batch_size,
             queue_capacity=TRAIN_QUEUE_CAPACITY,
             shuffle=True)
 

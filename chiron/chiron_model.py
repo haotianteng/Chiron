@@ -71,8 +71,7 @@ def prediction(logits, seq_length, label,beam_width = 30, top_paths=1):
         predict = tf.nn.ctc_greedy_decoder(
                                         logits, 
                                         seq_length, 
-                                        merge_repeated=True,
-                                        top_paths = top_paths)
+                                        merge_repeated=True)
     else:
         predict = tf.nn.ctc_beam_search_decoder(
                                         logits, 

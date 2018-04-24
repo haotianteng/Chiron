@@ -61,7 +61,7 @@ def average_gradients(tower_grads):
         grads = []
         for g, _ in grad_and_vars:
             #Iterate over variables
-            expanded_g = tf.expand_dims(g, 0)
+            expanded_g = tf.expand_dims(g, axis = 0)
             grads.append(expanded_g)
         grad = tf.concat(axis=0, values=grads)
         grad = tf.reduce_mean(grad, axis=0)
@@ -125,14 +125,14 @@ def train(hparams):
                                     initializer=tf.zeros_initializer())
         
         opt = model.train_opt(hparams.step_rate,hparams.max_steps,global_step = global_step)
-        x, seq_length, train_labels = inputs(hparams.data_dir, hparams.batch_size*hparams.ngpus,
+        x, seq_length, train_labels = inputs(hparams.data_dir, int(hparams.batch_size*hparams.ngpus),
                                             for_valid=False)
         split_y = tf.split(train_labels,hparams.ngpus,axis=0)
         split_seq_length = tf.split(seq_length,hparams.ngpus,axis=0)
         split_x = tf.split(x,hparams.ngpus,axis=0)
         tower_grads = []
         with tf.variable_scope(tf.get_variable_scope()):
-            for i in xrange(hparams.ngpus):
+            for i in range(hparams.ngpus):
                 with tf.device('/gpu:%d' % i):
                     with tf.name_scope('%s_%d' % ('gpu_tower' ,i)) as scope:
                         loss,error = tower_loss(scope,
@@ -159,7 +159,8 @@ def train(hparams):
         saver = tf.train.Saver()
         summary = tf.summary.merge_all()
 
-        sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
+                                                log_device_placement=False))
         save_model(hparams.log_dir, hparams.model_name)
         if not hparams.retrain:
             sess.run(init)
@@ -207,23 +208,27 @@ if __name__ == "__main__":
             '-i',
             '--data-dir',
             help='Location containing binary training data',
-            required=True)
+            default = '/media/Linux_ex/Nanopore_Data/20170322_c4_watermanag_S10/file_batch')
+#            required=True)
    
     parser.add_argument(
             '-o',
             '--log-dir',
             help='Log dir location',
-            required=True)
+            default = '/media/Linux_ex/model_test')
+#            required=True)
     parser.add_argument(
             '-m',
             '--model-name',
             help='Model name',
-            required=True)
+            default = "test")
+#            required=True)
     parser.add_argument(
             '-n',
             '--ngpus',
             help='number of gpus',
-            default = 1)
+            default = 1,
+            type = int)
     parser.add_argument(
             '-s',
             '--sequence-len',
