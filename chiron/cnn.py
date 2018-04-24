@@ -326,32 +326,32 @@ def getcnnfeature(signal, training):
 #    return fea
 ###############################################################################
 #   Residual Layer x 3 (DNA_default)
-    # with tf.variable_scope('res_layer1'):
-    #     net = residual_layer(net, out_channel=256,
-    #                           training=training, i_bn=True)
-    # with tf.variable_scope('res_layer2'):
-    #     net = residual_layer(net, out_channel=256, training=training)
-    # with tf.variable_scope('res_layer3'):
-    #     net = residual_layer(net, out_channel=256, training=training)
-    # feashape = net.get_shape().as_list()
-    # net = tf.reshape(net, [feashape[0], feashape[2],
-    #                         feashape[3]], name='fea_rs')
-    # return net
-
-###############################################################################
-#   RNA model
     with tf.variable_scope('res_layer1'):
-        net = residual_layer(net,out_channel=128,training = training, i_bn = True)
+        net = residual_layer(net, out_channel=256,
+                              training=training, i_bn=True)
     with tf.variable_scope('res_layer2'):
-        net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+        net = residual_layer(net, out_channel=256, training=training)
     with tf.variable_scope('res_layer3'):
-        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
-    with tf.variable_scope('res_layer4'):
-        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+        net = residual_layer(net, out_channel=256, training=training)
     feashape = net.get_shape().as_list()
     net = tf.reshape(net, [feashape[0], feashape[2],
                             feashape[3]], name='fea_rs')
     return net
+
+###############################################################################
+#   RNA model
+    # with tf.variable_scope('res_layer1'):
+    #     net = residual_layer(net,out_channel=128,training = training, i_bn = True)
+    # with tf.variable_scope('res_layer2'):
+    #     net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+    # with tf.variable_scope('res_layer3'):
+    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    # with tf.variable_scope('res_layer4'):
+    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    # feashape = net.get_shape().as_list()
+    # net = tf.reshape(net, [feashape[0], feashape[2],
+    #                         feashape[3]], name='fea_rs')
+    # return net
 ##############################################################################
 #   Dilate connection(Variant Wavenet) (res3_dilate7)
 #    res_layer = 3
