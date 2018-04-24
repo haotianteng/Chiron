@@ -45,9 +45,15 @@ To install with `pip`:
 ```
 pip install chiron  
 ```
-This will install Chiron, the CPU-only distribution of TensorFlow (and it's dependencies), and [`h5py`](https://github.com/h5py/h5py) (required for reading in `.fast5` files).
-
-**Note**: If you are after the GPU version, follow the steps in the following section.
+This will install Chiron, and [`h5py`](https://github.com/h5py/h5py) (required for reading in `.fast5` files).
+Tensorflow need to be install in addition by:
+```  
+pip install tensorflow  
+```  
+or GPU version:  
+```  
+pip install tensorflow-gpu  
+```  
 
 ### Install from GitHub
 This is currently the best install method if you are wanting to run Chiron on in GPU mode (`pip install` version is coming).
@@ -68,7 +74,7 @@ pip install tensorflow-gpu
 pip install h5py
 ```
 
-For alternate/detailed installation instructions for TensorFlow, see their [fantastic documentation](https://www.tensorflow.org/).
+For alternate/detailed installation instructions for TensorFlow, see the [documentation](https://www.tensorflow.org/).
 
 ## Basecall
 ### If installed from `pip`:
@@ -258,7 +264,7 @@ gcloud ml-engine jobs submit training $JOB_NAME \
 ### Configure 
 ```
 Change configure.yaml according to [GCloud Docs](https://cloud.google.com/ml-engine/docs/training-overview) 
-For example the following configure.yaml: 
+For example the following configure_multi_gpu.yaml: 
  
 trainingInput: 
   scaleTier: CUSTOM 
@@ -302,7 +308,7 @@ gcloud ml-engine jobs submit training ${JOB_NAME} \
     --module-name chiron.chiron_multi_gpu_train \
     --package-path chiron \
     --region $REGION \
-    --config config.yaml \
+    --config config_multi_gpu.yaml \
     -- \
     -i gs://$DATA_BUCKET/file_batch \
     -o gs://$MODEL_BUCKET/ \
