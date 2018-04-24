@@ -242,11 +242,16 @@ def read_data_for_eval(file_path,
 					   start_index=0,
                        step=20, 
 	                   seg_length=200, 
-                       sig_norm=True):
+                       sig_norm=True,
+                       reverse = False):
     """
     Input Args:
         file_path: file path to a signal file.
         start_index: the index of the signal start to read.
+        step: sliding step size.
+        seg_length: length of segments.
+        sig_norm: if the signal need to be normalized.
+        reverse: if the signal need to be reversed.
     """
     if not file_path.endswith('.signal'):
         raise ValueError('A .signal file is required.')
@@ -256,6 +261,8 @@ def read_data_for_eval(file_path,
         label = list()
         label_len = list()
         f_signal = read_signal(file_path, normalize=sig_norm)
+        if reverse:
+            f_signal = f_signal[::-1]
         f_signal = f_signal[start_index:]
         sig_len = len(f_signal)
         for indx in range(0, sig_len, step):

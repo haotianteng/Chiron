@@ -142,6 +142,11 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
     seg_folder = os.path.join(FLAGS.output, 'segments')
     meta_folder = os.path.join(FLAGS.output, 'meta')
     path_con = os.path.join(result_folder, file_pre + '.' + suffix)
+    if FLAGS.mode == 'rna':
+        consensus = consensus[::-1]
+        consensus = consensus.replace('T','U').replace('t','u')
+        if q_score is not None:
+            q_score = q_score[::-1]
     if not concise:
         path_reads = os.path.join(seg_folder, file_pre + '.' + suffix)
         path_meta = os.path.join(meta_folder, file_pre + '.meta')
@@ -228,7 +233,13 @@ def evaluation():
                 continue
             file_pre = os.path.splitext(name)[0]
             input_path = os.path.join(file_dir, name)
-            eval_data = read_data_for_eval(input_path, FLAGS.start,
+            if FLAGS.mode == 'rna':
+                eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                           seg_length=FLAGS.segment_len,
+                                           step=FLAGS.jump,
+                                           reverse = True)
+            else:
+                eval_data = read_data_for_eval(input_path, FLAGS.start,
                                            seg_length=FLAGS.segment_len,
                                            step=FLAGS.jump)
             reads_n = eval_data.reads_n
@@ -327,5 +338,7 @@ if __name__ == "__main__":
                         help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     parser.add_argument('--concise', action='store_true',
                         help="Concisely output the result, the meta and segments files will not be output.")
+    parser.add_argument('--mode', default = 'dna',
+                        help="Output mode, can be chosen from dna or rna.")
     args = parser.parse_args(sys.argv[1:])
     run(args)
