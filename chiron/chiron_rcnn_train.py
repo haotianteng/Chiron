@@ -66,7 +66,7 @@ def train():
         FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
     train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir,
-                             FLAGS.sequence_len, k_mer=FLAGS.k_mer,max_segments_num = FLAGS.max_segments_num)
+                             FLAGS.sequence_len, k_mer=FLAGS.k_mer,max_segments_num=FLAGS.segments_num)
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                         help='Step rate')
     parser.add_argument('-x', '--max_steps', type=int, default=10000,
                         help='Maximum step')
-    parser.add_argument('-n', '--max_segments_num', type = int, default = None,
+    parser.add_argument('-n', '--segments_num', type = int, default = None,
                         help='Maximum number of segments read into the training queue, default(None) read all segments.')
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
     parser.add_argument('-r', '--retrain', type=bool, default=False,

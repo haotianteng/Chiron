@@ -90,9 +90,12 @@ def path_prob(logits):
         prob_logits(Float): Tensor of shape[batch_size].
     """
 
+    fea_shape = logits.shape
+    bsize = fea_shape[0]
+    seg_len = fea_shape[1]
     top2_logits = tf.nn.top_k(logits, k=2)[0]
-    logits_diff = tf.slice(top2_logits, [0, 0, 0], [FLAGS.batch_size, FLAGS.segment_len, 1]) - tf.slice(
-        top2_logits, [0, 0, 1], [FLAGS.batch_size, FLAGS.segment_len, 1])
+    logits_diff = tf.slice(top2_logits, [0, 0, 0], [bsize, seg_len, 1]) - tf.slice(
+        top2_logits, [0, 0, 1], [bsize, seg_len, 1])
     prob_logits = tf.reduce_mean(logits_diff, axis=-2)
     return prob_logits
 
@@ -142,10 +145,7 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
     meta_folder = os.path.join(FLAGS.output, 'meta')
     path_con = os.path.join(result_folder, file_pre + '.' + suffix)
     if FLAGS.mode == 'rna':
-        consensus = consensus[::-1]
         consensus = consensus.replace('T','U').replace('t','u')
-        if q_score is not None:
-            q_score = q_score[::-1]
     if not concise:
         path_reads = os.path.join(seg_folder, file_pre + '.' + suffix)
         path_meta = os.path.join(meta_folder, file_pre + '.meta')
@@ -186,7 +186,7 @@ def evaluation():
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
     training = tf.placeholder(tf.bool)
-    logits, _ = chiron_model.inference(
+    logits, ratio = chiron_model.inference(
                                     x, 
                                     seq_length, 
                                     training=training,
@@ -253,7 +253,7 @@ def evaluation():
                     batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
                 seq_len = np.pad(
                     seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
-                feed_dict = {x: batch_x, seq_length: seq_len, training: False}
+                feed_dict = {x: batch_x, seq_length: seq_len/int(ratio), training: False}
                 if FLAGS.extension == 'fastq':
                     predict_val, logits_prob = sess.run(
                         [predict, prob], feed_dict=feed_dict)

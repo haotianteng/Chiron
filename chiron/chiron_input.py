@@ -302,8 +302,15 @@ def read_cache_dataset(h5py_file_path):
                    label_length=label_length)
 
 
-def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer=1, max_segments_num=FLAGS.max_segments_number):
+def read_tfrecord(data_dir, 
+                  tfrecord, 
+                  h5py_file_path=None, 
+                  seq_length=300, 
+                  k_mer=1, 
+                  max_segments_num=None):
     ###Read from raw data
+    if max_segments_num is None:
+        max_segments_num = FLAGS.max_segments_number
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
     else:
