@@ -28,7 +28,8 @@ from chiron.utils.easy_assembler import simple_assembly
 from chiron.utils.easy_assembler import simple_assembly_qs
 from chiron.utils.unix_time import unix_time
 from six.moves import range
-# from pprint import pformat
+import threading
+from collections import defaultdict
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -199,16 +200,17 @@ def evaluation():
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
     logits_index = tf.placeholder(tf.int32, shape=())
+    logits_fname = tf.placeholder(tf.string, shape=())
     logits_queue = tf.FIFOQueue(
-        capacity=FLAGS.batch_size * 100,
-        dtypes=[tf.float32, tf.int32, tf.int32],
-        shapes = [logits.shape,logits_index.shape,seq_length.shape]
+        capacity=100 * FLAGS.batch_size,
+        dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
+        shapes=[logits.shape,logits_fname.shape,logits_index.shape, seq_length.shape]
     )
     logits_queue_size = logits_queue.size()
-    logits_enqueue = logits_queue.enqueue((logits, logits_index, seq_length))
+    logits_enqueue = logits_queue.enqueue((logits, logits_fname, logits_index, seq_length))
 
     ### Decoding logits into bases
-    decode_predict_op, decode_prob_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
+    decode_predict_op, decode_prob_op, decoded_fname_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
     saver = tf.train.Saver()
     with tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config)) as sess:
         saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
@@ -229,6 +231,36 @@ def evaluation():
         if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
             os.makedirs(os.path.join(FLAGS.output, 'meta'))
 
+        def worker_fn():
+            for name in file_list:
+                if not name.endswith('.signal'):
+                    continue
+                input_path = os.path.join(file_dir, name)
+                eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                               seg_length=FLAGS.segment_len,
+                                               step=FLAGS.jump)
+                reads_n = eval_data.reads_n
+                for i in range(0, reads_n, FLAGS.batch_size):
+                    batch_x, seq_len, _ = eval_data.next_batch(
+                        FLAGS.batch_size, shuffle=False, sig_norm=False)
+                    batch_x = np.pad(
+                        batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
+                    seq_len = np.pad(
+                        seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
+                    feed_dict = {
+                        x: batch_x,
+                        seq_length: seq_len,
+                        training: False,
+                        logits_index:i,
+                        logits_fname: name,
+                    }
+                    sess.run(logits_enqueue,feed_dict=feed_dict)
+
+        worker = threading.Thread(target=worker_fn)
+        worker.setDaemon(True)
+        worker.start()
+
+        val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
         for name in tqdm(file_list, desc="basecalling fast5s"):
             start_time = time.time()
             if not name.endswith('.signal'):
@@ -249,37 +281,26 @@ def evaluation():
             reads = list()
 
             N = len(range(0, reads_n, FLAGS.batch_size))
-            i_logits = 0
-            decoded_cnt = 0
-            val = {}  # We could read vals out of order, that's why it's a dict
             with tqdm(total=reads_n, desc="signal processing") as pbar:
-                while decoded_cnt < N:
+                while True:
                     l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
-                    # Flow control
-                    # Either we have something beam decoded, or we've pushed all data into the queue
-                    pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz)
-                    if d_sz > 0 or i_logits >= reads_n:
-                        i, predict_val, logits_prob = sess.run([decode_idx_op, decode_predict_op, decode_prob_op], feed_dict={
-                            training: False
-                        })
-                        val[i] = (predict_val, logits_prob)
-                        decoded_cnt += 1
+                    pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz, refresh=False)
+                    decoded_fname, i, predict_val, logits_prob = sess.run([decoded_fname_op, decode_idx_op, decode_predict_op, decode_prob_op], feed_dict={
+                        training: False
+                    })
+                    decoded_fname = decoded_fname.decode("UTF-8")
+                    val[decoded_fname][i] = (predict_val, logits_prob)
+
+                    if decoded_fname == name:
+                        decoded_cnt = len(val[name])
                         pbar.update(min(reads_n, decoded_cnt*FLAGS.batch_size) - (decoded_cnt -1) * FLAGS.batch_size)
-                    else:
-                        batch_x, seq_len, _ = eval_data.next_batch(
-                            FLAGS.batch_size, shuffle=False, sig_norm=False)
-                        batch_x = np.pad(
-                            batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
-                        seq_len = np.pad(
-                            seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
-                        feed_dict = {x: batch_x, seq_length: seq_len/ratio, training: False, logits_index:i_logits}
-                        sess.run(logits_enqueue,feed_dict=feed_dict)
-                        i_logits += FLAGS.batch_size
+                        if decoded_cnt == N:
+                            break
 
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
             for i in trange(0, reads_n, FLAGS.batch_size, desc="further decoding"):
-                predict_val, logits_prob = val[i]
+                predict_val, logits_prob = val[name][i]
                 predict_read, unique = sparse2dense(predict_val)
                 predict_read = predict_read[0]
                 unique = unique[0]
@@ -293,6 +314,8 @@ def evaluation():
                 if FLAGS.extension == 'fastq':
                     qs_list = np.concatenate((qs_list, logits_prob))
                 reads += predict_read
+            val.pop(name)  # Release the memory
+
             tqdm.write("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
@@ -312,7 +335,7 @@ def evaluation():
 
 
 def decoding_queue(logits_queue, num_threads=6):
-    q_logits, q_index, seq_length = logits_queue.dequeue()
+    q_logits, q_name, q_index, seq_length = logits_queue.dequeue()
     if FLAGS.extension == 'fastq':
         prob = path_prob(q_logits)
     else:
@@ -329,18 +352,21 @@ def decoding_queue(logits_queue, num_threads=6):
         # Check this issue https://github.com/tensorflow/tensorflow/issues/9550
     decodeedQueue = tf.FIFOQueue(
         capacity=2 * num_threads,
-        dtypes=[tf.int64 for _ in decode_decoded] * 3 + [tf.float32, tf.float32, tf.int32],
+        dtypes=[tf.int64 for _ in decode_decoded] * 3 + [tf.float32, tf.float32, tf.string, tf.int32],
     )
     ops = []
     for x in decode_decoded:
         ops.append(x.indices)
         ops.append(x.values)
         ops.append(x.dense_shape)
-    decode_enqueue = decodeedQueue.enqueue(tuple(ops + [decode_log_prob, prob, q_index]))
+    decode_enqueue = decodeedQueue.enqueue(tuple(ops + [decode_log_prob, prob, q_name, q_index]))
 
     decode_dequeue = decodeedQueue.dequeue()
-    decode_predict, decode_prob, decode_idx = [[], decode_dequeue[-3]], decode_dequeue[-2], decode_dequeue[-1]
-    for i in range(0, len(decode_dequeue) - 3, 3):
+    decode_prob, decode_fname, decode_idx = decode_dequeue[-3:]
+
+    decode_dequeue = decode_dequeue[:-3]
+    decode_predict = [[], decode_dequeue[-1]]
+    for i in range(0, len(decode_dequeue) - 1, 3):
         decode_predict[0].append(
             tf.SparseTensor(
                 indices=decode_dequeue[i],
@@ -351,7 +377,7 @@ def decoding_queue(logits_queue, num_threads=6):
 
     decode_qr = tf.train.QueueRunner(decodeedQueue, [decode_enqueue]*num_threads)
     tf.train.add_queue_runner(decode_qr)
-    return decode_predict, decode_prob, decode_idx, decodeedQueue.size()
+    return decode_predict, decode_prob, decode_fname, decode_idx, decodeedQueue.size()
 
 
 def run(args):
