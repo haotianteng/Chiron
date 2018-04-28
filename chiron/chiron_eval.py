@@ -198,14 +198,13 @@ def evaluation():
     config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
-
-
+    logits_index = tf.placeholder(tf.int32, shape=())
     logits_queue = tf.FIFOQueue(
-        capacity=-1,
+        capacity=FLAGS.batch_size * 100,
         dtypes=[tf.float32, tf.int32, tf.int32],
+        shapes = [logits.shape,logits_index.shape,seq_length.shape]
     )
     logits_queue_size = logits_queue.size()
-    logits_index = tf.placeholder(tf.int32, shape=())
     logits_enqueue = logits_queue.enqueue((logits, logits_index, seq_length))
 
     ### Decoding logits into bases
@@ -273,7 +272,7 @@ def evaluation():
                             batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
                         seq_len = np.pad(
                             seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
-                        feed_dict = {x: batch_x, seq_length: seq_len, training: False, logits_index:i_logits}
+                        feed_dict = {x: batch_x, seq_length: seq_len/ratio, training: False, logits_index:i_logits}
                         sess.run(logits_enqueue,feed_dict=feed_dict)
                         i_logits += FLAGS.batch_size
 
