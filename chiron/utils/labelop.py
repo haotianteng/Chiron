@@ -130,7 +130,7 @@ def get_label_segment(fast5_fn, basecall_group, basecall_subgroup):
     return (segment_data, first_segment_index, segment_index, total)
 
 
-def get_label_raw(fast5_fn, basecall_group, basecall_subgroup):
+def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
     ##Open file
     try:
         fast5_data = h5py.File(fast5_fn, 'r')

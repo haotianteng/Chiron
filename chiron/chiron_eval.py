@@ -7,17 +7,19 @@
 #Created on Sun Apr 30 11:59:15 2017
 from __future__ import absolute_import
 from __future__ import print_function
+from tqdm import tqdm
+from tqdm import trange
+
 import argparse
 import os
 import sys
 import time
 import logging
-from tqdm import tqdm,trange
 
 import numpy as np
 import tensorflow as tf
-from chiron import chiron_model
 
+from chiron import chiron_model
 from chiron.chiron_input import read_data_for_eval
 from chiron.cnn import getcnnfeature
 from chiron.cnn import getcnnlogit
@@ -26,7 +28,7 @@ from chiron.utils.easy_assembler import simple_assembly
 from chiron.utils.easy_assembler import simple_assembly_qs
 from chiron.utils.unix_time import unix_time
 from six.moves import range
-from pprint import pformat
+# from pprint import pformat
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -91,9 +93,12 @@ def path_prob(logits):
         prob_logits(Float): Tensor of shape[batch_size].
     """
 
+    fea_shape = logits.shape
+    bsize = fea_shape[0]
+    seg_len = fea_shape[1]
     top2_logits = tf.nn.top_k(logits, k=2)[0]
-    logits_diff = tf.slice(top2_logits, [0, 0, 0], [FLAGS.batch_size, FLAGS.segment_len, 1]) - tf.slice(
-        top2_logits, [0, 0, 1], [FLAGS.batch_size, FLAGS.segment_len, 1])
+    logits_diff = tf.slice(top2_logits, [0, 0, 0], [bsize, seg_len, 1]) - tf.slice(
+        top2_logits, [0, 0, 1], [bsize, seg_len, 1])
     prob_logits = tf.reduce_mean(logits_diff, axis=-2)
     return prob_logits
 
@@ -142,6 +147,8 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
     seg_folder = os.path.join(FLAGS.output, 'segments')
     meta_folder = os.path.join(FLAGS.output, 'meta')
     path_con = os.path.join(result_folder, file_pre + '.' + suffix)
+    if FLAGS.mode == 'rna':
+        consensus = consensus.replace('T','U').replace('t','u')
     if not concise:
         path_reads = os.path.join(seg_folder, file_pre + '.' + suffix)
         path_meta = os.path.join(meta_folder, file_pre + '.meta')
@@ -183,10 +190,7 @@ def evaluation():
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
     training = tf.placeholder(tf.bool)
-
-    # logits: Tensor of shape [batch_size, max_time, class_num]
-    # ratio: Scalar float, the scale factor between the output logits and the input maximum length.
-    logits, _ = chiron_model.inference(
+    logits, ratio = chiron_model.inference(
                                     x, 
                                     seq_length, 
                                     training=training,
@@ -232,7 +236,13 @@ def evaluation():
                 continue
             file_pre = os.path.splitext(name)[0]
             input_path = os.path.join(file_dir, name)
-            eval_data = read_data_for_eval(input_path, FLAGS.start,
+            if FLAGS.mode == 'rna':
+                eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                           seg_length=FLAGS.segment_len,
+                                           step=FLAGS.jump,
+                                           reverse = True)
+            else:
+                eval_data = read_data_for_eval(input_path, FLAGS.start,
                                            seg_length=FLAGS.segment_len,
                                            step=FLAGS.jump)
             reads_n = eval_data.reads_n
@@ -269,7 +279,6 @@ def evaluation():
 
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
-
             for i in trange(0, reads_n, FLAGS.batch_size, desc="further decoding"):
                 predict_val, logits_prob = val[i]
                 predict_read, unique = sparse2dense(predict_val)
@@ -349,7 +358,7 @@ def decoding_queue(logits_queue, num_threads=6):
 def run(args):
     global FLAGS
     FLAGS = args
-    logging.debug("Flags:\n%s", pformat(vars(args)))
+    # logging.debug("Flags:\n%s", pformat(vars(args)))
     time_dict = unix_time(evaluation)
     print(FLAGS.output)
     print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
@@ -391,5 +400,7 @@ if __name__ == "__main__":
                         help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     parser.add_argument('--concise', action='store_true',
                         help="Concisely output the result, the meta and segments files will not be output.")
+    parser.add_argument('--mode', default = 'dna',
+                        help="Output mode, can be chosen from dna or rna.")
     args = parser.parse_args(sys.argv[1:])
     run(args)

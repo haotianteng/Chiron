@@ -46,7 +46,7 @@ def train():
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len)
     ctc_loss = model.loss(logits, seq_length, y)
-    opt = model.train_opt(ctc_loss, FLAGS.step_rate, global_step=global_step)
+    opt = model.train_opt(FLAGS.step_rate,FLAGS.max_steps, global_step=global_step)
     step = opt.minimize(ctc_loss,global_step = global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
@@ -66,7 +66,7 @@ def train():
         FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
     train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir,
-                             FLAGS.sequence_len, k_mer=FLAGS.k_mer)
+                             FLAGS.sequence_len, k_mer=FLAGS.k_mer,max_segments_num=FLAGS.segments_num)
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -107,17 +107,17 @@ def run(args):
     FLAGS.data_dir = FLAGS.data_dir + os.path.sep
     FLAGS.log_dir = FLAGS.log_dir + os.path.sep
     train()
-    required = True
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Training model with tfrecord file')
-    parser.add_argument('-i', '--data_dir', required=True,
+    parser.add_argument('-i', '--data_dir', required = True,
                         help="Directory that store the tfrecord files.")
-    parser.add_argument('-o', '--log_dir', required=True,
+    parser.add_argument('-o', '--log_dir', required = True  ,
                         help="log directory that store the training model.")
-    parser.add_argument('-m', '--model_name', required=True, help='model_name')
+    parser.add_argument('-m', '--model_name', required = True,
+                        help='model_name')
     parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
                         help='tfrecord file')
     parser.add_argument('-c', '--cache_dir', default=None, help="Output folder")
@@ -127,8 +127,10 @@ if __name__ == "__main__":
                         help='Batch size')
     parser.add_argument('-t', '--step_rate', type=float, default=1e-3,
                         help='Step rate')
-    parser.add_argument('-x', '--max_steps', type=int, default=1000,
+    parser.add_argument('-x', '--max_steps', type=int, default=10000,
                         help='Maximum step')
+    parser.add_argument('-n', '--segments_num', type = int, default = None,
+                        help='Maximum number of segments read into the training queue, default(None) read all segments.')
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
     parser.add_argument('-r', '--retrain', type=bool, default=False,
                         help='flag if retrain or not')

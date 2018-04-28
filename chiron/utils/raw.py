@@ -69,7 +69,8 @@ def extract_file(input_file):
     for index, start in enumerate(raw_start):
         raw_data_array.append(
             [start, start + raw_length[index], str(raw_label['base'][index])])
-
+    if FLAGS.mode=='rna':
+        raw_data = raw_data[::-1]
     return True, (raw_data, np.array(raw_data_array, dtype='S5'))
 
 
@@ -91,5 +92,7 @@ if __name__ == "__main__":
                         help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
+    parser.add_argument('--mode',default = 'dna',
+                        help='Type of data to basecall, default is dna, can be chosen from dna, rna and methylation(under construction)')
     args = parser.parse_args(sys.argv[1:])
     run(args)

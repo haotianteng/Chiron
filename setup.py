@@ -18,23 +18,21 @@ install_requires=[
   'tqdm>=4.23.0',
 ]
 
-tf_version=">=1.5.0"
-
-if os.environ.get("TENSORFLOW_GPU", ""):
-  install_requires.append('tensorflow-gpu' + tf_version)
-else:
-  install_requires.append('tensorflow' + tf_version)
+extras_require={
+  "tf": ["tensorflow>=1.3.0"],
+  "tf_gpu": ["tensorflow-gpu>=1.3.0"],
+}
 
 setup(
   name = 'chiron',
   packages = ['chiron'], # this must be the same as the name above
-  version = '0.3',
+  version = '0.4',
   include_package_data=True,
   description = 'A deep neural network basecaller for nanopore sequencing.',
   author = 'Haotian Teng',
   author_email = 'havens.teng@gmail.com',
   url = 'https://github.com/haotianteng/chiron', 
-  download_url = 'https://github.com/haotianteng/chiron/archive/0.3.tar.gz', # I'll explain this in a second
+  download_url = 'https://github.com/haotianteng/chiron/archive/0.4.tar.gz', # I'll explain this in a second
   keywords = ['basecaller', 'nanopore', 'sequencing','neural network'], # arbitrary keywords
   license="MPL 2.0",
   classifiers = ['License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)'],

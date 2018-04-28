@@ -26,7 +26,7 @@ raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 
 class Flags(object):
     def __init__(self):
-        self.max_reads_number = None
+        self.max_segments_number = None
         self.MAXLEN = 1e5  # Maximum Length of the holder in biglist. 1e5 by default
 
 
@@ -242,11 +242,16 @@ def read_data_for_eval(file_path,
 					   start_index=0,
                        step=20, 
 	                   seg_length=200, 
-                       sig_norm=True):
+                       sig_norm=True,
+                       reverse = False):
     """
     Input Args:
         file_path: file path to a signal file.
         start_index: the index of the signal start to read.
+        step: sliding step size.
+        seg_length: length of segments.
+        sig_norm: if the signal need to be normalized.
+        reverse: if the signal need to be reversed.
     """
     if not file_path.endswith('.signal'):
         raise ValueError('A .signal file is required.')
@@ -256,6 +261,8 @@ def read_data_for_eval(file_path,
         label = list()
         label_len = list()
         f_signal = read_signal(file_path, normalize=sig_norm)
+        if reverse:
+            f_signal = f_signal[::-1]
         f_signal = f_signal[start_index:]
         sig_len = len(f_signal)
         for indx in range(0, sig_len, step):
@@ -295,8 +302,15 @@ def read_cache_dataset(h5py_file_path):
                    label_length=label_length)
 
 
-def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
+def read_tfrecord(data_dir, 
+                  tfrecord, 
+                  h5py_file_path=None, 
+                  seq_length=300, 
+                  k_mer=1, 
+                  max_segments_num=None):
     ###Read from raw data
+    if max_segments_num is None:
+        max_segments_num = FLAGS.max_segments_number
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
     else:
@@ -365,14 +379,14 @@ def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer
             del tmp_label_length
             count = len(event)
             if file_count % 10 == 0:
-                if FLAGS.max_reads_number is not None:
-                    sys.stdout.write("%d/%d events read.   \n" % (count, FLAGS.max_reads_number))
-                    if len(event) > FLAGS.max_reads_number:
-                        event.resize(FLAGS.max_reads_number)
-                        label.resize(FLAGS.max_reads_number)
-                        event_length.resize(FLAGS.max_reads_number)
+                if max_segments_num is not None:
+                    sys.stdout.write("%d/%d events read.   \n" % (count, max_segments_num))
+                    if len(event) > max_segments_num:
+                        event.resize(max_segments_num)
+                        label.resize(max_segments_num)
+                        event_length.resize(max_segments_num)
 
-                        label_length.resize(FLAGS.max_reads_number)
+                        label_length.resize(max_segments_num)
                         break
                 else:
                     sys.stdout.write("%d lines read.   \n" % (count))
@@ -384,7 +398,7 @@ def read_tfrecord(data_dir, tfrecord, h5py_file_path=None, seq_length=300, k_mer
             train = DataSet(event=event, event_length=event_length, label=label, label_length=label_length)
         return train
             
-def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_reads_num=FLAGS.max_reads_number):
+def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_segments_num=FLAGS.max_segments_number):
     ###Read from raw data
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
@@ -439,15 +453,15 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, m
                 del tmp_label_length
                 count = len(event)
                 if file_count % 10 == 0:
-                    if FLAGS.max_reads_number is not None:
+                    if max_segments_num is not None:
                         sys.stdout.write("%d/%d events read.   \n" % (
-                        count, FLAGS.max_reads_number))
-                        if len(event) > FLAGS.max_reads_number:
-                            event.resize(FLAGS.max_reads_number)
-                            label.resize(FLAGS.max_reads_number)
-                            event_length.resize(FLAGS.max_reads_number)
+                        count, max_segments_num))
+                        if len(event) > max_segments_num:
+                            event.resize(max_segments_num)
+                            label.resize(max_segments_num)
+                            event_length.resize(max_segments_num)
 
-                            label_length.resize(FLAGS.max_reads_number)
+                            label_length.resize(max_segments_num)
                             break
                     else:
                         sys.stdout.write("%d lines read.   \n" % (count))

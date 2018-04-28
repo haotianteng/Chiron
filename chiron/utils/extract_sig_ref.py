@@ -15,7 +15,7 @@ import logging
 
 
 def extract(FLAGS):
-    logger = logging.getLogger(__name__)
+    # logger = logging.getLogger(__name__)
     count = 1
     root_folder = FLAGS.input_dir
     out_folder = FLAGS.output_dir
@@ -42,14 +42,14 @@ def extract(FLAGS):
                     raise ValueError("Failed in extracting " + (
                         os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
             except:
-                logging.getLogger(__name__).error("Cannot extact file %s", file_n, exc_info=True)
+                # logging.getLogger(__name__).error("Cannot extact file %s", file_n, exc_info=True)
                 continue
             signal_file = open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+')
             signal_file.write(" ".join([str(val) for val in raw_signal]))
             if len(reference) > 0:
                 ref_file = open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+')
                 ref_file.write(reference)
-            logger.info("Extracted " + (os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
+            print("Extracted " + (os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
 
 
 def extract_file(input_file):
@@ -75,8 +75,9 @@ def extract_file(input_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract the signal and reference from fast5 file.')
-    parser.add_argument('-i', '--input_dir', help="Directory that store the fast5 files.")
-    parser.add_argument('-o', '--output_dir', default=None,
+    parser.add_argument('-i', '--input_dir', required = True,
+                        help="Directory that store the fast5 files.")
+    parser.add_argument('-o', '--output_dir', required = True,
                         help="Directory that output the signal and reference sequence.")
     args = parser.parse_args(sys.argv[1:])
     extract(args)

@@ -36,6 +36,9 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
     """
     if strides is None:
         strides = [1, 1, 1, 1]
+    else:
+        if type(strides) is int:
+            strides = [1,strides,1,1]
     with tf.variable_scope(name):
         W = _variable_with_weight_decay("weights", 
                                         shape=ksize,
@@ -187,7 +190,7 @@ def inception_layer(indata, training, times=16):
     return (tf.concat([conv1a, conv0b, conv1c, conv1d, conv1e, conv1f], axis=-1, name='concat'))
 
 
-def residual_layer(indata, out_channel, training, i_bn=False):
+def residual_layer(indata, out_channel, training, i_bn=False,k = 3, strides = None):
     """An inplementation of the residual layer from https://arxiv.org/abs/1512.03385
 
     Args:
@@ -204,12 +207,12 @@ def residual_layer(indata, out_channel, training, i_bn=False):
     in_channel = fea_shape[-1]
     with tf.variable_scope('branch1'):
         indata_cp = conv_layer(indata, ksize=[1, 1, in_channel, out_channel], padding='SAME', training=training,
-                               name='conv1', BN=i_bn, active=False)
+                               name='conv1', BN=i_bn, active=False,strides = strides)
     with tf.variable_scope('branch2'):
         conv_out1 = conv_layer(indata, ksize=[1, 1, in_channel, out_channel], padding='SAME', training=training,
                                name='conv2a', bias_term=False)
-        conv_out2 = conv_layer(conv_out1, ksize=[1, 3, out_channel, out_channel], padding='SAME', training=training,
-                               name='conv2b', bias_term=False)
+        conv_out2 = conv_layer(conv_out1, ksize=[1, k, out_channel, out_channel], padding='SAME', training=training,
+                               name='conv2b', bias_term=False,strides = strides)
         conv_out3 = conv_layer(conv_out2, ksize=[1, 1, out_channel, out_channel], padding='SAME', training=training,
                                name='conv2c', bias_term=False, active=False)
     with tf.variable_scope('plus'):
@@ -265,8 +268,7 @@ def getcnnfeature(signal, training):
 
     # TODO: Read the structure hyper parameters from Json file.
     signal_shape = signal.get_shape().as_list()
-    signal = tf.reshape(signal, [signal_shape[0], 1, signal_shape[1], 1])
-    print((signal.get_shape()))
+    net = tf.reshape(signal, [signal_shape[0], 1, signal_shape[1], 1])
 #    #Conv layer x 4
 #    with tf.variable_scope('conv_layer1'):
 #        net = conv_layer(signal,ksize=[1,3,1,64],strides=[1,1,1,1],padding='SAME',training = training,name = 'conv')
@@ -324,18 +326,53 @@ def getcnnfeature(signal, training):
 #    return fea
 ###############################################################################
 #   Residual Layer x 3 (DNA_default)
-    with tf.variable_scope('res_layer1'):
-        res1 = residual_layer(signal, out_channel=256,
-                              training=training, i_bn=True)
-    with tf.variable_scope('res_layer2'):
-        res2 = residual_layer(res1, out_channel=256, training=training)
-    with tf.variable_scope('res_layer3'):
-        res3 = residual_layer(res2, out_channel=256, training=training)
-    feashape = res3.get_shape().as_list()
-    fea = tf.reshape(res3, [feashape[0], feashape[2],
-                            feashape[3]], name='fea_rs')
-    return fea
+    # with tf.variable_scope('res_layer1'):
+    #     net = residual_layer(net, out_channel=256,
+    #                           training=training, i_bn=True)
+    # with tf.variable_scope('res_layer2'):
+    #     net = residual_layer(net, out_channel=256, training=training)
+    # with tf.variable_scope('res_layer3'):
+    #     net = residual_layer(net, out_channel=256, training=training)
+    # feashape = net.get_shape().as_list()
+    # net = tf.reshape(net, [feashape[0], feashape[2],
+    #                         feashape[3]], name='fea_rs')
+    # return net
+
 ###############################################################################
+#   RNA model(test1)
+    # with tf.variable_scope('res_layer1'):
+    #     net = residual_layer(net,out_channel=128,training = training, i_bn = True)
+    # with tf.variable_scope('res_layer2'):
+    #     net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+    # with tf.variable_scope('res_layer3'):
+    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    # with tf.variable_scope('res_layer4'):
+    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    # feashape = net.get_shape().as_list()
+    # net = tf.reshape(net, [feashape[0], feashape[2],
+    #                         feashape[3]], name='fea_rs')
+    # return net
+###############################################################################
+#   RNA model(test2)
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net,out_channel=64,training = training, strides=2, k=7, i_bn = True)
+    with tf.variable_scope('max_pool1'):
+        net = tf.nn.max_pool(net,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name = 'mp_1')
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net,out_channel = 64, training = training)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+    with tf.variable_scope('res_layer4'):
+        net = residual_layer(net,out_channel=128,training = training)
+    with tf.variable_scope('res_layer5'):
+        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    with tf.variable_scope('res_layer6'):
+        net = residual_layer(net,out_channel = 256, training = training)
+    feashape = net.get_shape().as_list()
+    net = tf.reshape(net, [feashape[0], feashape[2],
+                            feashape[3]], name='fea_rs')
+    return net
+##############################################################################
 #   Dilate connection(Variant Wavenet) (res3_dilate7)
 #    res_layer = 3
 #    dilate_layer = 7
