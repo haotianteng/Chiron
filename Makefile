@@ -1,4 +1,6 @@
 USERNAME=""
+TAG="latest-py3"
+
 ifeq ($(strip $(USERNAME)), "")
 	BASE_TAG=""
 else
@@ -6,14 +8,14 @@ else
 endif
 
 docker-build:
-	docker build -t $(BASE_TAG)chiron:latest-py3-gpu -f Dockerfile.py3.gpu . 
-	docker build -t $(BASE_TAG)chiron:latest-py3 -f Dockerfile.py3.cpu . 
+	docker build -t $(BASE_TAG)chiron:$(TAG)-gpu -f Dockerfile.py3.gpu . 
+	docker build -t $(BASE_TAG)chiron:$(TAG) -f Dockerfile.py3.cpu . 
 
 .PHONY: docker-build
 
 docker-push: docker-build
-	docker push $(BASE_TAG)chiron:latest-py3-gpu
-	docker push $(BASE_TAG)chiron:latest-py3
+	docker push $(BASE_TAG)chiron:$(TAG)-gpu
+	docker push $(BASE_TAG)chiron:$(TAG)
 
 .PHONY: docker-push
 	
