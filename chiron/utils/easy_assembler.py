@@ -206,14 +206,15 @@ def mc_decoding(logits, base_type, sample_n=300):
 ###############################################################################
 
 #########################Simple assembly method################################
-def simple_assembly(bpreads):
+def simple_assembly(bpreads, start=0, jump=30):
     concensus = np.zeros([4, 1000])
+    lower_bound = np.zeros([4, 1000], dtype=np.int)
     pos = 0
     length = 0
     census_len = 1000
     for indx, bpread in enumerate(bpreads):
         if indx == 0:
-            add_count(concensus, 0, bpread)
+            add_count(concensus, 0, bpread, lower_bound, 0)
             continue
         d = difflib.SequenceMatcher(None, bpreads[indx - 1], bpread)
         match_block = max(d.get_matching_blocks(), key=lambda x: x[2])
@@ -221,20 +222,24 @@ def simple_assembly(bpreads):
         if disp + pos + len(bpreads[indx]) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)
+            lower_bound = np.lib.pad(lower_bound, ((0, 0), (0, 1000)),
+                                   mode='constant', constant_values=0)
+
             census_len += 1000
-        add_count(concensus, pos + disp, bpreads[indx])
+        add_count(concensus, pos + disp, bpreads[indx], lower_bound, start + indx*jump)
         pos += disp
         length = max(length, pos + len(bpreads[indx]))
-    return concensus[:, :length]
+    return concensus[:, :length], lower_bound[:, :length]
 
 
-def add_count(concensus, start_indx, segment):
+def add_count(concensus, start_indx, segment, lower_bound, lower_bound_val):
     base_dict = {'A': 0, 'C': 1, 'G': 2, 'T': 3, 'a': 0, 'c': 1, 'g': 2, 't': 3}
     if start_indx < 0:
         segment = segment[-start_indx:]
         start_indx = 0
     for i, base in enumerate(segment):
         concensus[base_dict[base]][start_indx + i] += 1
+        lower_bound[base_dict[base]][start_indx + i] = max(lower_bound[base_dict[base]][start_indx + i], lower_bound_val)
 
 
 ###############################################################################
