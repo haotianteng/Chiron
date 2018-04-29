@@ -220,14 +220,11 @@ def evaluation():
             file_dir = os.path.abspath(
                 os.path.join(FLAGS.input, os.path.pardir))
 
-        if not os.path.exists(FLAGS.output):
-            os.makedirs(FLAGS.output)
-        if not os.path.exists(os.path.join(FLAGS.output, 'segments')):
-            os.makedirs(os.path.join(FLAGS.output, 'segments'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'result')):
-            os.makedirs(os.path.join(FLAGS.output, 'result'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
-            os.makedirs(os.path.join(FLAGS.output, 'meta'))
+        os.makedirs(FLAGS.output, exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'segments'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'result'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'meta'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'labels'), exist_ok=True)
 
         for name in tqdm(file_list, desc="basecalling fast5s"):
             start_time = time.time()
@@ -257,7 +254,7 @@ def evaluation():
                     l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
                     # Flow control
                     # Either we have something beam decoded, or we've pushed all data into the queue
-                    pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz)
+                    pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz, refresh=False)
                     if d_sz > 0 or i_logits >= reads_n:
                         i, predict_val, logits_prob = sess.run([decode_idx_op, decode_predict_op, decode_prob_op], feed_dict={
                             training: False
@@ -299,9 +296,20 @@ def evaluation():
             if FLAGS.extension == 'fastq':
                 consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list)
                 qs_string = qs(consensus, qs_consensus)
+                labels = None
             else:
-                consensus = simple_assembly(bpreads)
-            c_bpread = index2base(np.argmax(consensus, axis=0))
+                consensus, labels = simple_assembly(bpreads, start=FLAGS.start, jump=FLAGS.jump)
+            consensus = np.argmax(consensus, axis=0)
+            c_bpread = index2base(consensus)
+            if not FLAGS.concise:
+                if labels is None:
+                    _ , labels = simple_assembly(bpreads, start=FLAGS.start, jump=FLAGS.jump)  # Minimal perfomance impact
+                labels = labels[consensus, np.arange(labels.shape[1])]
+                with open(os.path.join(FLAGS.output, 'labels', os.path.splitext(name)[0] + ".label"), "w") as f:
+                    for i in range(len(labels) - 1):
+                        print(labels[i], labels[i + 1], c_bpread[i], file=f)
+                    print(labels[-1], labels[-1], c_bpread[-1], file=f)
+
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
             tqdm.write("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
@@ -375,31 +383,6 @@ def run(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='chiron',
-                                     description='A deep neural network basecaller.')
-    parser.add_argument('-i', '--input', default='example_data/output/raw',
-                        help="File path or Folder path to the fast5 file.")
-    parser.add_argument('-o', '--output', default='example_data/output',
-                        help="Output Folder name")
-    parser.add_argument('-m', '--model', default='model/DNA_default',
-                        help="model folder")
-    parser.add_argument('-s', '--start', type=int, default=0,
-                        help="Start index of the signal file.")
-    parser.add_argument('-b', '--batch_size', type=int, default=1100,
-                        help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
-    parser.add_argument('-l', '--segment_len', type=int, default=300,
-                        help="Segment length to be divided into.")
-    parser.add_argument('-j', '--jump', type=int, default=30,
-                        help="Step size for segment")
-    parser.add_argument('-t', '--threads', type=int, default=0,
-                        help="Threads number")
-    parser.add_argument('-e', '--extension', default='fastq',
-                        help="Output file extension.")
-    parser.add_argument('--beam', type=int, default=0,
-                        help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
-    parser.add_argument('--concise', action='store_true',
-                        help="Concisely output the result, the meta and segments files will not be output.")
-    parser.add_argument('--mode', default = 'dna',
-                        help="Output mode, can be chosen from dna or rna.")
-    args = parser.parse_args(sys.argv[1:])
-    run(args)
+    from .entry import main
+    print("This calling method is deprecated, use entry", file=sys.stderr)
+    main(["call"] + sys.argv[1:])

@@ -51,6 +51,8 @@ def main(arguments=sys.argv[1:]):
                              help="Beam width used in beam search decoder, default is 50, set to 0 to use a greedy decoder. Large beam width give better decoding result but require longer decoding time.")
     parser_call.add_argument('--concise', action='store_true',
                              help="Concisely output the result, the meta and segments files will not be output.")
+    parser.add_argument('--mode', default = 'dna',
+                        help="Output mode, can be chosen from dna or rna.")
     parser_call.set_defaults(func=evaluation)
 
     # parser for 'extract' command
