@@ -198,14 +198,13 @@ def evaluation():
     config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
-
-
+    logits_index = tf.placeholder(tf.int32, shape=())
     logits_queue = tf.FIFOQueue(
-        capacity=-1,
+        capacity=FLAGS.batch_size * 100,
         dtypes=[tf.float32, tf.int32, tf.int32],
+        shapes = [logits.shape,logits_index.shape,seq_length.shape]
     )
     logits_queue_size = logits_queue.size()
-    logits_index = tf.placeholder(tf.int32, shape=())
     logits_enqueue = logits_queue.enqueue((logits, logits_index, seq_length))
 
     ### Decoding logits into bases
@@ -270,7 +269,7 @@ def evaluation():
                             batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
                         seq_len = np.pad(
                             seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
-                        feed_dict = {x: batch_x, seq_length: seq_len, training: False, logits_index:i_logits}
+                        feed_dict = {x: batch_x, seq_length: seq_len/ratio, training: False, logits_index:i_logits}
                         sess.run(logits_enqueue,feed_dict=feed_dict)
                         i_logits += FLAGS.batch_size
 
@@ -384,31 +383,6 @@ def run(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='chiron',
-                                     description='A deep neural network basecaller.')
-    parser.add_argument('-i', '--input', default='example_data/output/raw',
-                        help="File path or Folder path to the fast5 file.")
-    parser.add_argument('-o', '--output', default='example_data/output',
-                        help="Output Folder name")
-    parser.add_argument('-m', '--model', default='model/DNA_default',
-                        help="model folder")
-    parser.add_argument('-s', '--start', type=int, default=0,
-                        help="Start index of the signal file.")
-    parser.add_argument('-b', '--batch_size', type=int, default=1100,
-                        help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
-    parser.add_argument('-l', '--segment_len', type=int, default=300,
-                        help="Segment length to be divided into.")
-    parser.add_argument('-j', '--jump', type=int, default=30,
-                        help="Step size for segment")
-    parser.add_argument('-t', '--threads', type=int, default=0,
-                        help="Threads number")
-    parser.add_argument('-e', '--extension', default='fastq',
-                        help="Output file extension.")
-    parser.add_argument('--beam', type=int, default=0,
-                        help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
-    parser.add_argument('--concise', action='store_true',
-                        help="Concisely output the result, the meta and segments files will not be output.")
-    parser.add_argument('--mode', default = 'dna',
-                        help="Output mode, can be chosen from dna or rna.")
-    args = parser.parse_args(sys.argv[1:])
-    run(args)
+    from .entry import main
+    print("This calling method is deprecated, use entry", file=sys.stderr)
+    main(["call"] + sys.argv[1:])
