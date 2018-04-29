@@ -222,14 +222,11 @@ def evaluation():
             file_dir = os.path.abspath(
                 os.path.join(FLAGS.input, os.path.pardir))
 
-        if not os.path.exists(FLAGS.output):
-            os.makedirs(FLAGS.output)
-        if not os.path.exists(os.path.join(FLAGS.output, 'segments')):
-            os.makedirs(os.path.join(FLAGS.output, 'segments'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'result')):
-            os.makedirs(os.path.join(FLAGS.output, 'result'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
-            os.makedirs(os.path.join(FLAGS.output, 'meta'))
+        os.makedirs(FLAGS.output, exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'segments'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'result'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'meta'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'labels'), exist_ok=True)
 
         def worker_fn():
             for name in file_list:
@@ -322,9 +319,20 @@ def evaluation():
             if FLAGS.extension == 'fastq':
                 consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list)
                 qs_string = qs(consensus, qs_consensus)
+                labels = None
             else:
-                consensus = simple_assembly(bpreads)
-            c_bpread = index2base(np.argmax(consensus, axis=0))
+                consensus, labels = simple_assembly(bpreads, start=FLAGS.start, jump=FLAGS.jump)
+            consensus = np.argmax(consensus, axis=0)
+            c_bpread = index2base(consensus)
+            if not FLAGS.concise:
+                if labels is None:
+                    _ , labels = simple_assembly(bpreads, start=FLAGS.start, jump=FLAGS.jump)  # Minimal perfomance impact
+                labels = labels[consensus, np.arange(labels.shape[1])]
+                with open(os.path.join(FLAGS.output, 'labels', os.path.splitext(name)[0] + ".label"), "w") as f:
+                    for i in range(len(labels) - 1):
+                        print(labels[i], labels[i + 1], c_bpread[i], file=f)
+                    print(labels[-1], labels[-1], c_bpread[-1], file=f)
+
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
             tqdm.write("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
