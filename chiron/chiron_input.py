@@ -27,7 +27,7 @@ raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 class Flags(object):
     def __init__(self):
         self.max_segments_number = None
-        self.MAXLEN = 1e5  # Maximum Length of the holder in biglist. 1e5 by default
+        self.MAXLEN = 1e4  # Maximum Length of the holder in biglist. 1e5 by default
 
 
 #        self.max_segment_len = 200
@@ -349,10 +349,11 @@ def read_tfrecord(data_dir,
             features_string = (example.features.feature['features']
                                         .bytes_list
                                         .value[0])
-            
+            fn_string = (example.features.feature['fname'].bytes_list.value[0])
+
             raw_data = np.fromstring(raw_data_string, dtype=np.int16)
             
-            features_data = np.fromstring(features_string, dtype='S5')
+            features_data = np.fromstring(features_string, dtype='S8')
 
             # grouping the whole array into sub-array with size = 3
             group_size = 3
@@ -367,7 +368,6 @@ def read_tfrecord(data_dir,
             #except:
             #    sys.stdout.write("Read the label fail.Skipped.")
             #    continue
-
             tmp_event, tmp_event_length, tmp_label, tmp_label_length = read_raw(f_signal, f_label, seq_length)
             event += tmp_event
             event_length += tmp_event_length
@@ -641,11 +641,10 @@ def base2ind(base, alphabet_n=4, base_n=1):
 
 def main():
     ### Input Test ###
-    Data_dir = "/home/haotianteng/UQ/deepBNS/data/Lambda_R9.4/raw/"
-    train = read_raw_data_sets(Data_dir, seq_length=400)
+    Data_dir = "/media/Linux_ex/Nanopore_Data/20170322_c4_watermanag_S10/tfrecord_test/"
+    train = read_tfrecord(Data_dir,"train.tfrecords",seq_length=1000)
     for i in range(100):
         inputX, sequence_length, label = train.next_batch(10)
-        indxs, values, shape = label
 
 
 if __name__ == '__main__':

@@ -150,7 +150,7 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
     # Read corrected data
     try:
         corr_data = fast5_data[
-            '/Analyses/RawGenomeCorrected_000/' + basecall_subgroup + '/Events']
+            '/Analyses/'+basecall_group +'/' + basecall_subgroup + '/Events']
         corr_attrs = dict(list(corr_data.attrs.items()))
         corr_data = corr_data.value
     except:
@@ -162,12 +162,12 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
 
     # Reading extra information
     corr_start_rel_to_raw = corr_attrs['read_start_rel_to_raw']  #
-
+    if len(raw_dat) > 99999999:
+        raise ValueError(fast5_fn + ": max signal length exceed 99999999")
     if any(len(vals) <= 1 for vals in (
             corr_data, raw_dat)):
         raise NotImplementedError((
             'One or no segments or signal present in read.'))
-
     event_starts = corr_data['start'] + corr_start_rel_to_raw
     event_lengths = corr_data['length']
     event_bases = corr_data['base']
@@ -176,7 +176,6 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
     label_data = np.array(
         list(zip(event_starts, event_lengths, event_bases)),
         dtype=[('start', '<u4'), ('length', '<u4'), ('base', 'S1')])
-
     return (raw_dat, label_data, event_starts, event_lengths)
 
 
@@ -211,7 +210,7 @@ if __name__ == '__main__':
     fast5_fn = "/home/haotianteng/UQ/deepBNS/data/test/pass/test.fast5"
 
     basecall_subgroup = 'BaseCalled_template'
-    basecall_group = 'Basecall_1D_000'
+    basecall_group = 'RawGenomeCorrected_000'
 
     # Get segment data
     (segment_label, first_segment, last_segment, total) = get_label_segment(

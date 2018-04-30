@@ -65,7 +65,7 @@ def train():
     summary_writer = tf.summary.FileWriter(
         FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
 
-    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_dir,
+    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_file,
                              FLAGS.sequence_len, k_mer=FLAGS.k_mer,max_segments_num=FLAGS.segments_num)
     start = time.time()
     for i in range(FLAGS.max_steps):
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                         help='model_name')
     parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
                         help='tfrecord file')
-    parser.add_argument('-c', '--cache_dir', default=None, help="Output folder")
+    parser.add_argument('-c', '--cache_file', default=None, help="Cache file.")
     parser.add_argument('-s', '--sequence_len', type=int, default=400,
                         help='the length of sequence')
     parser.add_argument('-b', '--batch_size', type=int, default=200,
@@ -135,6 +135,6 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--retrain', type=bool, default=False,
                         help='flag if retrain or not')
     args = parser.parse_args(sys.argv[1:])
-    if args.cache_dir is None:
-        args.cache_dir = args.data_dir + '/cache.hdf5'
+    if args.cache_file is None:
+        args.cache_file = args.data_dir + '/cache.hdf5'
     run(args)

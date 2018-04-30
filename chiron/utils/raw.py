@@ -47,9 +47,9 @@ def extract(raw_folder=None):
                 count += 1
                 example = tf.train.Example(features=tf.train.Features(feature={
                     'raw_data': _bytes_feature(raw_data.tostring()),
-                    'features': _bytes_feature(raw_data_array.tostring())}))
+                    'features': _bytes_feature(raw_data_array.tostring()),
+                    'fname':_bytes_feature(file_n)}))
                 writer.write(example.SerializeToString())
-
             sys.stdout.write("%s file transfered.   \n" % (file_n))
 
     writer.close()
@@ -67,11 +67,14 @@ def extract_file(input_file):
 
     raw_data_array = []
     for index, start in enumerate(raw_start):
+        if raw_length[index]==0:
+            print("input_file:" + input_file)
+            raise ValueError("catch a label with length 0")
         raw_data_array.append(
             [start, start + raw_length[index], str(raw_label['base'][index])])
     if FLAGS.mode=='rna':
         raw_data = raw_data[::-1]
-    return True, (raw_data, np.array(raw_data_array, dtype='S5'))
+    return True, (raw_data, np.array(raw_data_array, dtype='S8'))
 
 
 def run(args):
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', required = True, help="Output folder")
     parser.add_argument('-f', '--tffile', default="train.tfrecords",
                         help="tfrecord file")
-    parser.add_argument('--basecall_group', default='Basecall_1D_000',
+    parser.add_argument('--basecall_group', default='RawGenomeCorrected_000',
                         help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
@@ -96,3 +99,4 @@ if __name__ == "__main__":
                         help='Type of data to basecall, default is dna, can be chosen from dna, rna and methylation(under construction)')
     args = parser.parse_args(sys.argv[1:])
     run(args)
+
