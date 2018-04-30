@@ -30,6 +30,7 @@ from chiron.utils.unix_time import unix_time
 from six.moves import range
 import threading
 from collections import defaultdict
+from pprint import pformat
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -202,7 +203,7 @@ def evaluation():
     logits_index = tf.placeholder(tf.int32, shape=())
     logits_fname = tf.placeholder(tf.string, shape=())
     logits_queue = tf.FIFOQueue(
-        capacity=100 * FLAGS.batch_size,
+        capacity=100,
         dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
         shapes=[logits.shape,logits_fname.shape,logits_index.shape, seq_length.shape]
     )
@@ -278,6 +279,12 @@ def evaluation():
             reads = list()
 
             N = len(range(0, reads_n, FLAGS.batch_size))
+            logger.debug("Read %s, %s", name, pformat(
+                dict(
+                    reads_n=reads_n,
+                    batch_size=FLAGS.batch_size,
+                )
+            ))
             with tqdm(total=reads_n, desc="signal processing") as pbar:
                 while True:
                     l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
@@ -287,7 +294,7 @@ def evaluation():
                     })
                     decoded_fname = decoded_fname.decode("UTF-8")
                     val[decoded_fname][i] = (predict_val, logits_prob)
-
+                    logger.debug("Recieved decoding for %s, part %5d", decoded_fname, i)
                     if decoded_fname == name:
                         decoded_cnt = len(val[name])
                         pbar.update(min(reads_n, decoded_cnt*FLAGS.batch_size) - (decoded_cnt -1) * FLAGS.batch_size)
@@ -313,7 +320,7 @@ def evaluation():
                 reads += predict_read
             val.pop(name)  # Release the memory
 
-            tqdm.write("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
+            logger.info("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             if FLAGS.extension == 'fastq':
@@ -335,7 +342,7 @@ def evaluation():
 
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
-            tqdm.write("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
+            logger.info("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
             list_of_time = [start_time, reading_time,
                             basecall_time, assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,

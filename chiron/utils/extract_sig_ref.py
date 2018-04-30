@@ -11,6 +11,8 @@ import os
 import sys
 
 import h5py
+from tqdm import tqdm
+from glob import glob
 import logging
 
 
@@ -33,7 +35,13 @@ def extract(FLAGS):
         os.mkdir(raw_folder)
     if not os.path.isdir(ref_folder):
         os.mkdir(ref_folder)
-    for file_n in os.listdir(root_folder):
+    filelist = [
+        x for x in glob(root_folder + "/*.fast5") if
+                not os.path.exists(os.path.join(
+                    raw_folder, os.path.splitext(x)[0] + ".signal"
+                ))
+    ]
+    for file_n in tqdm(filelist, desc="extracting signal data"):
         if file_n.endswith('fast5'):
             try:
                 raw_signal, reference = extract_file(root_folder + os.path.sep + file_n)
@@ -49,7 +57,7 @@ def extract(FLAGS):
             if len(reference) > 0:
                 ref_file = open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+')
                 ref_file.write(reference)
-            print("Extracted " + (os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
+            logging.getLogger(__name__).info("Extracted " + (os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
 
 
 def extract_file(input_file):

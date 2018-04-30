@@ -9,6 +9,8 @@ import argparse
 import sys
 import logging
 from os import path
+import sys
+from tqdm import tqdm
 
 from chiron import chiron_eval
 from chiron import chiron_rcnn_train
@@ -27,6 +29,10 @@ def evaluation(args):
 
 def export(args):
     raw.run(args)
+
+class TqdmWriteWrapper():
+    def write(self, s):
+        tqdm.write(s, end="")
 
 
 def main(arguments=sys.argv[1:]):
@@ -87,12 +93,35 @@ def main(arguments=sys.argv[1:]):
 
     args = parser.parse_args(arguments)
     if hasattr(args, 'func'):
-        args.func(args)
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        h = (logging.StreamHandler(
+            TqdmWriteWrapper()
+        ))
+        h.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)5s]:%(name)20s: %(message)s"
+        )
+        h.setFormatter(formatter)
+        root_logger.addHandler(h)
+
+        log_fn = path.join(args.output or args.log_dir, "debug.log")
+        h = (logging.FileHandler(
+            log_fn,
+        ))
+        h.setLevel(logging.DEBUG)
+        h.setFormatter(formatter)
+        root_logger.addHandler(h)
+        logging.info("Initialized logging handlers")
+        try:
+            args.func(args)
+        except:
+            logging.critical("Critical error happened", exc_info=True)
+            raise
     else:
         parser.print_help()
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     print(sys.argv[1:])
     main()
