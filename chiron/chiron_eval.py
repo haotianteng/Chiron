@@ -28,7 +28,9 @@ from chiron.utils.easy_assembler import simple_assembly
 from chiron.utils.easy_assembler import simple_assembly_qs
 from chiron.utils.unix_time import unix_time
 from six.moves import range
-# from pprint import pformat
+import threading
+from collections import defaultdict
+from pprint import pformat
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
@@ -199,16 +201,17 @@ def evaluation():
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
     logits_index = tf.placeholder(tf.int32, shape=())
+    logits_fname = tf.placeholder(tf.string, shape=())
     logits_queue = tf.FIFOQueue(
-        capacity=FLAGS.batch_size * 100,
-        dtypes=[tf.float32, tf.int32, tf.int32],
-        shapes = [logits.shape,logits_index.shape,seq_length.shape]
+        capacity=100,
+        dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
+        shapes=[logits.shape,logits_fname.shape,logits_index.shape, seq_length.shape]
     )
     logits_queue_size = logits_queue.size()
-    logits_enqueue = logits_queue.enqueue((logits, logits_index, seq_length))
+    logits_enqueue = logits_queue.enqueue((logits, logits_fname, logits_index, seq_length))
 
     ### Decoding logits into bases
-    decode_predict_op, decode_prob_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
+    decode_predict_op, decode_prob_op, decoded_fname_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
     saver = tf.train.Saver()
     with tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config)) as sess:
         saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
@@ -220,15 +223,42 @@ def evaluation():
             file_dir = os.path.abspath(
                 os.path.join(FLAGS.input, os.path.pardir))
 
-        if not os.path.exists(FLAGS.output):
-            os.makedirs(FLAGS.output)
-        if not os.path.exists(os.path.join(FLAGS.output, 'segments')):
-            os.makedirs(os.path.join(FLAGS.output, 'segments'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'result')):
-            os.makedirs(os.path.join(FLAGS.output, 'result'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
-            os.makedirs(os.path.join(FLAGS.output, 'meta'))
+        os.makedirs(FLAGS.output, exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'segments'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'result'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'meta'), exist_ok=True)
+        os.makedirs(os.path.join(FLAGS.output, 'labels'), exist_ok=True)
 
+        def worker_fn():
+            for name in file_list:
+                if not name.endswith('.signal'):
+                    continue
+                input_path = os.path.join(file_dir, name)
+                eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                               seg_length=FLAGS.segment_len,
+                                               step=FLAGS.jump)
+                reads_n = eval_data.reads_n
+                for i in range(0, reads_n, FLAGS.batch_size):
+                    batch_x, seq_len, _ = eval_data.next_batch(
+                        FLAGS.batch_size, shuffle=False, sig_norm=False)
+                    batch_x = np.pad(
+                        batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
+                    seq_len = np.pad(
+                        seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
+                    feed_dict = {
+                        x: batch_x,
+                        seq_length: seq_len,
+                        training: False,
+                        logits_index:i,
+                        logits_fname: name,
+                    }
+                    sess.run(logits_enqueue,feed_dict=feed_dict)
+
+        worker = threading.Thread(target=worker_fn)
+        worker.setDaemon(True)
+        worker.start()
+
+        val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
         for name in tqdm(file_list, desc="basecalling fast5s"):
             start_time = time.time()
             if not name.endswith('.signal'):
@@ -249,37 +279,32 @@ def evaluation():
             reads = list()
 
             N = len(range(0, reads_n, FLAGS.batch_size))
-            i_logits = 0
-            decoded_cnt = 0
-            val = {}  # We could read vals out of order, that's why it's a dict
+            logger.debug("Read %s, %s", name, pformat(
+                dict(
+                    reads_n=reads_n,
+                    batch_size=FLAGS.batch_size,
+                )
+            ))
             with tqdm(total=reads_n, desc="signal processing") as pbar:
-                while decoded_cnt < N:
+                while True:
                     l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
-                    # Flow control
-                    # Either we have something beam decoded, or we've pushed all data into the queue
-                    pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz)
-                    if d_sz > 0 or i_logits >= reads_n:
-                        i, predict_val, logits_prob = sess.run([decode_idx_op, decode_predict_op, decode_prob_op], feed_dict={
-                            training: False
-                        })
-                        val[i] = (predict_val, logits_prob)
-                        decoded_cnt += 1
+                    pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz, refresh=False)
+                    decoded_fname, i, predict_val, logits_prob = sess.run([decoded_fname_op, decode_idx_op, decode_predict_op, decode_prob_op], feed_dict={
+                        training: False
+                    })
+                    decoded_fname = decoded_fname.decode("UTF-8")
+                    val[decoded_fname][i] = (predict_val, logits_prob)
+                    logger.debug("Recieved decoding for %s, part %5d", decoded_fname, i)
+                    if decoded_fname == name:
+                        decoded_cnt = len(val[name])
                         pbar.update(min(reads_n, decoded_cnt*FLAGS.batch_size) - (decoded_cnt -1) * FLAGS.batch_size)
-                    else:
-                        batch_x, seq_len, _ = eval_data.next_batch(
-                            FLAGS.batch_size, shuffle=False, sig_norm=False)
-                        batch_x = np.pad(
-                            batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
-                        seq_len = np.pad(
-                            seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
-                        feed_dict = {x: batch_x, seq_length: seq_len/ratio, training: False, logits_index:i_logits}
-                        sess.run(logits_enqueue,feed_dict=feed_dict)
-                        i_logits += FLAGS.batch_size
+                        if decoded_cnt == N:
+                            break
 
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
             for i in trange(0, reads_n, FLAGS.batch_size, desc="further decoding"):
-                predict_val, logits_prob = val[i]
+                predict_val, logits_prob = val[name][i]
                 predict_read, unique = sparse2dense(predict_val)
                 predict_read = predict_read[0]
                 unique = unique[0]
@@ -293,18 +318,31 @@ def evaluation():
                 if FLAGS.extension == 'fastq':
                     qs_list = np.concatenate((qs_list, logits_prob))
                 reads += predict_read
-            tqdm.write("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
+            val.pop(name)  # Release the memory
+
+            logger.info("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             if FLAGS.extension == 'fastq':
                 consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list)
                 qs_string = qs(consensus, qs_consensus)
+                labels = None
             else:
-                consensus = simple_assembly(bpreads)
-            c_bpread = index2base(np.argmax(consensus, axis=0))
+                consensus, labels = simple_assembly(bpreads, start=FLAGS.start, jump=FLAGS.jump)
+            consensus = np.argmax(consensus, axis=0)
+            c_bpread = index2base(consensus)
+            if not FLAGS.concise:
+                if labels is None:
+                    _ , labels = simple_assembly(bpreads, start=FLAGS.start, jump=FLAGS.jump)  # Minimal perfomance impact
+                labels = labels[consensus, np.arange(labels.shape[1])]
+                with open(os.path.join(FLAGS.output, 'labels', os.path.splitext(name)[0] + ".label"), "w") as f:
+                    for i in range(len(labels) - 1):
+                        print(labels[i], labels[i + 1], c_bpread[i], file=f)
+                    print(labels[-1], labels[-1], c_bpread[-1], file=f)
+
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
-            tqdm.write("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
+            logger.info("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
             list_of_time = [start_time, reading_time,
                             basecall_time, assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
@@ -312,7 +350,7 @@ def evaluation():
 
 
 def decoding_queue(logits_queue, num_threads=6):
-    q_logits, q_index, seq_length = logits_queue.dequeue()
+    q_logits, q_name, q_index, seq_length = logits_queue.dequeue()
     if FLAGS.extension == 'fastq':
         prob = path_prob(q_logits)
     else:
@@ -329,18 +367,21 @@ def decoding_queue(logits_queue, num_threads=6):
         # Check this issue https://github.com/tensorflow/tensorflow/issues/9550
     decodeedQueue = tf.FIFOQueue(
         capacity=2 * num_threads,
-        dtypes=[tf.int64 for _ in decode_decoded] * 3 + [tf.float32, tf.float32, tf.int32],
+        dtypes=[tf.int64 for _ in decode_decoded] * 3 + [tf.float32, tf.float32, tf.string, tf.int32],
     )
     ops = []
     for x in decode_decoded:
         ops.append(x.indices)
         ops.append(x.values)
         ops.append(x.dense_shape)
-    decode_enqueue = decodeedQueue.enqueue(tuple(ops + [decode_log_prob, prob, q_index]))
+    decode_enqueue = decodeedQueue.enqueue(tuple(ops + [decode_log_prob, prob, q_name, q_index]))
 
     decode_dequeue = decodeedQueue.dequeue()
-    decode_predict, decode_prob, decode_idx = [[], decode_dequeue[-3]], decode_dequeue[-2], decode_dequeue[-1]
-    for i in range(0, len(decode_dequeue) - 3, 3):
+    decode_prob, decode_fname, decode_idx = decode_dequeue[-3:]
+
+    decode_dequeue = decode_dequeue[:-3]
+    decode_predict = [[], decode_dequeue[-1]]
+    for i in range(0, len(decode_dequeue) - 1, 3):
         decode_predict[0].append(
             tf.SparseTensor(
                 indices=decode_dequeue[i],
@@ -351,7 +392,7 @@ def decoding_queue(logits_queue, num_threads=6):
 
     decode_qr = tf.train.QueueRunner(decodeedQueue, [decode_enqueue]*num_threads)
     tf.train.add_queue_runner(decode_qr)
-    return decode_predict, decode_prob, decode_idx, decodeedQueue.size()
+    return decode_predict, decode_prob, decode_fname, decode_idx, decodeedQueue.size()
 
 
 def run(args):
@@ -375,31 +416,6 @@ def run(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='chiron',
-                                     description='A deep neural network basecaller.')
-    parser.add_argument('-i', '--input', default='example_data/output/raw',
-                        help="File path or Folder path to the fast5 file.")
-    parser.add_argument('-o', '--output', default='example_data/output',
-                        help="Output Folder name")
-    parser.add_argument('-m', '--model', default='model/DNA_default',
-                        help="model folder")
-    parser.add_argument('-s', '--start', type=int, default=0,
-                        help="Start index of the signal file.")
-    parser.add_argument('-b', '--batch_size', type=int, default=1100,
-                        help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
-    parser.add_argument('-l', '--segment_len', type=int, default=300,
-                        help="Segment length to be divided into.")
-    parser.add_argument('-j', '--jump', type=int, default=30,
-                        help="Step size for segment")
-    parser.add_argument('-t', '--threads', type=int, default=0,
-                        help="Threads number")
-    parser.add_argument('-e', '--extension', default='fastq',
-                        help="Output file extension.")
-    parser.add_argument('--beam', type=int, default=0,
-                        help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
-    parser.add_argument('--concise', action='store_true',
-                        help="Concisely output the result, the meta and segments files will not be output.")
-    parser.add_argument('--mode', default = 'dna',
-                        help="Output mode, can be chosen from dna or rna.")
-    args = parser.parse_args(sys.argv[1:])
-    run(args)
+    from .entry import main
+    print("This calling method is deprecated, use entry", file=sys.stderr)
+    main(["call"] + sys.argv[1:])
