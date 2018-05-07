@@ -15,9 +15,8 @@ install_requires=[
   'mappy>=2.10.0',
   'numpy>=1.13.3',
   'statsmodels>=0.8.0',
-  'tqdm>=4.23.0',
+  'tqdm>=4.23.0'
 ]
-
 extras_require={
   "tf": ["tensorflow>=1.3.0"],
   "tf_gpu": ["tensorflow-gpu>=1.3.0"],
@@ -37,5 +36,6 @@ setup(
   license="MPL 2.0",
   classifiers = ['License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)'],
   install_requires=install_requires,
+  extras_require=extras_require,
   entry_points={'console_scripts':['chiron=chiron.entry:main'],}
 )

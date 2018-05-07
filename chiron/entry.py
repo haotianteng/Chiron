@@ -20,6 +20,7 @@ def evaluation(args):
     FLAGS = args
     FLAGS.input_dir = FLAGS.input
     FLAGS.output_dir = FLAGS.output
+    FLAGS.recursive = True
     extract(FLAGS)
     FLAGS.input = FLAGS.output + '/raw/'
     chiron_eval.run(args)
@@ -38,7 +39,7 @@ def main(arguments=sys.argv[1:]):
     parser_call = subparsers.add_parser('call', description='Perform basecalling', help='Perform basecalling.')
     parser_call.add_argument('-i', '--input', required=True, help="File path or Folder path to the fast5 file.")
     parser_call.add_argument('-o', '--output', required=True, help="Output folder path")
-    parser_call.add_argument('-m', '--model', default=model_default_path, help="model folder")
+    parser_call.add_argument('-m', '--model',type = str, default=model_default_path, help="model folder path")
     parser_call.add_argument('-s', '--start', type=int, default=0, help="Start index of the signal file.")
     parser_call.add_argument('-b', '--batch_size', type=int, default=1100,
                              help="Batch size for run, bigger batch_size will increase the processing speed but require larger RAM load")
@@ -51,7 +52,7 @@ def main(arguments=sys.argv[1:]):
                              help="Beam width used in beam search decoder, default is 50, set to 0 to use a greedy decoder. Large beam width give better decoding result but require longer decoding time.")
     parser_call.add_argument('--concise', action='store_true',
                              help="Concisely output the result, the meta and segments files will not be output.")
-    parser.add_argument('--mode', default = 'dna',
+    parser_call.add_argument('--mode', default = 'dna',
                         help="Output mode, can be chosen from dna or rna.")
     parser_call.set_defaults(func=evaluation)
 
@@ -72,14 +73,14 @@ def main(arguments=sys.argv[1:]):
     parser_train.add_argument('-i', '--data_dir', required=True, help="Folder containing the labelled data.")
     parser_train.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
     parser_train.add_argument('-o', '--log_dir', required=True, help="Log dir which save the trained model")
-    parser_train.add_argument('-n', '--model_name', required=True, help="Model name saved.")
+    parser_train.add_argument('-m', '--model_name', required=True, help="Model name saved.")
     parser_train.add_argument('-c', '--cache_dir', default=None, help="Output folder")
     parser_train.add_argument('-t', '--retrain', type=bool, default=False,
                               help="If retrain is true, the previous trained model will be loaded from LOG_DIR before training.")
     parser_train.add_argument('-l', '--sequence_len', type=int, default=300, help="Segment length to be divided into.")
     parser_train.add_argument('-b', '--batch_size', type=int, default=400,
                               help="Batch size to train, large batch size require more ram but give faster training speed.")
-    parser_train.add_argument('-m', '--max_steps', type=int, default=20000, help="Maximum training steps conducted.")
+    parser_train.add_argument('-x', '--max_steps', type=int, default=20000, help="Maximum training steps conducted.")
     parser_train.add_argument('-r', '--step_rate', type=float, default=1e-3,
                               help="Learning rate used for optimiztion algorithm.")
     parser_train.add_argument('-k', '--k_mer', type=int, default=1, help="Output k-mer size.")

@@ -9,11 +9,31 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
+import json
+import os
 from chiron.cnn import getcnnfeature
 from chiron.cnn import getcnnlogit
 from chiron.rnn import rnn_layers
 
 MOVING_AVERAGE_DECAY = 0.9999
+
+def save_model(config_path,configure):
+    config_dir = config_path[:config_path.rindex(os.path.sep)]
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    with open(config_path,'w+') as config_file:
+        json.dump(configure,config_file)
+    return None
+
+def read_config(config_file):
+    if config_file is not None:
+        config = json.load(open(config_file))
+    else:
+        config = {'cnn':{'model':'dna_model1'},
+                  'rnn':{'layer_num':3,
+                         'hidden_num':100,
+                         'cell_type':'LSTM'}}
+    return config
 
 def loss(logits, seq_len, label):
     """Calculate a CTC loss from the input logits and label.
@@ -90,7 +110,7 @@ def prediction(logits, seq_length, label,beam_width = 30, top_paths=1):
     tf.summary.scalar('Error_rate', error)
     return error
 
-def inference(x,sequence_len,training,full_sequence_len,rnn_layer_num = 3):
+def inference(x,sequence_len,training,full_sequence_len,configure):
     """Infer a logits of the input signal batch.
 
     Args:
@@ -98,18 +118,23 @@ def inference(x,sequence_len,training,full_sequence_len,rnn_layer_num = 3):
         sequence_len: Tensor of shape [batch_size], given the real lenghs of the segments.
         training: Placeholder of Boolean, Ture if the inference is during training.
         full_sequence_len: Scalar float, the maximum length of the sample in the batch.
-        rnn_layer_num:Scalar Int, default is 3, the number of layer of RNN in the network.
+        configure:Model configuration.
 
     Returns:
         logits: Tensor of shape [batch_size, max_time, class_num]
         ratio: Scalar float, the scale factor between the output logits and the input maximum length.
     """
-    cnn_feature = getcnnfeature(x,training = training)
+    cnn_feature = getcnnfeature(x,training = training,cnn_config = configure['cnn']['model'])
     feashape = cnn_feature.get_shape().as_list()
     ratio = full_sequence_len/feashape[1]
-    if rnn_layer_num == 0:
+    if configure['rnn']['layer_num'] == 0:
         logits = getcnnlogit(cnn_feature)
     else:
-        logits = rnn_layers(cnn_feature,sequence_len,training,layer_num = rnn_layer_num)
+        logits = rnn_layers(cnn_feature,
+                            sequence_len,
+                            training,
+                            layer_num = configure['rnn']['layer_num'],
+                            hidden_num = configure['rnn']['hidden_num'],
+                            cell=configure['rnn']['cell_type'])
         #logits = cudnn_rnn(cnn_feature,rnn_layer_num)
     return logits,ratio

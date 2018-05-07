@@ -255,13 +255,13 @@ def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, 
     return relu_out
 
 
-def getcnnfeature(signal, training):
+def getcnnfeature(signal, training, cnn_config='dna_model1'):
     """Compute the CNN feature given the signal input.  
 
     Args:
         signal (Float): A 2D-Tensor of shape [batch_size,max_time]
         training (Boolean): A 0-D Boolean Tensor indicate if it's in training.      
-
+        cnn_config(string): A string indicate the configuration of CNN.
     Returns:
         cnn_fea: A 3D-Tensor of shape [batch_size, max_time, channel]
     """
@@ -269,63 +269,28 @@ def getcnnfeature(signal, training):
     # TODO: Read the structure hyper parameters from Json file.
     signal_shape = signal.get_shape().as_list()
     net = tf.reshape(signal, [signal_shape[0], 1, signal_shape[1], 1])
-#    #Conv layer x 4
-#    with tf.variable_scope('conv_layer1'):
-#        net = conv_layer(signal,ksize=[1,3,1,64],strides=[1,1,1,1],padding='SAME',training = training,name = 'conv')
-#    with tf.variable_scope('conv_layer2'):
-#        net = conv_layer(net,ksize=[1,3,64,128],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
-#    with tf.variable_scope('conv_layer3'):
-#        net = conv_layer(net,ksize=[1,3,128,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
-#    feashape = net.get_shape().as_list()
-#    fea = tf.reshape(net,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
-#    return fea
+    model_dict = {'dna_model1': DNA_model1, 
+                  'rna_model1': RNA_model1,
+                  'rna_model2': RNA_model2,
+                  'res_x': Res_x, 
+                  'variant_wavnet': Variant_wavnet,
+                  'incp_v2': incp_v2,
+                  'custom': custom}
+    net = model_dict[cnn_config](net,training)
+    feashape = net.get_shape().as_list()
+    net = tf.reshape(net, [feashape[0], feashape[2],
+                            feashape[3]], name='fea_rs')
+    return net
 
-#    with tf.variable_scope('conv_layer4'):
-#        conv4 = conv_layer(conv3,ksize=[1,5,256,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
-#    with tf.variable_scope('conv_layer5'):
-#        conv5 = conv_layer(conv4,ksize=[1,5,256,256],strides=[1,1,2,1],padding='SAME',training= training,name = 'conv')
+def Res_x(net,training,layer_num = 10):
+    #   Residual layer x 50
+    for i in range(1,layer_num):
+        with tf.variable_scope('res_layer'+str(i+1)):
+            net = residual_layer(net,out_channel = 256,training = training,i_bn = True)
+    return net
 
-#    Inception layer x 9
-#    with tf.variable_scope('incp_layer1'):
-#        incp5 = inception_layer(conv4,training)
-#    with tf.variable_scope('incp_layer2'):
-#        incp6 = inception_layer(incp5,training)
-#
-#    with tf.variable_scope('max_pool_1'):
-#        max_pool1 = tf.nn.max_pool(incp6,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
-#
-#    with tf.variable_scope('incp_layer3'):
-#        incp7 = inception_layer(max_pool1,training)
-#    with tf.variable_scope('incp_layer4'):
-#        incp8 = inception_layer(incp7,training)
-#    with tf.variable_scope('incp_layer5'):
-#        incp9 = inception_layer(incp8,training)
-#    with tf.variable_scope('incp_layer6'):
-#        incp10 = inception_layer(incp9,training)
-#    with tf.variable_scope('incp_layer7'):
-#        incp11 = inception_layer(incp10,training)
-#
-#    with tf.variable_scope('max_pool_2'):
-#        max_pool2 = tf.nn.max_pool(incp11,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
-#
-#    with tf.variable_scope('incp_layer8'):
-#        incp12 = inception_layer(max_pool2,training)
-#    with tf.variable_scope('incp_layer9'):
-#        incp13 = inception_layer(incp12,training)
-#
-#    with tf.variable_scope('avg_pool_1'):
-#        avg_pool1 = tf.nn.avg_pool(incp13,ksize = [1,1,7,1],strides = [1,1,1,1],padding = 'SAME',name='ap_1x7_s1')
-###############################################################################
-#   Residual layer x 50
-#    layer_num = 50
-#    for i in range(1,layer_num):
-#        with tf.variable_scope('res_layer'+str(i+1)):
-#            signal = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
-#    feashape = signal.get_shape().as_list()
-#    fea = tf.reshape(signal,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
-#    return fea
-###############################################################################
-#   Residual Layer x 3 (DNA_default)
+def DNA_model1(net,training):
+    #   Residual Layer x 3 (DNA_default)
     with tf.variable_scope('res_layer1'):
         net = residual_layer(net, out_channel=256,
                               training=training, i_bn=True)
@@ -333,64 +298,93 @@ def getcnnfeature(signal, training):
         net = residual_layer(net, out_channel=256, training=training)
     with tf.variable_scope('res_layer3'):
         net = residual_layer(net, out_channel=256, training=training)
-    feashape = net.get_shape().as_list()
-    net = tf.reshape(net, [feashape[0], feashape[2],
-                            feashape[3]], name='fea_rs')
     return net
 
-###############################################################################
-#   RNA model(test1)
-    # with tf.variable_scope('res_layer1'):
-    #     net = residual_layer(net,out_channel=128,training = training, i_bn = True)
-    # with tf.variable_scope('res_layer2'):
-    #     net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
-    # with tf.variable_scope('res_layer3'):
-    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
-    # with tf.variable_scope('res_layer4'):
-    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
-    # feashape = net.get_shape().as_list()
-    # net = tf.reshape(net, [feashape[0], feashape[2],
-    #                         feashape[3]], name='fea_rs')
-    # return net
-###############################################################################
-#   RNA model(test2)
-    # with tf.variable_scope('res_layer1'):
-    #     net = residual_layer(net,out_channel=64,training = training, strides=2, k=7, i_bn = True)
-    # with tf.variable_scope('max_pool1'):
-    #     net = tf.nn.max_pool(net,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name = 'mp_1')
-    # with tf.variable_scope('res_layer2'):
-    #     net = residual_layer(net,out_channel = 64, training = training)
-    # with tf.variable_scope('res_layer3'):
-    #     net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
-    # with tf.variable_scope('res_layer4'):
-    #     net = residual_layer(net,out_channel=128,training = training)
-    # with tf.variable_scope('res_layer5'):
-    #     net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
-    # with tf.variable_scope('res_layer6'):
-    #     net = residual_layer(net,out_channel = 256, training = training)
-    # feashape = net.get_shape().as_list()
-    # net = tf.reshape(net, [feashape[0], feashape[2],
-    #                         feashape[3]], name='fea_rs')
-    # return net
-##############################################################################
-#   Dilate connection(Variant Wavenet) (res3_dilate7)
-#    res_layer = 3
-#    dilate_layer = 7
-#    dilate_repeat = 1
-#    with tf.variable_scope('res_layer1'):
-#        net = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
-#    for i in range(1,res_layer):
-#        with tf.variable_scope('res_layer'+str(i+1)):
-#            net = residual_layer(net,out_channel = 256,training = training)
-#    for block_idx in range(dilate_repeat):
-#        for i in range(dilate_layer):
-#            with tf.variable_scope('block'+str(block_idx+1)+'dilate_layer'+str(i+1)):
-#                net = wavenet_layer(net,out_channel = 256,training = training,dilate=2**i,i_bn=True)
-#    feashape = net.get_shape().as_list()
-#    fea = tf.reshape(net,[feashape[0],feashape[2],feashape[3]],name = 'fea_rs')
-#    return fea
-###############################################################################
+def RNA_model1(net,training):
+    #   RNA model(test1)
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net,out_channel=128,training = training, i_bn = True)
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    with tf.variable_scope('res_layer4'):
+        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    return net
 
+def RNA_model2(net, training):
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net,out_channel=64,training = training, strides=2, k=7, i_bn = True)
+    with tf.variable_scope('max_pool1'):
+        net = tf.nn.max_pool(net,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name = 'mp_1')
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net,out_channel = 64, training = training)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+    with tf.variable_scope('res_layer4'):
+        net = residual_layer(net,out_channel=128,training = training)
+    with tf.variable_scope('res_layer5'):
+        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+    with tf.variable_scope('res_layer6'):
+        net = residual_layer(net,out_channel = 256, training = training)
+    return net
+
+
+
+def Variant_wavnet(net,training,res_layer = 1, dilate_layer = 7,dilate_repeat = 1):
+    #   Dilate connection(Variant Wavenet) (res3_dilate7)
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+    for i in range(1,res_layer):
+        with tf.variable_scope('res_layer'+str(i+1)):
+            net = residual_layer(net,out_channel = 256,training = training)
+    for block_idx in range(dilate_repeat):
+        for i in range(dilate_layer):
+           with tf.variable_scope('block'+str(block_idx+1)+'dilate_layer'+str(i+1)):
+                net = wavenet_layer(net,out_channel = 256,training = training,dilate=2**i,i_bn=True)
+    return net
+
+def incp_v2(net,training):
+    #Conv layer x 4
+    with tf.variable_scope('conv_layer1'):
+        net = conv_layer(net,ksize=[1,3,1,64],strides=[1,1,1,1],padding='SAME',training = training,name = 'conv')
+    with tf.variable_scope('conv_layer2'):
+        net = conv_layer(net,ksize=[1,3,64,128],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
+    with tf.variable_scope('conv_layer3'):
+        net = conv_layer(net,ksize=[1,3,128,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
+    with tf.variable_scope('conv_layer4'):
+        net = conv_layer(net,ksize=[1,5,256,256],strides=[1,1,1,1],padding='SAME',training= training,name = 'conv')
+
+    #Inception layer x 9
+    with tf.variable_scope('incp_layer1'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('incp_layer2'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('max_pool_1'):
+        net = tf.nn.max_pool(net,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
+    with tf.variable_scope('incp_layer3'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('incp_layer4'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('incp_layer5'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('incp_layer6'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('incp_layer7'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('max_pool_2'):
+        net = tf.nn.max_pool(net,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name='mp_1x3_s2')
+    with tf.variable_scope('incp_layer8'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('incp_layer9'):
+        net = inception_layer(net,training)
+    with tf.variable_scope('avg_pool_1'):
+        net = tf.nn.avg_pool(net,ksize = [1,1,7,1],strides = [1,1,1,1],padding = 'SAME',name='ap_1x7_s1')
+    return net
+
+def custom(net,training):
+    """define your customized CNN network here"""
+    return net
 
 def getcnnlogit(fea, outnum=5):
     """Get the logits from CNN feature.

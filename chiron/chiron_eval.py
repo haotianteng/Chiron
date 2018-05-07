@@ -191,18 +191,23 @@ def evaluation():
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
     training = tf.placeholder(tf.bool)
+    config_path = os.path.join(FLAGS.model,'model.json')
+    model_configure = chiron_model.read_config(config_path)
+
     logits, ratio = chiron_model.inference(
                                     x, 
                                     seq_length, 
                                     training=training,
-                                    full_sequence_len = FLAGS.segment_len)
+                                    full_sequence_len = FLAGS.segment_len,
+                                    configure = model_configure)
     config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
+    tqdm.monitor_interval = 0    
     logits_index = tf.placeholder(tf.int32, shape=())
     logits_fname = tf.placeholder(tf.string, shape=())
     logits_queue = tf.FIFOQueue(
-        capacity=100 * FLAGS.batch_size,
+        capacity=1000,
         dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
         shapes=[logits.shape,logits_fname.shape,logits_index.shape, seq_length.shape]
     )
@@ -230,9 +235,8 @@ def evaluation():
             os.makedirs(os.path.join(FLAGS.output, 'result'))
         if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
             os.makedirs(os.path.join(FLAGS.output, 'meta'))
-
         def worker_fn():
-            for name in file_list:
+            for name in tqdm(file_list,desc = "Logits inferencing.",position = 0):
                 if not name.endswith('.signal'):
                     continue
                 input_path = os.path.join(file_dir, name)
@@ -240,7 +244,7 @@ def evaluation():
                                                seg_length=FLAGS.segment_len,
                                                step=FLAGS.jump)
                 reads_n = eval_data.reads_n
-                for i in range(0, reads_n, FLAGS.batch_size):
+                for i in trange(0, reads_n, FLAGS.batch_size,desc = "Logits inferencing",position = 1):
                     batch_x, seq_len, _ = eval_data.next_batch(
                         FLAGS.batch_size, shuffle=False, sig_norm=False)
                     batch_x = np.pad(
@@ -255,13 +259,18 @@ def evaluation():
                         logits_fname: name,
                     }
                     sess.run(logits_enqueue,feed_dict=feed_dict)
-
-        worker = threading.Thread(target=worker_fn)
+        def run_listener(write_lock):
+            # This function is used to solve the error when tqdm is used inside thread
+            # https://github.com/tqdm/tqdm/issues/323
+            tqdm.set_lock(write_lock)
+            worker_fn()
+        write_lock = threading.Lock()
+        worker = threading.Thread(target=run_listener,args=(write_lock,) )
         worker.setDaemon(True)
         worker.start()
 
         val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
-        for name in tqdm(file_list, desc="basecalling fast5s"):
+        for name in tqdm(file_list, desc="CTC decoding.",position = 2):
             start_time = time.time()
             if not name.endswith('.signal'):
                 continue
@@ -281,13 +290,12 @@ def evaluation():
             reads = list()
 
             N = len(range(0, reads_n, FLAGS.batch_size))
-            with tqdm(total=reads_n, desc="signal processing") as pbar:
+            with tqdm(total=reads_n, desc="ctc decoding",position = 3) as pbar:
                 while True:
                     l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
                     pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz, refresh=False)
-                    decoded_fname, i, predict_val, logits_prob = sess.run([decoded_fname_op, decode_idx_op, decode_predict_op, decode_prob_op], feed_dict={
-                        training: False
-                    })
+                    decode_ops = [decoded_fname_op, decode_idx_op, decode_predict_op, decode_prob_op]
+                    decoded_fname, i, predict_val, logits_prob = sess.run(decode_ops, feed_dict={training: False})
                     decoded_fname = decoded_fname.decode("UTF-8")
                     val[decoded_fname][i] = (predict_val, logits_prob)
 
@@ -299,7 +307,7 @@ def evaluation():
 
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
-            for i in trange(0, reads_n, FLAGS.batch_size, desc="further decoding"):
+            for i in trange(0, reads_n, FLAGS.batch_size, desc="Output",position = 4):
                 predict_val, logits_prob = val[name][i]
                 predict_read, unique = sparse2dense(predict_val)
                 predict_read = predict_read[0]
@@ -316,7 +324,7 @@ def evaluation():
                 reads += predict_read
             val.pop(name)  # Release the memory
 
-            tqdm.write("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
+            # tqdm.write("[%s] Segment reads base calling finished, begin to assembly. %5.2f seconds" % (name, time.time() - start_time))
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             if FLAGS.extension == 'fastq':
@@ -327,11 +335,12 @@ def evaluation():
             c_bpread = index2base(np.argmax(consensus, axis=0))
             np.set_printoptions(threshold=np.nan)
             assembly_time = time.time() - start_time
-            tqdm.write("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
+            # tqdm.write("[%s] Assembly finished, begin output. %5.2f seconds" % (name, time.time() - start_time))
             list_of_time = [start_time, reading_time,
                             basecall_time, assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
                          q_score=qs_string)
+        
 
 
 def decoding_queue(logits_queue, num_threads=6):

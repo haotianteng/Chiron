@@ -15,6 +15,7 @@ import argparse
 import sys
 import os
 import time
+import json
 
 from distutils.dir_util import copy_tree
 
@@ -28,11 +29,6 @@ from chiron.cnn import getcnnlogit
 from six.moves import range
 
 
-def save_model():
-    copy_tree(os.path.dirname(os.path.abspath(__file__)),
-              FLAGS.log_dir + FLAGS.model_name + '/model')
-
-
 def train():
     training = tf.placeholder(tf.bool)
     global_step = tf.get_variable('global_step', trainable=False, shape=(),
@@ -44,7 +40,16 @@ def train():
     y_values = tf.placeholder(tf.int32)
     y_shape = tf.placeholder(tf.int64)
     y = tf.SparseTensor(y_indexs, y_values, y_shape)
-    logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len)
+    default_config = os.path.join(FLAGS.log_dir,FLAGS.model_name,'model.json')
+    if FLAGS.retrain:
+        if os.path.isfile(default_config):
+            config_file = default_config
+        else:
+            raise ValueError("Model Json file has not been found in model log directory")
+    else:
+        config_file = FLAGS.configuration   
+    config = model.read_config(config_file)
+    logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len,configure = config)
     ctc_loss = model.loss(logits, seq_length, y)
     opt = model.train_opt(FLAGS.step_rate,FLAGS.max_steps, global_step=global_step)
     step = opt.minimize(ctc_loss,global_step = global_step)
@@ -54,7 +59,6 @@ def train():
     summary = tf.summary.merge_all()
 
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
-    save_model()
     if FLAGS.retrain == False:
         sess.run(init)
         print("Model init finished, begin loading data. \n")
@@ -64,7 +68,7 @@ def train():
         print("Model loaded finished, begin loading data. \n")
     summary_writer = tf.summary.FileWriter(
         FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
-
+    model.save_model(default_config,config)
     train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_file,
                              FLAGS.sequence_len, k_mer=FLAGS.k_mer,max_segments_num=FLAGS.segments_num)
     start = time.time()
@@ -131,6 +135,8 @@ if __name__ == "__main__":
                         help='Maximum step')
     parser.add_argument('-n', '--segments_num', type = int, default = None,
                         help='Maximum number of segments read into the training queue, default(None) read all segments.')
+    parser.add_argument('--configure', default = None,
+                        help="Model structure configure json file.")
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
     parser.add_argument('-r', '--retrain', type=bool, default=False,
                         help='flag if retrain or not')

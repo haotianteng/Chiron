@@ -9,13 +9,14 @@
 import argparse
 import os
 import sys
-
 import h5py
 import logging
-
+import threading
+from tqdm import tqdm
 
 def extract(FLAGS):
     # logger = logging.getLogger(__name__)
+    tqdm.monitor_interval = 0
     count = 1
     root_folder = FLAGS.input_dir
     out_folder = FLAGS.output_dir
@@ -33,24 +34,37 @@ def extract(FLAGS):
         os.mkdir(raw_folder)
     if not os.path.isdir(ref_folder):
         os.mkdir(ref_folder)
-    for file_n in os.listdir(root_folder):
-        if file_n.endswith('fast5'):
-            try:
-                raw_signal, reference = extract_file(root_folder + os.path.sep + file_n)
-                count += 1
-                if len(raw_signal) == 0:
-                    raise ValueError("Failed in extracting " + (
-                        os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
-            except:
-                # logging.getLogger(__name__).error("Cannot extact file %s", file_n, exc_info=True)
-                continue
-            signal_file = open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+')
-            signal_file.write(" ".join([str(val) for val in raw_signal]))
-            if len(reference) > 0:
-                ref_file = open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+')
-                ref_file.write(reference)
-            print("Extracted " + (os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
-
+    if FLAGS.recursive:
+        dir_list = os.walk(root_folder)
+    else:
+        dir_list = [root_folder]
+    for dir_tuple in tqdm(dir_list,desc = "Subdirectory processing:",position = 0):
+        if FLAGS.recursive:
+            directory = dir_tuple[0]
+            file_list = dir_tuple[2]
+        else:
+            file_list = os.listdir(dir_tuple)
+        for file_n in tqdm(file_list,desc = "Signal processing:",position = 1):
+            if FLAGS.recursive:
+                full_file_n = os.path.join(directory,file_n)
+                # print(file_n)
+            else:
+                full_file_n = os.path.join(root_folder,file_n)
+            if file_n.endswith('fast5'):
+                try:
+                    raw_signal, reference = extract_file(full_file_n)
+                    count += 1
+                    if len(raw_signal) == 0:
+                        raise ValueError("Failed in extracting " + (
+                            os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal')))
+                except:
+                    # logging.getLogger(__name__).error("Cannot extact file %s", file_n, exc_info=True)
+                    continue
+                signal_file = open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+')
+                signal_file.write(" ".join([str(val) for val in raw_signal]))
+                if len(reference) > 0:
+                    ref_file = open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+')
+                    ref_file.write(reference)
 
 def extract_file(input_file):
     try:
@@ -75,9 +89,17 @@ def extract_file(input_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract the signal and reference from fast5 file.')
-    parser.add_argument('-i', '--input_dir', required = True,
+    parser.add_argument('-i', 
+                        '--input_dir', 
+                        required = True,
                         help="Directory that store the fast5 files.")
-    parser.add_argument('-o', '--output_dir', required = True,
+    parser.add_argument('-o', 
+                        '--output_dir', 
+                        required = True,
                         help="Directory that output the signal and reference sequence.")
+    parser.add_argument('-r',
+                        '--recursive',
+                        action='store_true',
+                        help="If recursively search subfolder")
     args = parser.parse_args(sys.argv[1:])
     extract(args)

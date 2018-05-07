@@ -17,7 +17,14 @@ from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rn
 from chiron.utils.lstm import BNLSTMCell
 from chiron.utils.variable import _variable_on_cpu
 
-def rnn_layers(x, seq_length, training, hidden_num=100, layer_num=3, class_n=5, cell='LSTM',dtype = tf.float32):
+def rnn_layers(x, 
+               seq_length, 
+               training, 
+               hidden_num=100, 
+               layer_num=3, 
+               class_n=5, 
+               cell='LSTM',
+               dtype = tf.float32):
     """Generate RNN layers.
 
     Args:
