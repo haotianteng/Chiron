@@ -55,32 +55,36 @@ or GPU version:
 pip install tensorflow-gpu  
 ```  
 
-### Install from GitHub
-This is currently the best install method if you are wanting to run Chiron on in GPU mode (`pip install` version is coming).
+### Install from Source
 ```
 git clone https://github.com/haotianteng/chiron.git
 cd chiron
 ```
 You will also need to install dependencies.
-
+```
+pip install h5py
+pip install tqdm
+pip install statsmodel
+```
 For CPU-version:
 ```
 pip install tensorflow  
-pip install h5py
 ```
 For GPU-version(Nvidia GPU required):
 ```
 pip install tensorflow-gpu  
-pip install h5py
 ```
-
+And then add the Chiron into PYTHONPATH,for convinience you can add it to the .bashrc
+```
+export PYTHONPATH=[Path to Chiron/Chiron]:$PYTHONPATH
+```
 For alternate/detailed installation instructions for TensorFlow, see the [documentation](https://www.tensorflow.org/).
 
 ## Basecall
 ### If installed from `pip`:
 An example call to Chiron to run basecalling is:  
 ```
-chiron call -i <input_fast5_folder> -o <output_folder>
+chiron call -i <input_fast5_folder> -o <output_folder> -m <model_folder>
 
 ```
 
@@ -89,15 +93,15 @@ chiron call -i <input_fast5_folder> -o <output_folder>
 All Chiron functionality can be run from **entry.py** in the Chiron folder. (You might like to also add the path to Chiron into your path for ease of running).
 
 ```
-python chiron/entry.py call -i <input_fast5_folder> -o <output_folder>
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m <model_folder>
 
 ```
 
 ### Test run
 
-We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) in the GitHub repository which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
+We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) in the GitHub repository and two models (DNA_default and RNA_default) which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
 ```
-python chiron/entry.py call -i chiron/example_folder/ -o <output_folder>
+python chiron/entry.py call -i chiron/example_folder/ -o <output_folder> -m chiron/model/DNA_default
 ```
 
 ### Decoder choice
@@ -133,7 +137,8 @@ chiron call -i <input_fast5_folder> -o <output_folder> -e fastq
 chiron call -i <input_fast5_folder> -o <output_folder> -e fasta  
 
 ## Training
-The default DNA model trained on R9.4 protocol with a mix of Lambda and E.coli dataset, if the basecalling result is not satisfying, you can train a model on your own training data set.  
+The default DNA model trained on R9.4 protocol with a mix of Lambda and E.coli dataset, and the default RNA model is trained on R9.4 direct RNA kit (-200mV configuration).
+If the basecalling result is not satisfying, you can train a model on your own training data set.  
 
 #### Hardware request:  
 Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.  

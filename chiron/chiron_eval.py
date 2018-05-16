@@ -412,12 +412,12 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='chiron',
                                      description='A deep neural network basecaller.')
-    parser.add_argument('-i', '--input', default='example_data/output/raw',
+    parser.add_argument('-i', '--input', required = True,
                         help="File path or Folder path to the fast5 file.")
-    parser.add_argument('-o', '--output', default='example_data/output',
+    parser.add_argument('-o', '--output', required = True,
                         help="Output Folder name")
-    parser.add_argument('-m', '--model', default='model/DNA_default',
-                        help="model folder")
+    parser.add_argument('-m', '--model', required = True,
+                        help="model folder path")
     parser.add_argument('-s', '--start', type=int, default=0,
                         help="Start index of the signal file.")
     parser.add_argument('-b', '--batch_size', type=int, default=1100,
