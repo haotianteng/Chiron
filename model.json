@@ -1,0 +1,10 @@
+{
+	"cnn":{
+		"model":"rna_model2"
+		},
+	"rnn":{
+		"layer_num":1,
+		"cell_type":"LSTM",
+		"hidden_num":100
+		}
+}
