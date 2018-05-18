@@ -47,7 +47,7 @@ def train():
         else:
             raise ValueError("Model Json file has not been found in model log directory")
     else:
-        config_file = FLAGS.configuration   
+        config_file = FLAGS.configure   
     config = model.read_config(config_file)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len,configure = config)
     ctc_loss = model.loss(logits, seq_length, y)
