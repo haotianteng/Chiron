@@ -21,7 +21,7 @@ from chiron.chiron_queue_input import inputs
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.training.python.training import hparam
 
-def tower_loss(scope,x,seqlen, labels,full_seq_len):
+def tower_loss(scope,x,seqlen, labels,full_seq_len,config):
     """Calculating the loss on a single GPU.
     
     Args:
@@ -29,11 +29,12 @@ def tower_loss(scope,x,seqlen, labels,full_seq_len):
         x (Float): Tensor of shape [batch_size, max_time], batch of input signal.
         seqlen (Int): Tensor of shape [batch_size], length of sequence in batch.
         labels (Int): Sparse Tensor, true labels.
+        config  (Dict): Key-Value pairs of the model configuration
 
     Returns:
         Tensor of shape [batch_size] containing the loss for a batch of data.
     """
-    logits,_ = model.inference(x,seqlen,training = True, full_sequence_len = full_seq_len)
+    logits,_ = model.inference(x,seqlen,training = True, full_sequence_len = full_seq_len,configure = config)
     sparse_labels = dense2sparse(labels)
     _ = model.loss(logits,seqlen,sparse_labels)
     error = model.prediction(logits,seqlen,sparse_labels)
@@ -69,20 +70,6 @@ def average_gradients(tower_grads):
         grad_and_var = (grad, v)
         average_grads.append(grad_and_var)
     return average_grads
-
-
-def save_model(log_dir, model_name):
-    """Copy the training model folder into the log.
-    TODO: Need a more orgnaized way to save the Neural Network sturcture instead of copying the whole folder into log.
-    Args:
-        log_dir: def inferenceString, the directory of the log.
-        model_name: String, the model name saved.
-
-
-    """
-    copy_tree(os.path.dirname(os.path.abspath(__file__)),
-              log_dir + model_name + '/model')
-
 
 def dense2sparse(label):
     """Transfer the dense label tensor to sparse tensor, the padding value should be -1 for the input dense label.
@@ -131,6 +118,15 @@ def train(hparams):
         split_seq_length = tf.split(seq_length,hparams.ngpus,axis=0)
         split_x = tf.split(x,hparams.ngpus,axis=0)
         tower_grads = []
+        default_config = os.path.join(hparams.log_dir,hparams.model_name,'model.json')
+        if hparams.retrain:
+            if os.path.isfile(default_config):
+                config_file = default_config
+            else:
+                raise ValueError("Model Json file has not been found in model log directory")
+        else:
+            config_file = hparams.configure
+        config = model.read_config(config_file)
         with tf.variable_scope(tf.get_variable_scope()):
             for i in range(hparams.ngpus):
                 with tf.device('/gpu:%d' % i):
@@ -139,7 +135,8 @@ def train(hparams):
                                                 split_x[i],
                                                 split_seq_length[i],
                                                 split_y[i],
-                                                full_seq_len = hparams.sequence_len)
+                                                full_seq_len = hparams.sequence_len,
+                                                config = config)
                         tf.get_variable_scope().reuse_variables()
                         summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
                         grads = opt.compute_gradients(loss)
@@ -161,7 +158,7 @@ def train(hparams):
 
         sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
                                                 log_device_placement=False))
-        save_model(hparams.log_dir, hparams.model_name)
+        model.save_model(default_config,config)
         if not hparams.retrain:
             sess.run(init)
             print("Model init finished, begin training. \n")
@@ -223,6 +220,10 @@ if __name__ == "__main__":
             help='Model name',
             default = "test")
 #            required=True)
+    parser.add_argument(
+           '--configure',
+           default = None,
+           help="Model structure configure json file.")
     parser.add_argument(
             '-n',
             '--ngpus',

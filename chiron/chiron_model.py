@@ -18,6 +18,11 @@ from chiron.rnn import rnn_layers
 MOVING_AVERAGE_DECAY = 0.9999
 
 def save_model(config_path,configure):
+    """Save the configuration to the config path
+    Args:
+        config_path(String) : path to save the configuration
+        configure(Dict) : Key-value pair of the configuration
+    """
     config_dir = config_path[:config_path.rindex(os.path.sep)]
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)

@@ -19,19 +19,6 @@ from chiron.chiron_queue_input import inputs
 from distutils.dir_util import copy_tree
 from tensorflow.contrib.training.python.training import hparam
 
-def save_model(log_dir, model_name):
-    """Copy the training model folder into the log.
-    TODO: Need a more orgnaized way to save the Neural Network sturcture instead of copying the whole folder into log.
-    Args:
-        log_dir: def inferenceString, the directory of the log.
-        model_name: String, the model name saved.
-
-
-    """
-    copy_tree(os.path.dirname(os.path.abspath(__file__)),
-              log_dir + model_name + '/model')
-
-
 def dense2sparse(label):
     """Transfer the dense label tensor to sparse tensor, the padding value should be -1 for the input dense label.
 
@@ -74,8 +61,16 @@ def train(hparam):
     x, seq_length, train_labels = inputs(hparam.data_dir, hparam.batch_size,
                                          for_valid=False)
     y = dense2sparse(train_labels)
-
-    logits, _ = model.inference(x,seq_length,training,hparam.sequence_len)
+    default_config = os.path.join(hparam.log_dir,hparam.model_name,'model.json')
+    if hparam.retrain:
+        if os.path.isfile(default_config):
+            config_file = default_config
+        else:
+            raise ValueError("Model Json file has not been found in model log directory")
+    else:
+        config_file = hparam.configure
+    config = model.read_config(config_file)
+    logits, _ = model.inference(x,seq_length,training,hparam.sequence_len,configure = config)
     ctc_loss = model.loss(logits, seq_length, y)
     opt = model.train_opt(hparam.step_rate,hparam.max_steps,global_step = global_step)
     step = opt.minimize(ctc_loss,global_step = global_step)
@@ -85,7 +80,7 @@ def train(hparam):
     summary = tf.summary.merge_all()
 
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
-    save_model(hparam.log_dir, hparam.model_name)
+    model.save_model(default_config, config)
     if not hparam.retrain:
         sess.run(init)
         print("Model init finished, begin training. \n")
@@ -168,6 +163,10 @@ if __name__ == "__main__":
            help='Max training steps',
            default=20000,
            type=int)
+   parser.add_argument(
+           '--configure',
+           default = None,
+           help="Model structure configure json file.")
    parser.add_argument(
            '-k'
            '--kmer',
