@@ -213,7 +213,7 @@ def evaluation():
     )
     logits_queue_size = logits_queue.size()
     logits_enqueue = logits_queue.enqueue((logits, logits_fname, logits_index, seq_length))
-
+    logits_queue_close = logits_queue.close()
     ### Decoding logits into bases
     decode_predict_op, decode_prob_op, decoded_fname_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
     saver = tf.train.Saver()
@@ -259,7 +259,7 @@ def evaluation():
                         logits_fname: name,
                     }
                     sess.run(logits_enqueue,feed_dict=feed_dict)
-            sess.run(logits_queue.close())
+            sess.run(logits_queue_close)
         def run_listener(write_lock):
             # This function is used to solve the error when tqdm is used inside thread
             # https://github.com/tqdm/tqdm/issues/323
