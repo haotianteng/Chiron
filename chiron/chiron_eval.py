@@ -342,7 +342,6 @@ def evaluation():
                             basecall_time, assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
                          q_score=qs_string)
-    worker.
 
 
 def decoding_queue(logits_queue, num_threads=6):
