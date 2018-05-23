@@ -259,11 +259,13 @@ def evaluation():
                         logits_fname: name,
                     }
                     sess.run(logits_enqueue,feed_dict=feed_dict)
+                    return
         def run_listener(write_lock):
             # This function is used to solve the error when tqdm is used inside thread
             # https://github.com/tqdm/tqdm/issues/323
             tqdm.set_lock(write_lock)
             worker_fn()
+            return
         write_lock = threading.Lock()
         worker = threading.Thread(target=run_listener,args=(write_lock,) )
         worker.setDaemon(True)
@@ -340,7 +342,7 @@ def evaluation():
                             basecall_time, assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
                          q_score=qs_string)
-        
+    worker.
 
 
 def decoding_queue(logits_queue, num_threads=6):
