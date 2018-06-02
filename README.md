@@ -64,7 +64,7 @@ You will also need to install dependencies.
 ```
 pip install h5py
 pip install tqdm
-pip install statsmodel
+pip install statsmodels
 ```
 For CPU-version:
 ```
