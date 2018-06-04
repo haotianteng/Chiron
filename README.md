@@ -64,7 +64,7 @@ You will also need to install dependencies.
 ```
 pip install h5py
 pip install tqdm
-pip install statsmodel
+pip install statsmodels
 ```
 For CPU-version:
 ```
@@ -88,9 +88,9 @@ chiron call -i <input_fast5_folder> -o <output_folder> -m <model_folder>
 
 ```
 
-### If installed from GitHub:
+### If installed from Github:
 
-All Chiron functionality can be run from **entry.py** in the Chiron folder. (You might like to also add the path to Chiron into your path for ease of running).
+All Chiron functionality can be run from **entry.py** in the Chiron folder. (You might like to also add the path to Chiron into your PATH for ease of running).
 
 ```
 python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m <model_folder>
@@ -155,31 +155,16 @@ chiron export -i <fast5 folder> -o <output_folder>
 or directly use the raw.py script in utils.
 
 ```
-python chiron/utils/raw.py --input <fast5 folder> --output <output_folder>
-```
-`.signal` file and correspond `.label` file, a typical file format:  
-
-`.signal` file format:  
-`544 554 556 571 563 472 467 487 482 513 517 521 495 504 500 520 492 506 ...`  
-i.e the file must contain only one row/column of raw signal numbers.  
-
-`.label` file format:
-```
-70 174 A  
-174 184 T  
-184 192 A  
-192 195 G  
-195 204 C  
-204 209 A  
-209 224 C  
-...  
+python chiron/utils/raw.py --input <fast5 folder> --output <output_folder> --mode dna
 ```
 
-Each line represents a DNA base pair in the Pore.
-* 1st column: Start position of the current nucleotide, position related to the signal vector (index count starts from zero).  
-* 2nd column: End position of the current nucleotide.  
-* 3rd column: Nucleotide, for DNA: A, G, C, or T. Although, there is no reason you could not use other labels.
+This will generate a tfrecord file for training when using the chiron_rcnn_train.py and chiron_input.py pipeline.  
 
+```
+python chiron/utils/file_batch.py --input <fast5 folder> --output <output folder> --length 400 --mode dna
+```
+
+This will generate several binary .bin file for training when using the chiron_train.py and chiron_queue_input.py pipeline.  
 
 ### Train a model
 
