@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow.python.saved_model import signature_constants as sig_constants
 import argparse
 
-from chiron.chiron_eval import inference
+from chiron_eval import inference
 
 parser = argparse.ArgumentParser(description='Basecall a signal file')
 # parser.add_argument('-i','--input', help="File path or Folder path to the signal file.")

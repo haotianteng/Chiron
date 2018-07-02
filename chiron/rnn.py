@@ -14,8 +14,8 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMCell
 from tensorflow.contrib.rnn import GRUCell
 from tensorflow.contrib.rnn.python.ops.rnn import stack_bidirectional_dynamic_rnn
-from chiron.utils.lstm import BNLSTMCell
-from chiron.utils.variable import _variable_on_cpu
+from utils.lstm import BNLSTMCell
+from utils.variable import _variable_on_cpu
 
 def rnn_layers(x, 
                seq_length, 

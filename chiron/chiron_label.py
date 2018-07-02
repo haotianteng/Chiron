@@ -15,7 +15,7 @@ import sys
 import h5py
 import mappy as mp
 
-from .chiron_input import biglist
+from chiron_input import biglist
 from six.moves import map
 
 
