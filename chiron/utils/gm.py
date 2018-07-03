@@ -33,10 +33,21 @@ class gm:
             for k in range(min(self.k,i)):
                 kmer = seq[i-k-1:i]
                 self.kmer_count[self.kmer_dict[kmer]][self.base.index(seq[i])] +=1
-    def save_model(self,sav_path):
-        np.save(sav_path,self.kmer_count)
+    def save(self,sav_path):
+        gm_dict = self.__dict__
+        gm_dict['kmer_count'] = gm_dict['kmer_count'].tolist()
+        print(gm_dict)
         with open(sav_path, 'w+') as f:
-            json.dump(self.kmer_dict,f)
+            json.dump(gm_dict,f)
+    def load(self,model_path):
+        with open(model_path,'r') as f:
+            gm_dict = json.load(f)
+        self.k = gm_dict['k']
+        self.n = gm_dict['n']
+        assert self.n == int(4*(4**self.k-1)/3)
+        self.base = gm_dict['base']
+        self.kmer_dict = gm_dict['kmer_dict']
+        self.kmer_count = np.asarray(gm_dict['kmer_count'])
 def fasta_reader(file_list,root_folder = None):
     for name in file_list:
         if root_folder is not None:
@@ -59,7 +70,7 @@ if __name__ == "__main__":
         for name in tqdm(seqs.keys(),desc = "Reading genome "+genome,position = 0):
             gm1.count_kmer(seqs[name])
             
-    gm1.save_model('/home/heavens/Documents/gm_model.json')
+    gm1.save('/home/heavens/Documents/gm_model.json')
     
 
     
