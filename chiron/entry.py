@@ -10,10 +10,10 @@ import sys
 import logging
 from os import path
 
-from chiron import chiron_eval
-from chiron import chiron_rcnn_train
-from chiron.utils import raw
-from chiron.utils.extract_sig_ref import extract
+import chiron_eval
+import chiron_rcnn_train
+from utils import raw
+from utils.extract_sig_ref import extract
 
 
 def evaluation(args):

@@ -11,9 +11,9 @@ from __future__ import print_function
 import tensorflow as tf
 import json
 import os
-from chiron.cnn import getcnnfeature
-from chiron.cnn import getcnnlogit
-from chiron.rnn import rnn_layers
+from cnn import getcnnfeature
+from cnn import getcnnlogit
+from rnn import rnn_layers
 
 MOVING_AVERAGE_DECAY = 0.9999
 
