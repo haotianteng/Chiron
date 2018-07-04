@@ -32,6 +32,10 @@ class gm:
                 pass
             for k in range(min(self.k,i)):
                 kmer = seq[i-k-1:i]
+                for base in kmer:
+                    if base not in self.base:
+                        print("Warning, unrecognized base founr automatically skip.")
+                        continue
                 self.kmer_count[self.kmer_dict[kmer]][self.base.index(seq[i])] +=1
     def save(self,sav_path):
         gm_dict = self.__dict__
