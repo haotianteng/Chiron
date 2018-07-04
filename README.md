@@ -4,7 +4,7 @@ Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling 
 Built with **TensorFlow** and python 2.7.
 
 If you found Chiron useful, please consider to cite:  
-> Teng, H., et al. (2017). Chiron: Translating nanopore raw signal directly into nucleotide sequence using deep learning. [bioRxiv 179531] (https://www.biorxiv.org/content/early/2017/09/12/179531)
+> Haotian Teng, Minh Duc Cao, Michael B Hall, Tania Duarte, Sheng Wang, Lachlan J M Coin; Chiron: translating nanopore raw signal directly into nucleotide sequence using deep learning, GigaScience, Volume 7, Issue 5, 1 May 2018, giy037, https://doi.org/10.1093/gigascience/giy037
 
 ---
 ## Table of contents
