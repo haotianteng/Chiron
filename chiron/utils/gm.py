@@ -32,11 +32,8 @@ class gm:
                 pass
             for k in range(min(self.k,i)):
                 kmer = seq[i-k-1:i]
-                for base in kmer:
-                    if base not in self.base:
-                        print("Warning, unrecognized base founr automatically skip.")
-                        continue
-                self.kmer_count[self.kmer_dict[kmer]][self.base.index(seq[i])] +=1
+                if self._base_check(kmer):
+                    self.kmer_count[self.kmer_dict[kmer]][self.base.index(seq[i])] +=1
     def save(self,sav_path):
         gm_dict = self.__dict__
         gm_dict['kmer_count'] = gm_dict['kmer_count'].tolist()
@@ -52,6 +49,11 @@ class gm:
         self.base = gm_dict['base']
         self.kmer_dict = gm_dict['kmer_dict']
         self.kmer_count = np.asarray(gm_dict['kmer_count'])
+    def _base_check(self,kmer):
+        for base in kmer:
+            if base not in self.base:
+                return False
+        return True
 def fasta_reader(file_list,root_folder = None):
     for name in file_list:
         if root_folder is not None:
