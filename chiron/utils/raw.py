@@ -40,7 +40,7 @@ def extract(raw_folder=None):
 
     for file_n in tf.gfile.ListDirectory(root_folder):
         if file_n.endswith('fast5'):
-            output_file = output_folder + os.path.splitext(file_n)[0]
+#            output_file = output_folder + os.path.splitext(file_n)[0]
             success, (raw_data, raw_data_array) = extract_file(
                 root_folder + os.path.sep + file_n)
             if success:
@@ -48,7 +48,7 @@ def extract(raw_folder=None):
                 example = tf.train.Example(features=tf.train.Features(feature={
                     'raw_data': _bytes_feature(raw_data.tostring()),
                     'features': _bytes_feature(raw_data_array.tostring()),
-                    'fname':_bytes_feature(file_n)}))
+                    'fname':_bytes_feature(str.encode(file_n))}))
                 writer.write(example.SerializeToString())
             sys.stdout.write("%s file transfered.   \n" % (file_n))
 
@@ -56,20 +56,20 @@ def extract(raw_folder=None):
 
 
 def extract_file(input_file):
-    try:
-        (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
+#    try:
+    (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
-    except IOError:
-        return False, (None, None)
-    except:
-        return False, (None, None)
+#    except IOError:
+#        return False, (None, None)
+#    except:
+#        return False, (None, None)
 
     raw_data_array = []
     for index, start in enumerate(raw_start):
-        if raw_length[index]==0:
-            print("input_file:" + input_file)
-            raise ValueError("catch a label with length 0")
+#        if raw_length[index]==0:
+#            print("input_file:" + input_file)
+#            raise ValueError("catch a label with length 0")
         raw_data_array.append(
             [start, start + raw_length[index], str(raw_label['base'][index])])
     if FLAGS.mode=='rna':

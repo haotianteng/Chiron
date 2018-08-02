@@ -75,7 +75,8 @@ def parse_cwDTW(f_path):
     segs = segs[index,:]
     output = list()
     for idx,seg in enumerate(segs[:-1]):
-        current = seg[[0,4,5,2]].tolist()
+        current = seg[[0,4,5]].tolist()
+        current.append(int(seg[2])-1)
         current.append(int(segs[idx+1,2])-int(seg[2]))
         current.append(seg[7][2])
         output.append(tuple(current))
@@ -98,6 +99,7 @@ def write_back(fast5_f,aln_matrix,raw,ref):
             fastq_h = fast5_fh.create_dataset('/Analyses/cwDTWCorrected_000/BaseCalled_template/Raw',shape = (),dtype = h5py.special_dtype(vlen=str))
             ref_h = fast5_fh.create_dataset('/Analyses/cwDTWCorrected_000/BaseCalled_template/Reference',shape = (),dtype = h5py.special_dtype(vlen=str))
         event_h[...] = data
+        event_h.attrs['read_start_rel_to_raw'] = 0
         fastq_h[...] = raw
         ref_h[...] = ref
 def label(filename):
@@ -116,6 +118,8 @@ def label(filename):
         align_matrix = parse_cwDTW(prefix+'.aln')
         write_back(abs_fast5,align_matrix,raw_seq,ref_seq)
 def run():
+    if not os.path.isdir(args.saving):
+        os.mkdir(args.saving)
     pool = Pool(args.thread)
     filelist = os.listdir(args.input)
     for _ in pool.imap_unordered(label,filelist):

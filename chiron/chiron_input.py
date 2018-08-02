@@ -354,11 +354,9 @@ def read_tfrecord(data_dir,
             raw_data = np.fromstring(raw_data_string, dtype=np.int16)
             
             features_data = np.fromstring(features_string, dtype='S8')
-
             # grouping the whole array into sub-array with size = 3
             group_size = 3
             features_data = [features_data[n:n+group_size] for n in range(0, len(features_data), group_size)]
-
             f_signal = read_signal_tfrecord(raw_data)
 
             if len(f_signal) == 0:
@@ -509,10 +507,7 @@ def read_label(file_path, skip_start=10, window_n=0):
     if skip_start < window_n:
         skip_start = window_n
     for line in f_h:
-        print ('line', line)
         record = line.split()
-        print ('record', record)
-        exit()
         all_base.append(base2ind(record[2]))
     f_h.seek(0, 0)  # Back to the start
     file_len = len(all_base)
@@ -539,7 +534,11 @@ def read_label_tfrecord(raw_label_array, skip_start=10, window_n=0):
     if skip_start < window_n:
         skip_start = window_n
     for line in raw_label_array:
-        all_base.append(base2ind(line[2]))
+        if isinstance(line[2],bytes):
+            c_base = line[2].decode()[2]
+        else:
+            c_base = line[2]
+        all_base.append(base2ind(c_base))
     file_len = len(all_base)
     for count, line in enumerate(raw_label_array):
         if count < skip_start or count > (file_len - skip_start - 1):
@@ -641,7 +640,7 @@ def base2ind(base, alphabet_n=4, base_n=1):
 
 def main():
     ### Input Test ###
-    Data_dir = "/media/Linux_ex/Nanopore_Data/20170322_c4_watermanag_S10/tfrecord_test/"
+    Data_dir = '/home/heavens/label/data/output_test/'
     train = read_tfrecord(Data_dir,"train.tfrecords",seq_length=1000)
     for i in range(100):
         inputX, sequence_length, label = train.next_batch(10)
