@@ -102,9 +102,9 @@ def write_back(fast5_f,aln_matrix,raw,ref):
         event_h.attrs['read_start_rel_to_raw'] = 0
         fastq_h[...] = raw
         ref_h[...] = ref
-def label(filename):
-    if filename.endswith("fast5"):
-        abs_fast5 = os.path.join(args.input,filename)
+def label(abs_fast5):
+    if abs_fast5.endswith("fast5"):
+        filename = os.path.basename(abs_fast5)
         try:
             raw_signal,raw_seq,ref_seq = extract_fastq(abs_fast5,args.ref)
         except:
@@ -121,7 +121,11 @@ def run():
     if not os.path.isdir(args.saving):
         os.mkdir(args.saving)
     pool = Pool(args.thread)
-    filelist = os.listdir(args.input)
+    filelist = []
+    for path , _ , files in os.walk(args.input):
+        for file in files:
+            if file.endswith('fast5'):
+                filelist.append(os.path.join(path,file))
     for _ in pool.imap_unordered(label,filelist):
 #    for _ in tqdm.tqdm(pool.imap_unordered(label,filelist),total = len(filelist)):
         pass
