@@ -57,7 +57,7 @@ def extract(raw_folder=None):
 
 def extract_file(input_file):
     try:
-    (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
+    	(raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
     except IOError:
