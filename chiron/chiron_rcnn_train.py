@@ -138,8 +138,9 @@ if __name__ == "__main__":
     parser.add_argument('--configure', default = None,
                         help="Model structure configure json file.")
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
-    parser.add_argument('-r', '--retrain', type=bool, default=False,
-                        help='flag if retrain or not')
+    parser.add_argument('--retrain', dest='retrain', action='store_true',
+                        help='Set retrain to true')
+    parser.set_defaults(retrain=False)
     args = parser.parse_args(sys.argv[1:])
     if args.cache_file is None:
         args.cache_file = args.data_dir + '/cache.hdf5'
