@@ -56,14 +56,14 @@ def extract(raw_folder=None):
 
 
 def extract_file(input_file):
-#    try:
+    try:
     (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
-#    except IOError:
-#        return False, (None, None)
-#    except:
-#        return False, (None, None)
+    except IOError:
+        return False, (None, None)
+    except:
+        return False, (None, None)
 
     raw_data_array = []
     for index, start in enumerate(raw_start):
