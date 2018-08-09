@@ -70,7 +70,7 @@ def parse_cwDTW(f_path):
             split_line = re.split('\s+\|*[diff:]*\s*',line.strip())
             segs.append(split_line)
     segs = np.array(segs)
-    _,index = np.unique(segs[:,7],return_index = True)
+    _,index = np.unique(segs[:,3],return_index = True)
     index = np.sort(index)
     segs = segs[index,:]
     output = list()
