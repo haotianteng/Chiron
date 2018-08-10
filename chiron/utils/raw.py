@@ -50,7 +50,9 @@ def extract(raw_folder=None):
                     'features': _bytes_feature(raw_data_array.tostring()),
                     'fname':_bytes_feature(str.encode(file_n))}))
                 writer.write(example.SerializeToString())
-            sys.stdout.write("%s file transfered.   \n" % (file_n))
+                sys.stdout.write("%s file transfered.   \n" % (file_n))
+            else:
+                sys.stdout.write("FAIL on %s file.   \n" % (file_n))
 
     writer.close()
 
