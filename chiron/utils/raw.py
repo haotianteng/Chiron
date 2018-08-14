@@ -38,9 +38,11 @@ def extract(raw_folder=None):
 
     writer = tf.python_io.TFRecordWriter(tfrecords_filename)
 
-    for file_n in tf.gfile.ListDirectory(root_folder):
+    for dir_n,_,file_list in tf.gfile.Walk(root_folder):
+     for file_n in file_list:
         if file_n.endswith('fast5'):
 #            output_file = output_folder + os.path.splitext(file_n)[0]
+            file_n = os.path.join(dir_n,file_n)
             success, (raw_data, raw_data_array) = extract_file(
                 root_folder + os.path.sep + file_n)
             if success:
@@ -62,9 +64,8 @@ def extract_file(input_file):
     	(raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
-    except IOError:
-        return False, (None, None)
-    except:
+    except Exception as e:
+        print(str(e))
         return False, (None, None)
 
     raw_data_array = []
