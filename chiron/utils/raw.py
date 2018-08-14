@@ -42,7 +42,6 @@ def extract(raw_folder=None):
      for file_n in file_list:
         if file_n.endswith('fast5'):
 #            output_file = output_folder + os.path.splitext(file_n)[0]
-            file_n = os.path.join(dir_n,file_n)
             success, (raw_data, raw_data_array) = extract_file(
                 root_folder + os.path.sep + file_n)
             if success:
