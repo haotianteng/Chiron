@@ -21,7 +21,7 @@ def extract_fastq(input_f,ref_f,mode = 0):
     Args:
         input_f: intput fast5 file handle
         ref_f: file name of the reference
-        mode: 0-dna, 1-rna
+        mode: 0-dna, 1-rna, -1-rna 180mV
     """
     with h5py.File(input_f,'r') as input_fh:
         raw_signal = list(input_fh['/Raw/Reads'].values())[0]['Signal'].value
@@ -139,13 +139,17 @@ if __name__ == "__main__":
                         help="Directory of the fast5 files.")
     parser.add_argument('-r', '--ref', required = True,
                         help="Reference file name")
-    parser.add_argument('-m','--mode',default = 0,
+    parser.add_argument('-m','--mode',default = 0,type = int,
                         help="If RNA pore model is used, 0 for DNA pore model, 1 for 200mV RNA pore model, -1 for 180mV RNA pore model, DEFAULT is 0.")
     parser.add_argument('-s','--saving',
                         help="Temporary saving folder.")
     parser.add_argument('-t','--thread',default = 1,type = int,
                         help="Thread number.")
     args = parser.parse_args(sys.argv[1:])
+    if args.mode==1 or args.mode == -1 or args.mode == 0:
+        pass
+    else:
+        raise ValueError("Mode should be 0,1 or -1")
     run()
 
     
