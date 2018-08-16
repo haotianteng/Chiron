@@ -111,7 +111,7 @@ def label(abs_fast5):
             return()
         prefix = os.path.join(args.saving,os.path.splitext(filename)[0])
         input_cmd = write_output(prefix,raw_signal,ref_seq)
-        cmd = "./utils/cwDTW_nano " + input_cmd +' -R ' + str(args.mode)
+        cmd = os.path.dirname(__file__)+"/utils/cwDTW_nano " + input_cmd +' -R ' + str(args.mode)
         args_cmd = shlex.split(cmd)
         p = subprocess.Popen(args_cmd)
         p.wait()
