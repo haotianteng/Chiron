@@ -236,7 +236,7 @@ def evaluation():
         if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
             os.makedirs(os.path.join(FLAGS.output, 'meta'))
         def worker_fn():
-            for name in tqdm(file_list,desc = "Logits inferencing.",position = 0):
+            for name in file_list:
                 if not name.endswith('.signal'):
                     continue
                 input_path = os.path.join(file_dir, name)
@@ -244,7 +244,7 @@ def evaluation():
                                                seg_length=FLAGS.segment_len,
                                                step=FLAGS.jump)
                 reads_n = eval_data.reads_n
-                for i in trange(0, reads_n, FLAGS.batch_size,desc = "Logits inferencing",position = 1):
+                for i in trange(0, reads_n, FLAGS.batch_size,desc = "Logits inferencing",position = 2):
                     batch_x, seq_len, _ = eval_data.next_batch(
                         FLAGS.batch_size, shuffle=False, sig_norm=False)
                     batch_x = np.pad(
@@ -271,7 +271,7 @@ def evaluation():
         worker.start()
 
         val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
-        for name in tqdm(file_list, desc="CTC decoding.",position = 2):
+        for name in tqdm(file_list, desc="Total process",position = 1):
             start_time = time.time()
             if not name.endswith('.signal'):
                 continue
