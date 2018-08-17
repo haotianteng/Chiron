@@ -73,7 +73,7 @@ def extract_file(input_file):
         return False
     except:
         return False
-    raw_signal = list(input_fh['/Raw/Reads'].values())[0]['Signal'].value
+    raw_signal = list(input_data['/Raw/Reads'].values())[0]['Signal'].value
     try:
         reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
         reference = '>template\n' + reference.split('\n')[1]
