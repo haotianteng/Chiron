@@ -23,8 +23,8 @@ def extract(FLAGS):
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
     if out_folder is None:
-        raw_folder = os.path.abspath(os.path.join(out_folder, os.pardir, 'raw'))
-        ref_folder = os.path.abspath(os.path.join(out_folder, os.pardir, 'reference'))
+        raw_folder = os.path.abspath(os.path.join(out_folder, 'raw'))
+        ref_folder = os.path.abspath(os.path.join(out_folder, 'reference'))
     else:
         if not os.path.isdir(FLAGS.output_dir):
             os.makedirs(FLAGS.output_dir)
@@ -73,9 +73,7 @@ def extract_file(input_file):
         return False
     except:
         return False
-    raw_attr = input_data['Raw/Reads/']
-    read_name = list(raw_attr.keys())[0]
-    raw_signal = raw_attr[read_name + '/Signal'].value
+    raw_signal = list(input_fh['/Raw/Reads'].values())[0]['Signal'].value
     try:
         reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
         reference = '>template\n' + reference.split('\n')[1]

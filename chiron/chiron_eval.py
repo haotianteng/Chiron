@@ -244,7 +244,7 @@ def evaluation():
                                                seg_length=FLAGS.segment_len,
                                                step=FLAGS.jump)
                 reads_n = eval_data.reads_n
-                for i in trange(0, reads_n, FLAGS.batch_size,desc = "Logits inferencing",position = 2):
+                for i in trange(0, reads_n, FLAGS.batch_size,desc = "Logits inferencing",position = 3):
                     batch_x, seq_len, _ = eval_data.next_batch(
                         FLAGS.batch_size, shuffle=False, sig_norm=False)
                     batch_x = np.pad(
@@ -271,7 +271,7 @@ def evaluation():
         worker.start()
 
         val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
-        for name in tqdm(file_list, desc="Total process",position = 1):
+        for name in tqdm(file_list, desc="Total process",position = 2):
             start_time = time.time()
             if not name.endswith('.signal'):
                 continue
@@ -291,7 +291,7 @@ def evaluation():
             reads = list()
 
             N = len(range(0, reads_n, FLAGS.batch_size))
-            with tqdm(total=reads_n, desc="ctc decoding",position = 3) as pbar:
+            with tqdm(total=reads_n, desc="ctc decoding",position = 4) as pbar:
                 while True:
                     l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
                     pbar.set_postfix(logits_q=l_sz, decoded_q=d_sz, refresh=False)
@@ -309,7 +309,7 @@ def evaluation():
 
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
-            for i in trange(0, reads_n, FLAGS.batch_size, desc="Output",position = 4):
+            for i in trange(0, reads_n, FLAGS.batch_size, desc="Output",position = 5):
                 predict_val, logits_prob = val[name][i]
                 predict_read, unique = sparse2dense(predict_val)
                 predict_read = predict_read[0]
