@@ -15,10 +15,13 @@ Include any logs or source code that would be helpful to diagnose the problem. I
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Hardware (please complete the following information):**
+**Environment (please complete the following information):**
  - OS: [e.g. iOS]
  - GPU [e.g. CPU only, GTX 1080...]
- - Version [e.g. 0.4.1]
+ - Chiron Version [e.g. 0.4.1]
+ - Tensorflow Version [e.g. 1.8.0-gpu]
+ - Python Version [e.g. 2.7]
+ - Other related packages version
 
 **Additional context**
 Add any other context about the problem here.
