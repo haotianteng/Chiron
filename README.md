@@ -252,10 +252,11 @@ gcloud ml-engine jobs submit training $JOB_NAME \
 ## Distributed training on Google Cloud ML Engine
 
 ### Configure 
-```
+
 Change configure.yaml according to [GCloud Docs](https://cloud.google.com/ml-engine/docs/training-overview) 
 For example the following configure_multi_gpu.yaml: 
- 
+
+```
 trainingInput: 
   scaleTier: CUSTOM 
   masterType: standard_p100 
@@ -263,9 +264,9 @@ trainingInput:
   parameterServerType: large_model 
   workerCount: 3 
   parameterServerCount: 3 
- 
-Will enable 3 workers + 1 master worker with one P-100 GPU in each worker. 
 ```
+
+Will enable 3 workers + 1 master worker with one P-100 GPU in each worker. 
 
 ### Transfer fast5 files 
 ```
