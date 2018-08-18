@@ -19,7 +19,7 @@ import labelop
 
 DNA_BASE = {'A': 0, 'C': 1, 'G': 2, 'T': 3, }
 DNA_IDX = ['A', 'C', 'G', 'T']
-
+MINIMUM_LABEL_LEN = 5
 
 def extract():
     root_folder = FLAGS.input + os.path.sep
@@ -67,11 +67,11 @@ def extract():
         pre_start = raw_start[0]
         pre_index = 0
         for index, start in enumerate(raw_start):
-            if start - pre_start > FLAGS.length:
-                if index - 1 == pre_index:
+            while (start - pre_start > FLAGS.length):
+                if index - 1 - MINIMUM_LABEL_LEN <= pre_index:
                     # If a single segment is longer than the maximum singal length, skip it.
-                    pre_start = start
-                    pre_index = index
+                    pre_index +=1
+                    pre_start = raw_start[pre_index]
                     continue
                 event.append(np.pad(raw_data[pre_start:raw_start[index - 1]],
                                     (0, FLAGS.length + pre_start - raw_start[index - 1]), mode='constant'))
