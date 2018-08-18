@@ -331,9 +331,16 @@ def RNA_model2(net, training):
 
 
 def RNA_model3(net, training):
+    fea_shape = net.get_shape().as_list()
+    in_channel = fea_shape[-1]
     with tf.variable_scope('conv_layer'):
-	net = conv_layer(indata, ksize=[1, 14, 1, 256], padding='SAME', training=training,
-                               name='conv1', BN=True,strides = 7)
+        net = conv_layer(net, 
+                         ksize=[1, 14, in_channel, 256], 
+                         padding='SAME', 
+                         training=training,
+                         name='conv1', 
+                         BN=True,
+                         strides = 7)
     with tf.variable_scope('res_layer1'):
         net = residual_layer(net,out_channel=256,training = training,i_bn = True)
     with tf.variable_scope('res_layer2'):
@@ -345,7 +352,7 @@ def RNA_model3(net, training):
 def Variant_wavnet(net,training,res_layer = 1, dilate_layer = 7,dilate_repeat = 1):
     #   Dilate connection(Variant Wavenet) (res3_dilate7)
     with tf.variable_scope('res_layer1'):
-        net = residual_layer(signal,out_channel = 256,training = training,i_bn = True)
+        net = residual_layer(net,out_channel = 256,training = training,i_bn = True)
     for i in range(1,res_layer):
         with tf.variable_scope('res_layer'+str(i+1)):
             net = residual_layer(net,out_channel = 256,training = training)

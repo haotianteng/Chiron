@@ -23,7 +23,7 @@ MINIMUM_LABEL_LEN = 5
 
 def extract():
     if FLAGS.mode == 'rna':
-        MINIMUM_SIGNl_LEN = MINIMUM_LABEL_LEN * 7
+        MINIMUM_SIGNAL_LEN = MINIMUM_LABEL_LEN * 7
     elif FLAGS.mode == 'dna':
         MINIMUM_SIGNAL_LEN = MINIMUM_LABEL_LEN + 1
     else:
