@@ -20,9 +20,14 @@ import labelop
 DNA_BASE = {'A': 0, 'C': 1, 'G': 2, 'T': 3, }
 DNA_IDX = ['A', 'C', 'G', 'T']
 MINIMUM_LABEL_LEN = 5
-MINIMUM_SIGNAL_LEN = MINIMUM_LABEL_LEN+1
 
 def extract():
+    if FLAGS.mode == 'rna':
+        MINIMUM_SIGNl_LEN = MINIMUM_LABEL_LEN * 7
+    elif FLAGS.mode == 'dna':
+        MINIMUM_SIGNAL_LEN = MINIMUM_LABEL_LEN + 1
+    else:
+        raise ValueError("mode must be either dna or rna.")
     root_folder = FLAGS.input + os.path.sep
     output_folder = FLAGS.output + os.path.sep
     if not os.path.isdir(root_folder):
