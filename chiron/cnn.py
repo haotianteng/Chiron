@@ -272,6 +272,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
     model_dict = {'dna_model1': DNA_model1, 
                   'rna_model1': RNA_model1,
                   'rna_model2': RNA_model2,
+                  'rna_model3': RNA_model3,
                   'res_x': Res_x, 
                   'variant_wavnet': Variant_wavnet,
                   'incp_v2': incp_v2,
