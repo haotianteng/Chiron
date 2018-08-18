@@ -100,11 +100,12 @@ def extract():
             return True
         return False
 
-    for file_n in os.listdir(root_folder):
+    for base_dir, _ ,file_list in os.walk(root_folder):
+     for file_n in file_list:
         if file_n.endswith('fast5'):
             if output_file is None:
-                output_file = open(output_folder + os.path.sep + "data_batch_" + str(batch_idx) + '.bin', 'wb+')
-            output_state = extract_fast5(root_folder + os.path.sep + file_n, output_file)
+                output_file = open(os.path.join(output_folder,"data_batch_" + str(batch_idx) + '.bin'), 'wb+')
+            output_state = extract_fast5(os.path.join(base_dir,file_n), output_file)
             if output_state:
                 batch_idx += 1
                 output_file.close()
@@ -146,11 +147,11 @@ if __name__ == "__main__":
                         help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
-    parser.add_argument('-l', '--length', default=512, help="Length of the signal segment")
-    parser.add_argument('-b', '--batch', default=10000, help="Number of record in one file.")
+    parser.add_argument('-l', '--length',type=int, default=512, help="Length of the signal segment")
+    parser.add_argument('-b', '--batch',type=int, default=10000, help="Number of record in one file.")
     parser.add_argument('-n', '--normalization', default='median',
                         help="The method of normalization applied to signal, Median(default):robust median normalization, 'mean': mean normalization, 'None': no normalizaion")
-    parser.add_argument('-m', '--max', default=10, help="Maximum number of batch files generated.")
-    parser.add_argument('--mode', default='dna', help="Sequecing data type. Default is DNA.")
+    parser.add_argument('-m', '--max',type=int, default=10, help="Maximum number of batch files generated.")
+    parser.add_argument('--mode', default='dna', help="Sequecing data type. Default is DNA.Can be rna or dna")
     args = parser.parse_args(sys.argv[1:])
     run(args)

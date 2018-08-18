@@ -174,10 +174,10 @@ if __name__ == "__main__":
            default=1,
            type=int)
    parser.add_argument(
-           '-r',
-           '--retrain',
-           help='Flag if retrain the model',
-           default=False,
-           type=bool)
+            '--retrain', 
+            dest='retrain', 
+            action='store_true',
+            help='Set retrain to true')
+   parser.set_defaults(retrain=False)
    args = parser.parse_args()
    run(hparam.HParams(**args.__dict__)) 
