@@ -13,13 +13,11 @@ import os
 
 import tensorflow as tf
 
-SIGNAL_LEN = 512
-LABEL_LEN = 512
 TRAIN_QUEUE_CAPACITY = 500000
 VALID_QUEUE_CAPACITY = 100000
 
 
-def read_data(filename_queue):
+def read_data(filename_queue,full_sequence_len):
     """
     Reads and parses binary file of the .bin data files.
     If a N-way read parallelism is required, please call this function N times
@@ -33,19 +31,19 @@ def read_data(filename_queue):
         return a Record class containing following fields:
             key: a scalar string Tensor describing the filename& record number for this example.
             signal_len: a uint16 Tensor given the singal length of this example.
-            signal: a [SIGNAL_LEN] float32 Tensor with the signal data. True length is stored in signal_len field, padded with 0.
+            signal: a [full_sequence_len] float32 Tensor with the signal data. True length is stored in signal_len field, padded with 0.
             label_len: a uint16 Tensor given the label length of this example.
-            label: a [LABEL_LEN] uint8 Tensor with the label in the range [0-3(4)], represent A C G T (X).
+            label: a [full_label_len] uint8 Tensor with the label in the range [0-3(4)], represent A C G T (X).
     """
 
     class Record(object):
         pass
-
+    full_label_len = full_sequence_len
     record = Record()
     signal_unit = 4
     label_unit = 1
-    signal_bytes = SIGNAL_LEN * signal_unit
-    label_bytes = LABEL_LEN * label_unit
+    signal_bytes = full_sequence_len * signal_unit
+    label_bytes = full_label_len * label_unit
     len_bytes = 2
     record_len = len_bytes + signal_bytes + len_bytes + label_bytes
 
@@ -59,9 +57,9 @@ def read_data(filename_queue):
     record.signal_len.set_shape([])
     signal_vec = tf.reshape(
         tf.strided_slice(vec, [len_bytes], [len_bytes + signal_bytes]),
-        [SIGNAL_LEN, signal_unit])
+        [full_sequence_len, signal_unit])
     record.signal = tf.bitcast(signal_vec, type=tf.float32)
-    record.signal.set_shape([SIGNAL_LEN])
+    record.signal.set_shape([full_sequence_len])
     record.label_len = tf.cast(
         tf.bitcast(tf.strided_slice(vec, [len_bytes + signal_bytes],
                                     [len_bytes + signal_bytes + len_bytes]),
@@ -70,7 +68,7 @@ def read_data(filename_queue):
     record.label = tf.cast(
         tf.strided_slice(vec, [len_bytes + signal_bytes + len_bytes],
                          [record_len]), dtype=tf.int32)
-    record.label.set_shape([LABEL_LEN])
+    record.label.set_shape([full_label_len])
     return record
 
 
@@ -80,8 +78,8 @@ def _generate_signal_label_batch(signal, label, signal_len, batch_size, shuffle,
     """
     Generate a queue of signal-label batch.
     Args:
-        signal: 1D Tensor of [SIGNAL_LEN] of dtype float32
-        label: 1D Tensor of [LABEL_LEN] of dtype int8
+        signal: 1D Tensor of [full_sequence_len] of dtype float32
+        label: 1D Tensor of [full_label_len] of dtype int8
         signal_len: Scalar Tensor of dtype uint16, the unpadded length of signal
         batch_size: batch size of the mini batch.
         suffle: boolean number, indicate whether the queue is shuffled.
@@ -108,7 +106,7 @@ def _generate_signal_label_batch(signal, label, signal_len, batch_size, shuffle,
     return signal_batch, signal_len_batch, label_batch
 
 
-def inputs(data_dir, batch_size, for_valid=False):
+def inputs(data_dir, batch_size, full_sequence_len,for_valid=False):
     """
     Construct input for Nanopore Sequencing training.
     
@@ -118,9 +116,9 @@ def inputs(data_dir, batch_size, for_valid=False):
         for_valid: Boolean indicating if input is for validation.
         
     Returns:
-        signal_batch: 2D tensor of [batch_size, SIGNAL_LEN] size.
+        signal_batch: 2D tensor of [batch_size, full_sequence_len] size.
         signal_len_batch: 1D tensor of [batch_size] size.
-        label_batch: 2D tensor of [batch_size, LABEL_LEN] size.
+        label_batch: 2D tensor of [batch_size, full_label_len] size.
     
     """
     filenames = list()
@@ -129,7 +127,7 @@ def inputs(data_dir, batch_size, for_valid=False):
             filenames.append(os.path.join(data_dir, file_name))
 
     filename_queue = tf.train.string_input_producer(filenames)
-    read_input = read_data(filename_queue)
+    read_input = read_data(filename_queue,full_sequence_len)
     if for_valid:
         os.sys.stdout.write(
             "Filling queue with %d signals before starting to validate. "
