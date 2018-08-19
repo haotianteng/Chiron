@@ -51,7 +51,10 @@ def train():
     config = model.read_config(config_file)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len,configure = config)
     ctc_loss = model.loss(logits, seq_length, y)
-    opt = model.train_opt(FLAGS.step_rate,FLAGS.max_steps, global_step=global_step)
+    opt = model.train_opt(FLAGS.step_rate,
+                          FLAGS.max_steps, 
+                          global_step=global_step,
+                          opt_name = config['opt_method'])
     step = opt.minimize(ctc_loss,global_step = global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()

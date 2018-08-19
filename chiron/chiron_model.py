@@ -37,7 +37,8 @@ def read_config(config_file):
         config = {'cnn':{'model':'dna_model1'},
                   'rnn':{'layer_num':3,
                          'hidden_num':100,
-                         'cell_type':'LSTM'}}
+                         'cell_type':'LSTM'},
+                         'opt_method':'Adam'}
     return config
 
 def loss(logits, seq_len, label):

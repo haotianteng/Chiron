@@ -6,5 +6,6 @@
 		"layer_num":1,
 		"cell_type":"LSTM",
 		"hidden_num":100
-		}
+		},
+	"opt_method":"Adam"
 }
