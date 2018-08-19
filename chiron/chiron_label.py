@@ -106,7 +106,7 @@ def label(abs_fast5):
     if abs_fast5.endswith("fast5"):
         filename = os.path.basename(abs_fast5)
         try:
-            raw_signal,raw_seq,ref_seq = extract_fastq(abs_fast5,args.ref)
+            raw_signal,raw_seq,ref_seq = extract_fastq(abs_fast5,args.ref,args.mode)
         except:
             return()
         prefix = os.path.join(args.saving,os.path.splitext(filename)[0])
