@@ -52,7 +52,7 @@ def extract(FLAGS):
                 full_file_n = os.path.join(root_folder,file_n)
             if file_n.endswith('fast5'):
                 try:
-                    raw_signal, reference = extract_file(full_file_n)
+                    raw_signal, reference = extract_file(full_file_n,FLAGS.mode)
                     count += 1
                     if len(raw_signal) == 0:
                         raise ValueError("Failed in extracting " + (
@@ -66,7 +66,7 @@ def extract(FLAGS):
                     ref_file = open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+')
                     ref_file.write(reference)
 
-def extract_file(input_file):
+def extract_file(input_file,mode = 'dna'):
     try:
         input_data = h5py.File(input_file, 'r')
     except IOError:
@@ -74,6 +74,8 @@ def extract_file(input_file):
     except:
         return False
     raw_signal = list(input_data['/Raw/Reads'].values())[0]['Signal'].value
+    if mode == 'rna':
+        raw_signal = raw_signal[::-1]
     try:
         reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
         reference = '>template\n' + reference.split('\n')[1]
@@ -99,5 +101,9 @@ if __name__ == '__main__':
                         '--recursive',
                         action='store_true',
                         help="If recursively search subfolder")
+    parser.add_argument('-m',
+                        '--mode',
+                        default = 'rna',
+                        help="Output mode, can be chosen from dna or rna.")
     args = parser.parse_args(sys.argv[1:])
     extract(args)
