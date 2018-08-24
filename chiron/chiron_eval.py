@@ -298,9 +298,9 @@ def evaluation():
                 decoded_fname, i, predict_val, logits_prob = sess.run(decode_ops, feed_dict={training: False})
                 decoded_fname = decoded_fname.decode("UTF-8")
                 val[decoded_fname][i] = (predict_val, logits_prob)               
+                pbars.update(1,progress = len(val[name])*FLAGS.batch_size)
+                pbars.update_bar()
                 if len(val[name]) == N:
-                    pbars.update(1,progress = len(val[name])*FLAGS.batch_size)
-                    pbars.update_bar()
                     break
 
             pbars.update(3,progress = f_i+1)
