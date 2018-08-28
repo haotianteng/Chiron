@@ -64,7 +64,6 @@ def extract():
             fail_list.append(input_file_path)
             return False
         if mode=='rna':
-            print(type(raw_data))
             raw_data = raw_data[::-1]
         if FLAGS.normalization == 'mean':
             raw_data = (raw_data - np.median(raw_data)) / np.float(np.std(raw_data))
