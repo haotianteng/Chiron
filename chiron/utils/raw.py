@@ -91,10 +91,10 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', required = True,
                         help="Directory that store the fast5 files.")
     parser.add_argument('-o', '--output', required = True, help="Output folder")
+    parser.add_argument('--basecall_group',required = True,
+                        help='The attribute group name that store the resquiggled data. e.g. RawGenomeCorrected_000')
     parser.add_argument('-f', '--tffile', default="train.tfrecords",
                         help="tfrecord file")
-    parser.add_argument('--basecall_group', default='cwDTWCorrected_000',
-                        help='Basecall group Nanoraw resquiggle into. Default is Basecall_1D_000')
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
     parser.add_argument('--mode',default = 'dna',
