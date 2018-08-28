@@ -91,8 +91,8 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', required = True,
                         help="Directory that store the fast5 files.")
     parser.add_argument('-o', '--output', required = True, help="Output folder")
-    parser.add_argument('--basecall_group',required = True,
-                        help='The attribute group name that store the resquiggled data. e.g. RawGenomeCorrected_000')
+    parser.add_argument('--basecall_group',default = "RawGenomeCorrected_000",
+                        help='The attribute group to extract the training data from. e.g. RawGenomeCorrected_000')
     parser.add_argument('-f', '--tffile', default="train.tfrecords",
                         help="tfrecord file")
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
