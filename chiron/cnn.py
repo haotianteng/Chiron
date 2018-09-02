@@ -38,7 +38,7 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
         strides = [1, 1, 1, 1]
     else:
         if type(strides) is int:
-            strides = [1,strides,1,1]
+            strides = [1,1,strides,1]
     with tf.variable_scope(name):
         W = _variable_with_weight_decay("weights", 
                                         shape=ksize,
