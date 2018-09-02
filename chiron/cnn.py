@@ -219,7 +219,40 @@ def residual_layer(indata, out_channel, training, i_bn=False,k = 3, strides = No
         relu_out = tf.nn.relu(indata_cp + conv_out3, name='final_relu')
     return relu_out
 
+def residual_layer_identity_mapping(indata, out_channel, training, k = 3, strides = None):
+    """An inplementation of the residual layer from https://arxiv.org/abs/1512.03385
 
+    Args:
+        indata: A 4-D Tensor
+        out_channel (Int): The number of out channel
+        training (Boolean): 0-D Boolean Tensor indicate if it's in training.
+        i_bn (bool, optional): Defaults to False. If the identity layer being batch nomalized.
+
+    Returns:
+        relu_out: A 4-D Tensor of shape [batch_size, Height, Weight, out_channel]
+    """
+
+    fea_shape = indata.get_shape().as_list()
+    in_channel = fea_shape[-1]
+    with tf.variable_scope('branch1'):
+        if strides is not None:
+            indata_cp = tf.nn.avg_pool(indata,ksize = [1,1,strides,1],strides = [1,1,strides,1],padding = "SAME")
+        else:
+            indata_cp = indata
+        if out_channel>in_channel:
+            diff = out_channel - in_channel
+            paddings = tf.constant([[0,0],[0,0],[0,0],[0,diff]])
+            indata_cp = tf.pad(indata_cp,paddings = paddings,mode = 'CONSTANT',name = 'padding',constant_values = 0)
+    with tf.variable_scope('branch2'):
+        bn_1 = simple_global_bn(indata,name = 'pre_bn1')
+        relu_1 = tf.nn.relu(bn_1,name = 'pre_relu_1')
+        conv_1 = conv_layer(relu_1, ksize=[1, k, in_channel, out_channel], padding='SAME', training=training,
+                               name='conv2a', bias_term=False,BN = False,strides = strides)
+        bn_2 = simple_global_bn(conv_1,name = 'pre_bn2')
+        relu_2 = tf.nn.relu(bn_2,name = 'pre_relu2')
+        conv_2 = conv_layer(relu_2, ksize=[1, k, out_channel, out_channel], padding='SAME', training=training,
+                               name='conv2b', bias_term=False,strides = 1)
+    return conv_2+indata_cp
 def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, i_bn=True):
     """    An implementation of a variant of the Wavenet layer. https://arxiv.org/abs/1609.03499
 
@@ -304,29 +337,39 @@ def DNA_model1(net,training):
 def RNA_model1(net,training):
     #   RNA model(test1)
     with tf.variable_scope('res_layer1'):
-        net = residual_layer(net,out_channel=128,training = training, i_bn = True)
+        net = residual_layer_identity_mapping(net,out_channel=128,training = training,k = 3)
     with tf.variable_scope('res_layer2'):
-        net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
+        net = residual_layer_identity_mapping(net,out_channel = 128, training = training, strides = 2,k=3)
     with tf.variable_scope('res_layer3'):
-        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+        net = residual_layer_identity_mapping(net,out_channel = 256, training = training, strides = 2,k=3)
     with tf.variable_scope('res_layer4'):
-        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
+        net = residual_layer_identity_mapping(net,out_channel = 256, training = training, strides = 2,k=3)
     return net
 
 def RNA_model2(net, training):
+    fea_shape = net.get_shape().as_list()
+    in_channel = fea_shape[-1]
+    with tf.variable_scope('conv_layer1'):
+        net = conv_layer(net, 
+                         ksize=[1, 5, in_channel, 256], 
+                         padding='SAME', 
+                         training=training,
+                         name='conv1', 
+                         BN=True,
+                         strides = 2)
+    with tf.variable_scope('conv_layer2'):
+        net = conv_layer(net, 
+                         ksize=[1, 5, in_channel, 256], 
+                         padding='SAME',
+                         training=training,
+                         name='conv2',
+                         BN=True,
+                         strides = 2)
     with tf.variable_scope('res_layer1'):
-        net = residual_layer(net,out_channel=64,training = training, strides=2, k=7, i_bn = True)
-    with tf.variable_scope('max_pool1'):
-        net = tf.nn.max_pool(net,ksize = [1,1,3,1],strides = [1,1,2,1],padding = 'SAME',name = 'mp_1')
+        net = residual_layer(net,out_channel=256,training = training,i_bn = True)
     with tf.variable_scope('res_layer2'):
-        net = residual_layer(net,out_channel = 64, training = training)
+        net = residual_layer(net,out_channel = 256, training = training)
     with tf.variable_scope('res_layer3'):
-        net = residual_layer(net,out_channel = 128, training = training, strides = 2,k=3)
-    with tf.variable_scope('res_layer4'):
-        net = residual_layer(net,out_channel=128,training = training)
-    with tf.variable_scope('res_layer5'):
-        net = residual_layer(net,out_channel = 256, training = training, strides = 2,k=3)
-    with tf.variable_scope('res_layer6'):
         net = residual_layer(net,out_channel = 256, training = training)
     return net
 
