@@ -247,11 +247,11 @@ def residual_layer_identity_mapping(indata, out_channel, training, k = 3, stride
         bn_1 = simple_global_bn(indata,name = 'pre_bn1')
         relu_1 = tf.nn.relu(bn_1,name = 'pre_relu_1')
         conv_1 = conv_layer(relu_1, ksize=[1, k, in_channel, out_channel], padding='SAME', training=training,
-                               name='conv2a', bias_term=False,BN = False,strides = strides)
+                               name='conv2a', bias_term=False,BN = False,strides = strides,active = False)
         bn_2 = simple_global_bn(conv_1,name = 'pre_bn2')
         relu_2 = tf.nn.relu(bn_2,name = 'pre_relu2')
         conv_2 = conv_layer(relu_2, ksize=[1, k, out_channel, out_channel], padding='SAME', training=training,
-                               name='conv2b', bias_term=False,strides = 1)
+                               name='conv2b', bias_term=False,strides = 1,active = False)
     return conv_2+indata_cp
 def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, i_bn=True):
     """    An implementation of a variant of the Wavenet layer. https://arxiv.org/abs/1609.03499
