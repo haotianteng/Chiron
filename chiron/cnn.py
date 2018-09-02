@@ -312,6 +312,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
                   'custom': custom}
     net = model_dict[cnn_config](net,training)
     feashape = net.get_shape().as_list()
+    print("CNN output has the segment length %d, and %d channels"%(feashape[2],feashape[3]))
     net = tf.reshape(net, [feashape[0], feashape[2],
                             feashape[3]], name='fea_rs')
     return net
