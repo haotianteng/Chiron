@@ -1,12 +1,19 @@
 import numpy as np
 import json
 import os
+import sys
+import argparse
 from tqdm import tqdm
-from random import randint
 class gm:
+    """
+    Genome Model Class:
+        k: the length of the longest kmer counted in the model, The genome model
+        P(x|K) give the probability of observe Nucleotide x given a kmer K that has
+        a length <= k.
+    """
     def __init__(self,k = 5):
         self.k = k
-        self.n = int(4*(4**k-1)/3)
+        self.n = int(4*(4**k-1)/3) #n = 4**1 + 4**2 + ... + 4**k
         self.base = ['A','C','G','T']
         self.kmer_dict = {}
         self.kmer_count = np.zeros([self.n,4],dtype = int)
@@ -37,7 +44,6 @@ class gm:
     def save(self,sav_path):
         gm_dict = self.__dict__
         gm_dict['kmer_count'] = gm_dict['kmer_count'].tolist()
-        print(gm_dict)
         with open(sav_path, 'w+') as f:
             json.dump(gm_dict,f)
     def load(self,model_path):
@@ -67,16 +73,41 @@ def fasta_reader(file_list,root_folder = None):
                 else:
                     seqs[last_seq]  = seqs[last_seq]+line.strip()
         yield name,seqs
-if __name__ == "__main__":
-    root_folder = '/home/heavens/Reference'
-    file_list = os.listdir(root_folder)
-    file_list = [file_list[0]]
-    gm1 = gm(k=5)
-    for genome,seqs in fasta_reader(file_list,root_folder):
+def run(args):
+    root_folder = args.input
+    f_L = os.listdir(root_folder)
+    fasta_list = list()
+    for f in f_L:
+        if f.endswith('fasta') or f.endswith('.fa'):
+            fasta_list.append(f)
+    gm1 = gm(k=args.k)
+    for genome,seqs in fasta_reader(fasta_list,root_folder):
         for name in tqdm(seqs.keys(),desc = "Reading genome "+genome,position = 0):
             gm1.count_kmer(seqs[name])
-            
-    gm1.save('/home/heavens/Documents/gm_model.json')
+    out_path = os.path.join(args.output,args.name)
+    gm1.save(out_path)
+    print("Genome model saved to %s"%(out_path))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog='genome model',
+                                     description='Build a genome model upon genomes.')
+    parser.add_argument('-i', 
+                        '--input', 
+                        required = True,
+                        help="Directory of the genome files.")
+    parser.add_argument('-o',
+                        '--output', 
+                        required = True,
+                        help="Output folder.")
+    parser.add_argument('-n',
+                        '--name',
+                        default = "gm.json",
+                        help="Output file name.")
+    parser.add_argument('-k',
+                        default = 6, 
+                        type = int, 
+                        help="The length of longest Kmer counted in the model")
+    args = parser.parse_args(sys.argv[1:])
+    run(args)
     
 
     
