@@ -1,0 +1,6 @@
+# Reading Basecalling assembly output total rate(bp/s)
+0.093 7.375 0.216 0.009 7.693 435.614
+# read_len batch_size segment_len jump start_pos
+3351 1100 300 30 0
+# input_name model_name
+/shares/coin/haotian.teng/deepBNS/Chiron/chiron/example_data/output/raw/ model/DNA_default
