@@ -191,9 +191,13 @@ class DataSet(object):
             Input Args:
                 batch_size:A scalar indicate the batch size.
                 shuffle: boolean, indicate if the data should be shuffled after each epoch.
+                sig_norm: If the signal need to be normalized, if sig_norm set
+                to True when read the data, then the redundant sig_norm is not required.
             Output Args:
                 inputX,sequence_length,label_batch: tuple of (indx,vals,shape)
         """
+        if self.epochs_completed>=1 and self.for_eval:
+            print("Warning, evaluation dataset already finish one iteration.")
         start = self._index_in_epoch
         # Shuffle for the first epoch
         if self._epochs_completed == 0 and start == 0:
@@ -207,25 +211,30 @@ class DataSet(object):
             rest_reads_n = self.reads_n - start
             event_rest_part, label_rest_part = self.read_into_memory(
                 self._perm[start:self._reads_n])
-
-            # Shuffle the data
-            if shuffle:
-                np.random.shuffle(self._perm)
-            # Start next epoch
             start = 0
-            self._index_in_epoch = batch_size - rest_reads_n
-            end = self._index_in_epoch
-            event_new_part, label_new_part = self.read_into_memory(
-                self._perm[start:end])
-            if event_rest_part.shape[0] == 0:
-                event_batch = event_new_part
-                label_batch = label_new_part
-            elif event_new_part.shape[0] == 0:
+            if self._for_eval:
                 event_batch = event_rest_part
                 label_batch = label_rest_part
+                self._index_in_epoch = 0
+                end = 0
+            # Shuffle the data
             else:
-                event_batch = np.concatenate((event_rest_part, event_new_part), axis=0)
-                label_batch = np.concatenate((label_rest_part, label_new_part), axis=0)
+                if shuffle:
+                    np.random.shuffle(self._perm)
+                # Start next epoch
+                self._index_in_epoch = batch_size - rest_reads_n
+                end = self._index_in_epoch
+                event_new_part, label_new_part = self.read_into_memory(
+                    self._perm[start:end])
+                if event_rest_part.shape[0] == 0:
+                    event_batch = event_new_part
+                    label_batch = label_new_part
+                elif event_new_part.shape[0] == 0:
+                    event_batch = event_rest_part
+                    label_batch = label_rest_part
+                else:
+                    event_batch = np.concatenate((event_rest_part, event_new_part), axis=0)
+                    label_batch = np.concatenate((label_rest_part, label_new_part), axis=0)
         else:
             self._index_in_epoch += batch_size
             end = self._index_in_epoch
