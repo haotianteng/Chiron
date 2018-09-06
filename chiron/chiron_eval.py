@@ -279,8 +279,7 @@ def evaluation():
             if FLAGS.mode == 'rna':
                 eval_data = read_data_for_eval(input_path, FLAGS.start,
                                            seg_length=FLAGS.segment_len,
-                                           step=FLAGS.jump,
-                                           reverse = True)
+                                           step=FLAGS.jump)
             else:
                 eval_data = read_data_for_eval(input_path, FLAGS.start,
                                            seg_length=FLAGS.segment_len,
