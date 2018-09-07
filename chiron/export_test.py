@@ -11,15 +11,17 @@ import tensorflow as tf
 from tensorflow.python.saved_model import signature_constants as sig_constants
 import argparse
 
-from chiron.chiron_eval import inference
+from chiron.chiron_model import inference,read_config
+from chiron.chiron_eval import path_prob
 
 parser = argparse.ArgumentParser(description='Basecall a signal file')
 # parser.add_argument('-i','--input', help="File path or Folder path to the signal file.")
 # parser.add_argument('-o','--output', help = "Output Folder name")
-parser.add_argument('-m', '--model', default='../model/crnn3+3_S10_2_re', help="model folder")
+parser.add_argument('-m', '--model', required = True, help="model folder")
 parser.add_argument('-b', '--batch_size', type=int, default=1100,
                     help="Batch size for run, bigger batch_size will increase the processing speed but require larger RAM load")
-parser.add_argument('-l', '--segment_len', type=int, default=300, help="Segment length to be divided into.")
+parser.add_argument('-l', '--segment_len', type=int, default=400, help="Segment length to be divided into.")
+parser.add_argument('-w','--beam_width',type = int,default = 30 , help="The window width of beam.")
 FLAGS = parser.parse_args()
 
 
@@ -27,11 +29,22 @@ def input_output_list():
     x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
     seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
     training = tf.placeholder(tf.bool)
-    logits, _ = inference(x, seq_length, training=training)
-    predict = tf.nn.ctc_greedy_decoder(tf.transpose(logits, perm=[1, 0, 2]), seq_length, merge_repeated=True)
+    config_path = os.path.join(FLAGS.model,'model.json')
+    model_configure = read_config(config_path)
+    logits, ratio = inference(x, 
+                              seq_length, 
+                              training=training,
+                              full_sequence_len = FLAGS.segment_len,
+                              configure = model_configure)
+    ratio = tf.constant(ratio,dtype = tf.float32,shape = [])
+    seq_length_r = tf.cast(tf.round(seq_length/ratio),tf.int32)
+    prob_logits = path_prob(logits)
+    predict = tf.nn.ctc_beam_search_decoder(tf.transpose(logits, perm=[1, 0, 2]), 
+                                            seq_length_r, 
+                                            merge_repeated=True,
+                                            beam_width = FLAGS.beam_width)
     input_dict = {'x': x, 'seq_length': seq_length, 'training': training}
-    output_dict = {'decoded_indices': predict[0][0].indices, 'decoded_values': predict[0][0].values,
-                   'neg_sum_logits': predict[1]}
+    output_dict = {'predict_sequences':predict,'logits':logits, 'prob_logits':prob_logits}
     return input_dict, output_dict
 
 
