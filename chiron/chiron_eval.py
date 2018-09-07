@@ -253,7 +253,7 @@ def evaluation():
                         seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
                     feed_dict = {
                         x: batch_x,
-                        seq_length: seq_len,
+                        seq_length: np.ceil(seq_len/ratio).astype(np.int32),
                         training: False,
                         logits_index:i,
                         logits_fname: name,
