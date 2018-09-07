@@ -37,14 +37,14 @@ def input_output_list():
                               full_sequence_len = FLAGS.segment_len,
                               configure = model_configure)
     ratio = tf.constant(ratio,dtype = tf.float32,shape = [])
-    seq_length_r = tf.cast(tf.round(seq_length/ratio),tf.int32)
+    seq_length_r = tf.cast(tf.round(tf.cast(seq_length,dtype = tf.float32)/ratio),tf.int32)
     prob_logits = path_prob(logits)
-    predict = tf.nn.ctc_beam_search_decoder(tf.transpose(logits, perm=[1, 0, 2]), 
+    predict,log_prob = tf.nn.ctc_beam_search_decoder(tf.transpose(logits, perm=[1, 0, 2]), 
                                             seq_length_r, 
                                             merge_repeated=True,
                                             beam_width = FLAGS.beam_width)
     input_dict = {'x': x, 'seq_length': seq_length, 'training': training}
-    output_dict = {'predict_sequences':predict,'logits':logits, 'prob_logits':prob_logits}
+    output_dict = {'predict_index':predict[0],'logits':logits, 'prob_logits':prob_logits,'log_prob':log_prob}
     return input_dict, output_dict
 
 
@@ -63,11 +63,11 @@ def build_and_run_exports(job_dir, serving_input_fn):
 
         inputs_info = {
             name: tf.saved_model.utils.build_tensor_info(tensor)
-            for name, tensor in inputs_dict.iteritems()
+            for name, tensor in inputs_dict.items()
         }
         output_info = {
             name: tf.saved_model.utils.build_tensor_info(tensor)
-            for name, tensor in prediction_dict.iteritems()
+            for name, tensor in prediction_dict.items()
         }
         signature_def = tf.saved_model.signature_def_utils.build_signature_def(
             inputs=inputs_info,
