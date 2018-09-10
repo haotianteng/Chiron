@@ -60,11 +60,11 @@ def extract(FLAGS):
                 except:
                     # logging.getLogger(__name__).error("Cannot extact file %s", file_n, exc_info=True)
                     continue
-                signal_file = open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+')
-                signal_file.write(" ".join([str(val) for val in raw_signal]))
+                with open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+') as signal_file:
+                    signal_file.write(" ".join([str(val) for val in raw_signal]))
                 if len(reference) > 0:
-                    ref_file = open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+')
-                    ref_file.write(reference)
+                    with open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+') as ref_file:
+                        ref_file.write(reference)
 
 def extract_file(input_file,mode = 'dna'):
     try:
