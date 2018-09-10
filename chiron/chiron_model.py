@@ -55,7 +55,7 @@ def loss(logits, seq_len, label):
     """
     loss = tf.reduce_mean(
         tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
-                       time_major=False))
+                       time_major=False,ignore_longer_outputs_than_inputs=True))
     tf.add_to_collection('losses',loss)
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
     tf.summary.scalar('loss', loss)
