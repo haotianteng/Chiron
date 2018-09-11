@@ -111,9 +111,9 @@ def generate_train_valid_datasets():
     if FLAGS.read_cache:
         train_ds = read_cache_dataset(FLAGS.train_cache)
         valid_ds = read_cache_dataset(FLAGS.valid_cache)
-        if train_ds.event.shape()[1]!=FLAGS.sequence_len:
+        if train_ds.event.shape[1]!=FLAGS.sequence_len:
             raise ValueError("The event length of training cached dataset %d is inconsistent with given sequene_len %d"%(train_ds.event.shape()[1],FLAGS.sequence_len))
-        if valid_ds.event.shape()[1]!=FLAGS.sequence_len:
+        if valid_ds.event.shape[1]!=FLAGS.sequence_len:
             raise ValueError("The event length of training cached dataset %d is inconsistent with given sequene_len %d"%(valid_ds.event.shape()[1],FLAGS.sequence_len))
         return train_ds,valid_ds
     sys.stdout.write("Begin reading training dataset.\n")
