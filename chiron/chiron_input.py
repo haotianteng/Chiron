@@ -20,6 +20,7 @@ from statsmodels import robust
 from six.moves import range
 from six.moves import zip
 import tensorflow as tf
+import utils.progress as progress
 
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 
@@ -318,8 +319,10 @@ def read_tfrecord(data_dir,
                   k_mer=1, 
                   max_segments_num=None):
     ###Read from raw data
+    count_bar = progress.multi_pbars("Extract tfrecords")
     if max_segments_num is None:
         max_segments_num = FLAGS.max_segments_number
+        count_bar.update(0,progress = 0,total = max_segments_num)
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
     else:
@@ -387,7 +390,8 @@ def read_tfrecord(data_dir,
             count = len(event)
             if file_count % 10 == 0:
                 if max_segments_num is not None:
-                    sys.stdout.write("%d/%d events read.   \n" % (count, max_segments_num))
+                    count_bar.update(0,progress = count,total = max_segments_num)
+                    count_bar.update_bar()
                     if len(event) > max_segments_num:
                         event.resize(max_segments_num)
                         label.resize(max_segments_num)
@@ -396,13 +400,15 @@ def read_tfrecord(data_dir,
                         label_length.resize(max_segments_num)
                         break
                 else:
-                    sys.stdout.write("%d lines read.   \n" % (count))
+                    count_bar.update(0,progress = count,total = count)
+                    count_bar.update_bar()
             file_count += 1
 
         if event.cache:
             train = read_cache_dataset(h5py_file_path)
         else:
             train = DataSet(event=event, event_length=event_length, label=label, label_length=label_length)
+        count_bar.end()
         return train
             
 def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_segments_num=FLAGS.max_segments_number):

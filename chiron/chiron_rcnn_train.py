@@ -24,6 +24,7 @@ import chiron.chiron_model as model
 
 from chiron.chiron_input import read_raw_data_sets
 from chiron.chiron_input import read_tfrecord
+from chiron.chiron_input import read_cache_dataset
 from chiron.cnn import getcnnfeature
 from chiron.cnn import getcnnlogit
 from six.moves import range
@@ -72,8 +73,7 @@ def train():
     summary_writer = tf.summary.FileWriter(
         FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
     model.save_model(default_config,config)
-    train_ds = read_tfrecord(FLAGS.data_dir, FLAGS.tfrecord, FLAGS.cache_file,
-                             FLAGS.sequence_len, k_mer=FLAGS.k_mer,max_segments_num=FLAGS.segments_num)
+    train_ds,valid_ds = generate_train_valid_datasets()
     start = time.time()
     for i in range(FLAGS.max_steps):
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
@@ -84,7 +84,7 @@ def train():
         loss_val, _ = sess.run([ctc_loss, step], feed_dict=feed_dict)
         if i % 10 == 0:
             global_step_val = tf.train.global_step(sess, global_step)
-            valid_x, valid_len, valid_y = train_ds.next_batch(FLAGS.batch_size)
+            valid_x, valid_len, valid_y = valid_ds.next_batch(FLAGS.batch_size)
             indxs, values, shape = valid_y
             feed_dict = {x: valid_x, seq_length: valid_len / ratio,
                          y_indexs: indxs, y_values: values, y_shape: shape,
@@ -92,7 +92,7 @@ def train():
             error_val = sess.run(error, feed_dict=feed_dict)
             end = time.time()
             print(
-            "Step %d/%d Epoch %d, batch number %d, loss: %5.3f edit_distance: %5.3f Elapsed Time/step: %5.3f" \
+            "Step %d/%d Epoch %d, batch number %d, train_loss: %5.3f validate_edit_distance: %5.3f Elapsed Time/step: %5.3f" \
             % (i, FLAGS.max_steps, train_ds.epochs_completed,
                train_ds.index_in_epoch, loss_val, error_val,
                (end - start) / (i + 1)))
@@ -107,7 +107,33 @@ def train():
     saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt',
                global_step=global_step_val)
 
-
+def generate_train_valid_datasets():
+    if FLAGS.read_cache:
+        train_ds = read_cache_dataset(FLAGS.train_cache)
+        valid_ds = read_cache_dataset(FLAGS.valid_cache)
+        if train_ds.event.shape()[1]!=FLAGS.sequence_len:
+            raise ValueError("The event length of training cached dataset %d is inconsistent with given sequene_len %d"%(train_ds.event.shape()[1],FLAGS.sequence_len))
+        if valid_ds.event.shape()[1]!=FLAGS.sequence_len:
+            raise ValueError("The event length of training cached dataset %d is inconsistent with given sequene_len %d"%(valid_ds.event.shape()[1],FLAGS.sequence_len))
+        return train_ds,valid_ds
+    sys.stdout.write("Begin reading training dataset.\n")
+    train_ds = read_tfrecord(FLAGS.data_dir, 
+                             FLAGS.tfrecord, 
+                             FLAGS.train_cache,
+                             FLAGS.sequence_len, 
+                             k_mer=FLAGS.k_mer,
+                             max_segments_num=FLAGS.segments_num)
+    sys.stdout.write("Begin reading validation dataset.\n")
+    if FLAGS.validation is not None:
+        valid_ds = read_tfrecord(FLAGS.data_dir, 
+                                 FLAGS.validation,
+                                 FLAGS.valid_cache,
+                                 FLAGS.sequence_len, 
+                                 k_mer=FLAGS.k_mer,
+                                 max_segments_num=FLAGS.segments_num)
+    else:
+        valid_ds = train_ds
+    return train_ds,valid_ds
 def run(args):
     global FLAGS
     FLAGS = args
@@ -125,9 +151,12 @@ if __name__ == "__main__":
                         help="log directory that store the training model.")
     parser.add_argument('-m', '--model_name', required = True,
                         help='model_name')
+    parser.add_argument('-v', '--validation', default = None, 
+                        help="validation tfrecord file, default is None, which conduct no validation")
     parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
                         help='tfrecord file')
-    parser.add_argument('-c', '--cache_file', default=None, help="Cache file.")
+    parser.add_argument('--train_cache', default=None, help="Cache file for training dataset.")
+    parser.add_argument('--valid_cache', default=None, help="Cache file for validation dataset.")
     parser.add_argument('-s', '--sequence_len', type=int, default=400,
                         help='the length of sequence')
     parser.add_argument('-b', '--batch_size', type=int, default=200,
@@ -143,8 +172,12 @@ if __name__ == "__main__":
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
     parser.add_argument('--retrain', dest='retrain', action='store_true',
                         help='Set retrain to true')
+    parser.add_argument('--read_cache',dest='read_cache',action='store_true',
+                        help="Read from cached hdf5 file.")
     parser.set_defaults(retrain=False)
     args = parser.parse_args(sys.argv[1:])
-    if args.cache_file is None:
-        args.cache_file = args.data_dir + '/cache.hdf5'
+    if args.train_cache is None:
+        args.train_cache = args.data_dir + '/train_cache.hdf5'
+    if (args.valid_cache is None) and (args.validation is not None):
+        args.valid_cache = args.data_dir + '/valid_cache.hdf5'
     run(args)
