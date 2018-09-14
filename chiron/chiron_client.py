@@ -27,12 +27,8 @@ Typical usage example:
 
 from __future__ import print_function
 
-import sys
-import threading
 from chiron.utils.easy_assembler import simple_assembly_qs
-from chiron.utils.easy_assembler import simple_assembly
 from chiron.chiron_input import read_data_for_eval
-from chiron.utils.raw import extract
 from chiron.chiron_eval import sparse2dense, qs, index2base,write_output
 # This is a placeholder for a Google-internal import.
 import os
@@ -40,15 +36,15 @@ import grpc
 import numpy as np
 import tensorflow as tf
 from collections import defaultdict
-from tensorflow_serving.apis import predict_pb2
+from tensorflow_serving.apis import prediction_service_pb2
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
 tf.app.flags.DEFINE_integer('concurrency', 1,
                             'maximum number of concurrent inference requests')
-tf.app.flags.DEFINE_integer('batch_size', 1100, 'Number of test images')
-tf.app.flags.DEFINE_string('server', '', 'PredictionService host:port')
-tf.app.flags.DEFINE_string('raw_dir', '/tmp', 'Input raw signal directory. ')
-tf.app.flags.DEFINE_string('output','/tmp/output',"Output data directory. ")
+tf.app.flags.DEFINE_integer('batch_size', 400, 'Number of test images')
+tf.app.flags.DEFINE_string('server', '127.0.0.1:8500', 'PredictionService host:port')
+tf.app.flags.DEFINE_string('raw_dir', '/home/heavens/Chiron_project/Chiron/chiron/example_data/DNA/output/raw/', 'Input raw signal directory. ')
+tf.app.flags.DEFINE_string('output','/home/heavens/Chiron_project/Chiron/chiron/example_data/DNA/output/',"Output data directory. ")
 tf.app.flags.DEFINE_string('mode','dna','If basecalling in RNA mode or DNA mode.')
 tf.app.flags.DEFINE_string('extension','fastq','output format, default is fastq')
 
@@ -61,8 +57,8 @@ class DNA_CONF():
         self.START = 0
 class RNA_CONF():
     def __init__(self):
-        self.SEGMENT_LEN = 1000
-        self.JUMP = 60
+        self.SEGMENT_LEN = 500
+        self.JUMP = 50
         self.START = 0
 class _Result_Collection(object):
     def __init__(self):
@@ -116,17 +112,13 @@ def _post_process(collector, i, f):
         if exception:
             print(exception)
         return _callback
-def do_inference(hostport, work_dir, concurrency, num_tests):
+def do_inference(hostport):
     """Tests PredictionService with concurrent requests.
     
     Args:
     hostport: Host:port address of the PredictionService.
-    work_dir: The full path of working directory for test data set.
-    concurrency: Maximum number of concurrent requests.
-    num_tests: Number of test images to use.
-    
+     
     Returns:
-    The classification error rate.
     
     Raises:
     IOError: An error occurred processing test data set.
@@ -139,7 +131,7 @@ def do_inference(hostport, work_dir, concurrency, num_tests):
         raise ValueError("Mode has to be either rna or dna.")
     channel = grpc.insecure_channel(hostport)
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    request = predict_pb2.PredictRequest()
+    request = prediction_service_pb2.PredictRequest()
     request.model_spec.name = 'chiron'
     request.model_spec.signature_name = 'predict_seqeunces'
     collector = _Result_Collection()
@@ -168,14 +160,10 @@ def do_inference(hostport, work_dir, concurrency, num_tests):
                          suffix=FLAGS.extension,
                          q_score=qs_string)
 def main(_):
-  if FLAGS.num_tests > 10000:
-    print('num_tests should not be greater than 10k')
-    return
   if not FLAGS.server:
     print('please specify server host:port')
     return
-  error_rate = do_inference()
-  print('\nInference error rate: %s%%' % (error_rate * 100))
+  do_inference(FLAGS.server)
 
 
 if __name__ == '__main__':
