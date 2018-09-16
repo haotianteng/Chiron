@@ -65,7 +65,7 @@ def rnn_layers(x,
                 cell_fw=multi_cells_fw, cell_bw=multi_cells_bw, inputs=x, sequence_length=seq_length, dtype=dtype, scope=scope)
         lasth = tf.concat(outputs, 2, name='birnn_output_concat')
     # shape of lasth [batch_size,max_time,hidden_num*2]
-    batch_size = lasth.get_shape().as_list()[0]
+    batch_size = tf.shape(lasth)[0]
     max_time = lasth.get_shape().as_list()[1]
     with tf.variable_scope('rnn_fnn_layer'):
         weight_out = _variable_on_cpu(name='weights',

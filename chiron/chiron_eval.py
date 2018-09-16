@@ -92,7 +92,7 @@ def path_prob(logits):
         prob_logits(Float): Tensor of shape[batch_size].
     """
 
-    fea_shape = logits.shape
+    fea_shape = tf.shape(logits)
     bsize = fea_shape[0]
     seg_len = fea_shape[1]
     top2_logits = tf.nn.top_k(logits, k=2)[0]
@@ -182,6 +182,12 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
             out_meta.write("# input_name model_name\n")
             out_meta.write("%s %s\n" % (FLAGS.input, FLAGS.model))
 
+def rewrite():
+    """Write back the output to the fast5 files
+    Args:
+        
+    """
+    #Under Develope#
 
 def evaluation():
     pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])

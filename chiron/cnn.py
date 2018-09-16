@@ -301,7 +301,8 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
 
     # TODO: Read the structure hyper parameters from Json file.
     signal_shape = signal.get_shape().as_list()
-    net = tf.reshape(signal, [signal_shape[0], 1, signal_shape[1], 1])
+    batch_n = tf.shape(signal)[0]
+    net = tf.reshape(signal, [batch_n, 1, signal_shape[1], 1])
     model_dict = {'dna_model1': DNA_model1, 
                   'rna_model1': RNA_model1,
                   'rna_model2': RNA_model2,
@@ -313,7 +314,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
     net = model_dict[cnn_config](net,training)
     feashape = net.get_shape().as_list()
     print("CNN output has the segment length %d, and %d channels"%(feashape[2],feashape[3]))
-    net = tf.reshape(net, [feashape[0], feashape[2],
+    net = tf.reshape(net, [batch_n, feashape[2],
                             feashape[3]], name='fea_rs')
     return net
 
