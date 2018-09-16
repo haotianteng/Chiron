@@ -36,13 +36,13 @@ import grpc
 import numpy as np
 import tensorflow as tf
 from collections import defaultdict
-from tensorflow_serving.apis import prediction_service_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+from tensorflow_serving.apis import predict_pb2
+from tensorflow_serving.apis import prediction_service_pb2 as prediction_service_pb2_grpc
 
 tf.app.flags.DEFINE_integer('concurrency', 1,
                             'maximum number of concurrent inference requests')
-tf.app.flags.DEFINE_integer('batch_size', 400, 'Number of test images')
-tf.app.flags.DEFINE_string('server', '127.0.0.1:8500', 'PredictionService host:port')
+tf.app.flags.DEFINE_integer('batch_size', 300, 'Number of test images')
+tf.app.flags.DEFINE_string('server', '0.0.0.0:8500', 'PredictionService host:port')
 tf.app.flags.DEFINE_string('raw_dir', '/home/heavens/Chiron_project/Chiron/chiron/example_data/DNA/output/raw/', 'Input raw signal directory. ')
 tf.app.flags.DEFINE_string('output','/home/heavens/Chiron_project/Chiron/chiron/example_data/DNA/output/',"Output data directory. ")
 tf.app.flags.DEFINE_string('mode','dna','If basecalling in RNA mode or DNA mode.')
@@ -98,20 +98,23 @@ def data_iterator(raw_dir,start = 0, segment_len = 400, jump_step = 30):
                 yield batch_x,seq_len,i,f,len(range(0, reads_n, FLAGS.batch_size)),reads_n
 def _post_process(collector, i, f):
     def _callback(result_future):
-        predict = result_future.result().outputs['predict_sequences']
-        log_prob = result_future.result().outputs['log_prob']
-        predict = ([predict],log_prob)
-        logits_prob = result_future.result().outputs['prob_logits']
-        predict_read, uniq_list = sparse2dense(predict)
-        predict_read = predict_read[0]
-        uniq_list = uniq_list[0]
-        logits_prob = logits_prob[uniq_list]
-        collector.val['f'][i]['predict'] = predict_read
-        collector.val['f'][i]['logits_prob'] = logits_prob
         exception = result_future.exception()
         if exception:
             print(exception)
-        return _callback
+        else:
+            print(result_future.result())
+            predict = result_future.result().outputs['predict_index']
+            log_prob = result_future.result().outputs['log_prob']
+            predict = ([predict],log_prob)
+            logits_prob = result_future.result().outputs['prob_logits']
+            predict_read, uniq_list = sparse2dense(predict)
+            predict_read = predict_read[0]
+            uniq_list = uniq_list[0]
+            logits_prob = logits_prob[uniq_list]
+            collector.val['f'][i]['predict'] = predict_read
+            collector.val['f'][i]['logits_prob'] = logits_prob
+        
+    return _callback
 def do_inference(hostport):
     """Tests PredictionService with concurrent requests.
     
@@ -131,17 +134,18 @@ def do_inference(hostport):
         raise ValueError("Mode has to be either rna or dna.")
     channel = grpc.insecure_channel(hostport)
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-    request = prediction_service_pb2.PredictRequest()
+    request = predict_pb2.PredictRequest()
     request.model_spec.name = 'chiron'
-    request.model_spec.signature_name = 'predict_seqeunces'
+    request.model_spec.signature_name = tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
     collector = _Result_Collection()
     for batch_x,seq_len,i,f,N,reads_n in data_iterator(FLAGS.raw_dir):
-        request.inputs['x'].CopyFrom(
-            tf.contrib.util.make_tensor_proto(batch_x, shape=[FLAGS.batch_size, CONF.SEGMENT_LEN]))
-        request.inputs['seq_length'].CopyFrom(
-            tf.contrib.util.make_tensor_proto(seq_len, shape=[FLAGS.batch_size]))
-        request.inputs['training'].CopyFrom(
-            tf.contrib.util.make_tensor_proto(False, shape=[]))
+        print(batch_x.shape)
+        print(seq_len.shape)
+        seq_len = np.reshape(seq_len,(seq_len.shape[0],1))
+        combined_input = np.concatenate((batch_x,seq_len),axis = 1)
+        print(combined_input.shape)
+        request.inputs['input'].CopyFrom(
+            tf.contrib.util.make_tensor_proto(combined_input, shape=[FLAGS.batch_size, CONF.SEGMENT_LEN+1]))
         result_future = stub.Predict.future(request, 5.0)  # 5 seconds
         result_future.add_done_callback(_post_process(collector,i,f))
         if len(collector.val[f]) == N:
@@ -163,7 +167,7 @@ def main(_):
   if not FLAGS.server:
     print('please specify server host:port')
     return
-  do_inference(FLAGS.server)
+  result = do_inference(FLAGS.server)
 
 
 if __name__ == '__main__':
