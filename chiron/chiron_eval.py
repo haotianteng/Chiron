@@ -126,8 +126,16 @@ def qs(consensus, consensus_qs, output_standard='phred+33'):
         q_string = [chr(x + 33) for x in quality_score.astype(int)]
         return ''.join(q_string)
 
-def write_output(segments, consensus, time_list, file_pre, concise=False, suffix='fasta', seg_q_score=None,
-                 q_score=None):
+def write_output(segments, 
+                 consensus, 
+                 time_list, 
+                 file_pre,
+                 global_setting,
+                 concise=False, 
+                 suffix='fasta', 
+                 seg_q_score=None,
+                 q_score=None
+                 ):
     """Write the output to the fasta(q) file.
 
     Args:
@@ -139,25 +147,27 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
         suffix (str, optional): Defaults to 'fasta'. Output file suffix from 'fasta', 'fastq'.
         seg_q_score ([str], optional): Defaults to None. Quality scores of read segment.
         q_score (str, optional): Defaults to None. Quality scores of the read.
+        global_setting: The global Flags of chiron_eval.
     """
     start_time, reading_time, basecall_time, assembly_time = time_list
-    result_folder = os.path.join(FLAGS.output, 'result')
-    seg_folder = os.path.join(FLAGS.output, 'segments')
-    meta_folder = os.path.join(FLAGS.output, 'meta')
+    result_folder = os.path.join(global_setting.output, 'result')
+    seg_folder = os.path.join(global_setting.output, 'segments')
+    meta_folder = os.path.join(global_setting.output, 'meta')
     path_con = os.path.join(result_folder, file_pre + '.' + suffix)
-    if FLAGS.mode == 'rna':
+    if global_setting.mode == 'rna':
         consensus = consensus.replace('T','U').replace('t','u')
     if not concise:
         path_reads = os.path.join(seg_folder, file_pre + '.' + suffix)
         path_meta = os.path.join(meta_folder, file_pre + '.meta')
-    with open(path_reads, 'w+') as out_f, open(path_con, 'w+') as out_con:
+    with open(path_con, 'w+') as out_con:
         if not concise:
-            for indx, read in enumerate(segments):
-                out_f.write(file_pre + str(indx) + '\n')
-                out_f.write(read + '\n')
-                if (suffix == 'fastq') and (seg_q_score is not None):
-                    out_f.write('+\n')
-                    out_f.write(seg_q_score[indx] + '\n')
+            with open(path_reads, 'w+') as out_f:
+                for indx, read in enumerate(segments):
+                    out_f.write(file_pre + str(indx) + '\n')
+                    out_f.write(read + '\n')
+                    if (suffix == 'fastq') and (seg_q_score is not None):
+                        out_f.write('+\n')
+                        out_f.write(seg_q_score[indx] + '\n')
         if (suffix == 'fastq') and (q_score is not None):
             out_con.write(
                 '@{}\n{}\n+\n{}\n'.format(file_pre, consensus, q_score))
@@ -178,9 +188,9 @@ def write_output(segments, consensus, time_list, file_pre, concise=False, suffix
             out_meta.write(
                 "# read_len batch_size segment_len jump start_pos\n")
             out_meta.write(
-                "%d %d %d %d %d\n" % (total_len, FLAGS.batch_size, FLAGS.segment_len, FLAGS.jump, FLAGS.start))
+                "%d %d %d %d %d\n" % (total_len, global_setting.batch_size, global_setting.segment_len, global_setting.jump, global_setting.start))
             out_meta.write("# input_name model_name\n")
-            out_meta.write("%s %s\n" % (FLAGS.input, FLAGS.model))
+            out_meta.write("%s %s\n" % (global_setting.input, global_setting.model))
 
 def rewrite():
     """Write back the output to the fast5 files
@@ -341,7 +351,7 @@ def evaluation():
             list_of_time = [start_time, reading_time,
                             basecall_time, assembly_time]
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
-                         q_score=qs_string)
+                         q_score=qs_string,global_setting=FLAGS)
     pbars.end()
 
 

@@ -113,7 +113,7 @@ def build_and_run_exports():
                            'values':values_output_tensor_info,
                            'dense_shape':dense_shape_output_tensor_info,
                            'logits':logits_output_tensor_info,
-                           'porb_logits':prob_logits_output_tensor_info,
+                           'prob_logits':prob_logits_output_tensor_info,
                            'log_prob':log_prob_output_tensor_info},
                 method_name=sig_constants.PREDICT_METHOD_NAME))
             
