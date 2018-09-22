@@ -134,7 +134,7 @@ def inference(x,sequence_len,training,full_sequence_len,configure, apply_ratio =
     feashape = cnn_feature.get_shape().as_list()
     ratio = full_sequence_len/feashape[1]
     if apply_ratio:
-        sequence_len =  tf.cast(tf.ceil(tf.cast(sequence_len,tf.float32)/ratio),tf.uint16)
+        sequence_len =  tf.cast(tf.ceil(tf.cast(sequence_len,tf.float32)/ratio),tf.int32)
     if configure['rnn']['layer_num'] == 0:
         logits = getcnnlogit(cnn_feature)
     else:
