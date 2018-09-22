@@ -74,7 +74,13 @@ def train(hparam):
     else:
         config_file = hparam.configure
     config = model.read_config(config_file)
-    logits, _ = model.inference(x,seq_length,training,hparam.sequence_len,configure = config)
+    logits, ratio = model.inference(x,
+                                seq_length,
+                                training,
+                                hparam.sequence_len,
+                                configure = config,
+                                apply_ratio = True)
+    seq_length = tf.ceil(seq_length/ratio)
     ctc_loss = model.loss(logits, seq_length, y)
     opt = model.train_opt(hparam.step_rate,hparam.max_steps,global_step = global_step)
     step = opt.minimize(ctc_loss,global_step = global_step)

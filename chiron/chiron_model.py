@@ -116,7 +116,7 @@ def prediction(logits, seq_length, label,beam_width = 30, top_paths=1):
     tf.summary.scalar('Error_rate', error)
     return error
 
-def inference(x,sequence_len,training,full_sequence_len,configure):
+def inference(x,sequence_len,training,full_sequence_len,configure, apply_ratio = False):
     """Infer a logits of the input signal batch.
 
     Args:
@@ -125,7 +125,7 @@ def inference(x,sequence_len,training,full_sequence_len,configure):
         training: Placeholder of Boolean, Ture if the inference is during training.
         full_sequence_len: Scalar float, the maximum length of the sample in the batch.
         configure:Model configuration.
-
+        apply_ratio: If apply the ration to the sequence_len or not.
     Returns:
         logits: Tensor of shape [batch_size, max_time, class_num]
         ratio: Scalar float, the scale factor between the output logits and the input maximum length.
@@ -133,6 +133,8 @@ def inference(x,sequence_len,training,full_sequence_len,configure):
     cnn_feature = getcnnfeature(x,training = training,cnn_config = configure['cnn']['model'])
     feashape = cnn_feature.get_shape().as_list()
     ratio = full_sequence_len/feashape[1]
+    if apply_ratio:
+        sequence_len = tf.ceil(sequence_len/ratio)
     if configure['rnn']['layer_num'] == 0:
         logits = getcnnlogit(cnn_feature)
     else:
