@@ -80,7 +80,7 @@ def train(hparam):
                                 hparam.sequence_len,
                                 configure = config,
                                 apply_ratio = True)
-    seq_length = tf.ceil(seq_length/ratio)
+    seq_length = tf.cast(tf.ceil(tf.cast(seq_length,tf.float32)/ratio),tf.uint16)
     ctc_loss = model.loss(logits, seq_length, y)
     opt = model.train_opt(hparam.step_rate,hparam.max_steps,global_step = global_step)
     step = opt.minimize(ctc_loss,global_step = global_step)
