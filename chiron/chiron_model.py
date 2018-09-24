@@ -16,7 +16,9 @@ from chiron.cnn import getcnnlogit
 from chiron.rnn import rnn_layers
 
 MOVING_AVERAGE_DECAY = 0.9999
-
+LR_BOUNDARY = [0.66,0.83]
+LR_DECAY = [1e-1,1e-2]
+MOMENTUM = 0.9
 def save_model(config_path,configure):
     """Save the configuration to the config path
     Args:
@@ -77,10 +79,13 @@ def train_opt(init_rate,max_steps,global_step=None, opt_name="Adam"):
                   "SGD": tf.train.GradientDescentOptimizer,
                   "RMSProp": tf.train.RMSPropOptimizer,
                   "Momentum": tf.train.MomentumOptimizer}
-    boundaries = [int(max_steps*0.66), int(max_steps*0.83)]
-    values = [init_rate * decay for decay in [1,1e-1,1e-2]]
+    boundaries = [int(max_steps*LR_BOUNDARY[0]), int(max_steps*LR_BOUNDARY[1])]
+    values = [init_rate * decay for decay in [1,LR_DECAY[0],LR_DECAY[1]]]
     learning_rate = tf.train.piecewise_constant(global_step,boundaries,values)
-    opt = optimizers[opt_name](learning_rate)
+    if opt_name == "Momentum":
+        opt = optimizers[opt_name](learning_rate,momentum = MOMENTUM,use_nesterov = True)
+    else:
+        opt = optimizers[opt_name](learning_rate)
     return opt
 
 def prediction(logits, seq_length, label,beam_width = 30, top_paths=1):
