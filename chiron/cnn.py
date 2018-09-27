@@ -307,6 +307,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
                   'rna_model1': RNA_model1,
                   'rna_model2': RNA_model2,
                   'rna_model3': RNA_model3,
+                  'rna_test':rna_test,
                   'res_x': Res_x, 
                   'variant_wavnet': Variant_wavnet,
                   'incp_v2': incp_v2,
@@ -336,16 +337,44 @@ def DNA_model1(net,training):
         net = residual_layer(net, out_channel=256, training=training)
     return net
 
+def rna_test(net,training):
+    fea_shape = net.get_shape().as_list()
+    in_channel = fea_shape[-1]
+    with tf.variable_scope('conv_layer'):
+        net = conv_layer(net,
+                         ksize=[1, 5, in_channel, 256],
+                         padding='SAME',
+                         training=training,
+                         name='conv1',
+                         BN=True,
+                         strides = 3)
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net,out_channel=256,training = training,i_bn = True)
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net,out_channel = 256, training = training)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net,out_channel = 256, training = training)
+    return net
+
+
 def RNA_model1(net,training):
     #   RNA model(test1)
-    with tf.variable_scope('res_layer1'):
-        net = residual_layer_identity_mapping(net,out_channel=256,training = training,k = 3)
+    fea_shape = net.get_shape().as_list()
+    in_channel = fea_shape[-1]
+    with tf.variable_scope('conv_layer'):
+        net = conv_layer(net,
+                         ksize=[1, 7, in_channel, 256],
+                         padding='SAME',
+                         training=training,
+                         name='conv1',
+                         BN=True,
+                         strides = 3)
     with tf.variable_scope('res_layer2'):
-        net = residual_layer_identity_mapping(net,out_channel = 384, training = training, strides = 2,k=3)
+        net = residual_layer_identity_mapping(net,out_channel = 256, training = training,k=3)
     with tf.variable_scope('res_layer3'):
-        net = residual_layer_identity_mapping(net,out_channel = 512, training = training, strides = 2,k=3)
+        net = residual_layer_identity_mapping(net,out_channel = 256, training = training, strides = 2,k=3)
     with tf.variable_scope('res_layer4'):
-        net = residual_layer_identity_mapping(net,out_channel = 512, training = training, strides = 2,k=3)
+        net = residual_layer_identity_mapping(net,out_channel = 256, training = training,k=3)
     return net
 
 def RNA_model2(net, training):
@@ -359,12 +388,6 @@ def RNA_model2(net, training):
                          name='conv1', 
                          BN=True,
                          strides = 5)
-    with tf.variable_scope('res_layer1'):
-        net = residual_layer(net,out_channel=256,training = training,i_bn = True)
-    with tf.variable_scope('res_layer2'):
-        net = residual_layer(net,out_channel = 256, training = training)
-    with tf.variable_scope('res_layer3'):
-        net = residual_layer(net,out_channel = 256, training = training)
     return net
 
 
