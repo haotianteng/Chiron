@@ -23,21 +23,10 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 
-def extract(raw_folder=None):
+def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
     count = 1
-    root_folder = FLAGS.input + os.path.sep
-    output_folder = FLAGS.output + os.path.sep
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
-    if output_folder is None:
-        output_folder = os.path.abspath(os.path.join(root_folder, os.pardir)) + '/raw/'
-    if not os.path.isdir(output_folder):
-            os.mkdir(output_folder)
-
-    tfrecords_filename = output_folder + FLAGS.tffile
-
-    writer = tf.python_io.TFRecordWriter(tfrecords_filename)
-
     for dir_n,_,file_list in tf.gfile.Walk(root_folder):
      for file_n in file_list:
         if file_n.endswith('fast5'):
@@ -50,14 +39,28 @@ def extract(raw_folder=None):
                     'raw_data': _bytes_feature(raw_data.tostring()),
                     'features': _bytes_feature(raw_data_array.tostring()),
                     'fname':_bytes_feature(str.encode(file_n))}))
-                writer.write(example.SerializeToString())
+                tfrecord_writer.write(example.SerializeToString())
                 sys.stdout.write("%s file transfered.   \n" % (file_n))
             else:
                 sys.stdout.write("FAIL on %s file.   \n" % (file_n))
 
+def run_list(dirs,output_folder):
+    """
+    Run extract() function on all directories if FLAGS.input is a list.
+    Input Args:
+        dirs: Directories that contain resquiggled fast5 files.
+        output_folder: Directory to output the TFRecrod file.
+    """
+    if output_folder is None:
+        output_folder = os.path.abspath(os.path.join(root_folder, os.pardir)) + '/raw/'
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
+    tfrecords_filename = output_folder + FLAGS.tffile
+    writer = tf.python_io.TFRecordWriter(tfrecords_filename)
+    for directory in dirs:
+        root_folder = directory + os.path.sep
+        extract(root_folder,output_folder,writer)
     writer.close()
-
-
 def extract_file(input_file):
     try:
     	(raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
@@ -82,14 +85,16 @@ def extract_file(input_file):
 def run(args):
     global FLAGS
     FLAGS = args
-    extract()
+    dirs = FLAGS.input.split(',')
+    output_folder = FLAGS.output + os.path.sep
+    run_list(dirs,output_folder)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Transfer fast5 to raw_pair file.')
     parser.add_argument('-i', '--input', required = True,
-                        help="Directory that store the fast5 files.")
+                        help="Directory that store the fast5 files, multiple directories separted by commas.")
     parser.add_argument('-o', '--output', required = True, help="Output folder")
     parser.add_argument('--basecall_group',default = "RawGenomeCorrected_000",
                         help='The attribute group to extract the training data from. e.g. RawGenomeCorrected_000')
