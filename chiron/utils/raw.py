@@ -86,6 +86,9 @@ def run(args):
     global FLAGS
     FLAGS = args
     dirs = FLAGS.input.split(',')
+    for root_folder in dirs:
+        if not os.path.isdir(root_folder):
+            raise IOError('Input directory %s does not found.'%(root_folder))
     output_folder = FLAGS.output + os.path.sep
     run_list(dirs,output_folder)
 
