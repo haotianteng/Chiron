@@ -70,7 +70,10 @@ For CPU-version:
 ```
 pip install tensorflow  
 ```
-For GPU-version(Nvidia GPU required):
+For GPU-version(Nvidia GPU required):  
+Install [CUDA](https://developer.nvidia.com/cuda-toolkit)  
+Install [cuDNN](https://developer.nvidia.com/cudnn)  
+Install tensorflow gpu version  
 ```
 pip install tensorflow-gpu  
 ```
@@ -145,7 +148,7 @@ Recommend training on GPU with TensorFlow - usually 8GB RAM (GPU) is required.
 
 #### Prepare training data set.  
 Using raw.py script to extract the signal and label from the re-squiggled fast5 file.
-(For how to re-squiggle fast5 file, check [here, nanoraw re-squiggle](https://nanoraw.readthedocs.io/en/latest/resquiggle.html#example-commands))
+(For how to re-squiggle fast5 file, check [Tombo re-squiggle](https://github.com/nanoporetech/tombo))
 
 #### If installed from `pip`:
 ```
