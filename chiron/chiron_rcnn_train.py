@@ -159,9 +159,9 @@ if __name__ == "__main__":
     parser.add_argument('--valid_cache', default=None, help="Cache file for validation dataset.")
     parser.add_argument('-s', '--sequence_len', type=int, default=400,
                         help='the length of sequence')
-    parser.add_argument('-b', '--batch_size', type=int, default=200,
+    parser.add_argument('-b', '--batch_size', type=int, default=400,
                         help='Batch size')
-    parser.add_argument('-t', '--step_rate', type=float, default=1e-3,
+    parser.add_argument('-t', '--step_rate', type=float, default=1e-2,
                         help='Step rate')
     parser.add_argument('-x', '--max_steps', type=int, default=10000,
                         help='Maximum step')

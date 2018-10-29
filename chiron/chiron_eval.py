@@ -163,16 +163,14 @@ def write_output(segments,
         if not concise:
             with open(path_reads, 'w+') as out_f:
                 for indx, read in enumerate(segments):
-                    out_f.write(file_pre + str(indx) + '\n')
-                    out_f.write(read + '\n')
+                    out_f.write('>{}{}\n{}\n'.format(file_pre, str(indx),read))
                     if (suffix == 'fastq') and (seg_q_score is not None):
-                        out_f.write('+\n')
-                        out_f.write(seg_q_score[indx] + '\n')
+                        out_f.write('@{}{}\n{}\n+\n{}\n'.format(file_pre, str(indx),read,seg_q_score[indx]))
         if (suffix == 'fastq') and (q_score is not None):
             out_con.write(
                 '@{}\n{}\n+\n{}\n'.format(file_pre, consensus, q_score))
         else:
-            out_con.write('{}\n{}'.format(file_pre, consensus))
+            out_con.write('>{}\n{}'.format(file_pre, consensus))
     if not concise:
         with open(path_meta, 'w+') as out_meta:
             total_time = time.time() - start_time
@@ -188,16 +186,13 @@ def write_output(segments,
             out_meta.write(
                 "# read_len batch_size segment_len jump start_pos\n")
             out_meta.write(
-                "%d %d %d %d %d\n" % (total_len, global_setting.batch_size, global_setting.segment_len, global_setting.jump, global_setting.start))
+                "%d %d %d %d %d\n" % (total_len, 
+                                      global_setting.batch_size, 
+                                      global_setting.segment_len, 
+                                      global_setting.jump, 
+                                      global_setting.start))
             out_meta.write("# input_name model_name\n")
             out_meta.write("%s %s\n" % (global_setting.input, global_setting.model))
-
-def rewrite():
-    """Write back the output to the fast5 files
-    Args:
-        
-    """
-    #Under Develope#
 
 def evaluation():
     pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])
@@ -432,9 +427,9 @@ if __name__ == "__main__":
                         help="model folder path")
     parser.add_argument('-s', '--start', type=int, default=0,
                         help="Start index of the signal file.")
-    parser.add_argument('-b', '--batch_size', type=int, default=1100,
+    parser.add_argument('-b', '--batch_size', type=int, default=400,
                         help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
-    parser.add_argument('-l', '--segment_len', type=int, default=300,
+    parser.add_argument('-l', '--segment_len', type=int, default=400,
                         help="Segment length to be divided into.")
     parser.add_argument('-j', '--jump', type=int, default=30,
                         help="Step size for segment")
@@ -442,7 +437,7 @@ if __name__ == "__main__":
                         help="Threads number")
     parser.add_argument('-e', '--extension', default='fastq',
                         help="Output file extension.")
-    parser.add_argument('--beam', type=int, default=0,
+    parser.add_argument('--beam', type=int, default=30,
                         help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     parser.add_argument('--concise', action='store_true',
                         help="Concisely output the result, the meta and segments files will not be output.")
