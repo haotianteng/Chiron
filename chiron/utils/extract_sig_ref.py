@@ -65,6 +65,8 @@ def extract(FLAGS):
                 if len(reference) > 0:
                     with open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+') as ref_file:
                         ref_file.write(reference)
+                if (FLAGS.test_number is not None) and (count >=FLAGS.test_number):
+                    return
 
 def extract_file(input_file,mode = 'dna'):
     try:
@@ -105,5 +107,9 @@ if __name__ == '__main__':
                         '--mode',
                         default = 'rna',
                         help="Output mode, can be chosen from dna or rna.")
+    parser.add_argument('--test_number',
+                        default = None,
+                        type = int,
+                        help="Extract test_number reads, default is None, extract all reads.")
     args = parser.parse_args(sys.argv[1:])
     extract(args)
