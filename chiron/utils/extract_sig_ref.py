@@ -72,7 +72,7 @@ def extract(FLAGS):
                 with open(os.path.join(raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+') as signal_file:
                     signal_file.write(" ".join([str(val) for val in raw_signal]))
                 if len(reference) > 0:
-                    with open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fasta'), 'w+') as ref_file:
+                    with open(os.path.join(ref_folder, os.path.splitext(file_n)[0] + '_ref.fastq'), 'w+') as ref_file:
                         ref_file.write(reference)
                 if (FLAGS.test_number is not None) and (count >=FLAGS.test_number):
                     return
@@ -91,7 +91,7 @@ def extract_file(input_file,mode = 'dna'):
         raw_signal = raw_signal[::-1]
     try:
         reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
-        reference = '>template\n' + reference.decode('UTF-8').split('\n')[1]
+        reference = '@%s\n'%(os.path.basename(input_file).split('.')[0]) + '\n'.join(reference.decode('UTF-8').split('\n')[1:])
     except:
         try:
             reference = input_data['Analyses/Alignment_000/Aligned_template/Fasta'].value
