@@ -7,7 +7,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # Created on Mon Mar 27 14:04:57 2017
-# This module is going to be deprecated, use chiron_train and chiron_queue_input instead.
 # from rnn import rnn_layers
 from __future__ import absolute_import
 from __future__ import print_function
@@ -110,7 +109,10 @@ def train():
 def generate_train_valid_datasets():
     if FLAGS.read_cache:
         train_ds = read_cache_dataset(FLAGS.train_cache)
-        valid_ds = read_cache_dataset(FLAGS.valid_cache)
+        if FLAGS.validation is not None:
+            valid_ds = read_cache_dataset(FLAGS.valid_cache)
+        else:
+            valid_ds = train_ds
         if train_ds.event.shape[1]!=FLAGS.sequence_len:
             raise ValueError("The event length of training cached dataset %d is inconsistent with given sequene_len %d"%(train_ds.event.shape()[1],FLAGS.sequence_len))
         if valid_ds.event.shape[1]!=FLAGS.sequence_len:
