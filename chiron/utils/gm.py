@@ -11,10 +11,13 @@ class gm:
         P(x|K) give the probability of observe Nucleotide x given a kmer K that has
         a length <= k.
     """
-    def __init__(self,k = 5):
+    def __init__(self,k = 5,mode = 0):
         self.k = k
         self.n = int(4*(4**k-1)/3) #n = 4**1 + 4**2 + ... + 4**k
-        self.base = ['A','C','G','T']
+        if mode == 0:
+            self.base = ['A','C','G','T']
+        elif mode == 1:
+            self.base = ['A','C','G','U']
         self.kmer_dict = {}
         self.kmer_count = np.zeros([self.n,4],dtype = int)
         for i in range(self.n):
@@ -60,6 +63,22 @@ class gm:
             if base not in self.base:
                 return False
         return True
+    def get_count(self,kmer):
+        return self.kmer_count[self.kmer_dict[kmer]]
+    def __getitem__(self, key):
+        if type(key) is str:
+            return self.get_count(key)
+        elif (type(key) is int) or (type(key) is slice):
+            return self.kmer_count[key]
+        else:
+            raise TypeError("Key shuold be a kmer string or int index.")
+    def get_kmer_between(self,min_k,max_k):
+        """
+        Get the kmer whose length l, min_k <= l <= max_k
+        """
+        min_index = self._kmer2idx(self.base[0]*min_k)
+        max_index = self._kmer2idx(self.base[-1]*max_k)
+        return(min_index,max_index,self.kmer_count[min_index:max_index+1])
 def fasta_reader(file_list,root_folder = None):
     for name in file_list:
         if root_folder is not None:
@@ -73,17 +92,41 @@ def fasta_reader(file_list,root_folder = None):
                 else:
                     seqs[last_seq]  = seqs[last_seq]+line.strip()
         yield name,seqs
+
+def fastq_reader(file_list,root_folder = None):
+    for name in file_list:
+        if root_folder is not None:
+            name = os.path.join(root_folder,name)
+        seqs = {}
+        with open(name,'r') as f:
+            for line in f:
+                if line.startswith('@'):    
+                    last_seq =line[1:].strip()
+                    seqs[last_seq] = ''
+                    seq_line = next(f)
+                    while not seq_line.startswith('+'):
+                        seqs[last_seq]  = seqs[last_seq]+seq_line.strip()
+                        seq_line = next(f)
+        yield name,seqs
 def run(args):
     root_folder = args.input
     f_L = os.listdir(root_folder)
     fasta_list = list()
+    fastq_list = list()
     for f in f_L:
         if f.endswith('fasta') or f.endswith('.fa'):
             fasta_list.append(f)
-    gm1 = gm(k=args.k)
-    for genome,seqs in fasta_reader(fasta_list,root_folder):
-        for name in tqdm(seqs.keys(),desc = "Reading genome "+genome,position = 0):
-            gm1.count_kmer(seqs[name])
+        if f.endswith('fastq') or f.endswith('.fq'):
+            fastq_list.append(f)
+    gm1 = gm(k=args.k,mode = args.mode)
+    if 'a' in args.suffixs:
+        for genome,seqs in fasta_reader(fasta_list,root_folder):
+            for name in tqdm(seqs.keys(),desc = "Reading genome "+genome,position = 0):
+                gm1.count_kmer(seqs[name])
+    if 'q' in args.suffixs:
+        for genome,seqs in fastq_reader(fastq_list,root_folder):
+            for name in tqdm(seqs.keys(),desc = "Reading genome "+genome,position = 0):
+                gm1.count_kmer(seqs[name])        
     out_path = os.path.join(args.output,args.name)
     gm1.save(out_path)
     print("Genome model saved to %s"%(out_path))
@@ -98,6 +141,10 @@ if __name__ == "__main__":
                         '--output', 
                         required = True,
                         help="Output folder.")
+    parser.add_argument('-s',
+                        '--suffixs',
+                        default = 'qa',
+                        help="The suffix of the genome file, default is qa, a for only fasta, q for only fastq.")
     parser.add_argument('-n',
                         '--name',
                         default = "gm.json",
@@ -106,6 +153,10 @@ if __name__ == "__main__":
                         default = 6, 
                         type = int, 
                         help="The length of longest Kmer counted in the model")
+    parser.add_argument('--mode',
+                        type = int,
+                        default = 0,
+                        help = "Mode, if input is 0 (dna) or 1 (rna).")
     args = parser.parse_args(sys.argv[1:])
     run(args)
     
