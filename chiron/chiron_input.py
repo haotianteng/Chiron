@@ -20,7 +20,7 @@ from statsmodels import robust
 from six.moves import range
 from six.moves import zip
 import tensorflow as tf
-import utils.progress as progress
+import chiron.utils.progress as progress
 
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 
