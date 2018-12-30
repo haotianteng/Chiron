@@ -60,6 +60,7 @@ class _Result_Collection(object):
     def __init__(self,concurrency):
         self.val = NEST_DICT()
         self.batch_n = dict()
+        self.reads_n = dict()
         self._condition = threading.Condition()
         self._concurrency = concurrency
         self._error = 0
@@ -75,8 +76,8 @@ class _Result_Collection(object):
         for i in range(len(self.val[f])):
             reads+=self.val[f][i]['predict']
             probs = np.concatenate((probs,self.val[f][i]['logits_prob']))
-        reads = reads[:self.batch_n[f]]
-        probs = probs[:self.batch_n[f]]
+        reads = reads[:self.reads_n[f]]
+        probs = probs[:self.reads_n[f]]
         self.remove(f)
         return reads,probs
     def remove(self,file_name):
@@ -147,13 +148,15 @@ def data_iterator(file_list,start = 0, segment_len = 400, jump_step = 30):
             batch_x, seq_len, _ = data_set.next_batch(
                 FLAGS.batch_size, shuffle=False, sig_norm=False)
             batch_x = np.pad(
-                batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
+                batch_x, 
+                ((0, FLAGS.batch_size - len(batch_x)), (0, 0)),
+                mode='constant')
             seq_len = np.pad(
                 seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
             index += 1
             yield batch_x,seq_len,index,f_p,len(range(0, reads_n, FLAGS.batch_size)),reads_n
                 
-def _post_process(collector, i, f,N):
+def _post_process(collector, i, f,N,reads_n):
     def _callback(result_future):
         exception = result_future.exception()
         if exception:
@@ -170,9 +173,11 @@ def _post_process(collector, i, f,N):
             collector.val[f][i]['logits_prob'] = logits_prob
             if f not in collector.batch_n.keys():
                 collector.batch_n[f] = N
+                collector.reads_n[f] = reads_n
             collector.dec_active()
             if len(collector.val[f]) >= N:
                 collector.inc_done(f)
+                collector.reads_n[f] = reads_n
     return _callback
 def make_dirs(output):
     if not os.path.exists(output):
@@ -203,19 +208,24 @@ def do_inference():
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
     request = predict_pb2.PredictRequest()
     request.model_spec.name = 'chiron'
-    request.model_spec.signature_name = 'predicted_sequences'
+#    request.model_spec.signature_name = 'predicted_sequences'
+    request.model_spec.signature_name = tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
     collector = _Result_Collection(concurrency = FLAGS.concurrency)
     file_list = gen_file_list(FLAGS.input)
     batch_iterator = data_iterator(file_list)
     def submit_fn():
         for batch_x,seq_len,i,f,N,reads_n in batch_iterator:
             seq_len = np.reshape(seq_len,(seq_len.shape[0],1))
-            combined_input = np.concatenate((batch_x,seq_len),axis = 1).astype(np.float32)
-            request.inputs['combined_inputs'].CopyFrom(
-                tf.contrib.util.make_tensor_proto(combined_input, shape=[FLAGS.batch_size, CONF.SEGMENT_LEN+1]))
+#            combined_input = np.concatenate((batch_x,seq_len),axis = 1).astype(np.float32)
+#            request.inputs['combined_inputs'].CopyFrom(
+#                tf.contrib.util.make_tensor_proto(combined_input, shape=[FLAGS.batch_size, CONF.SEGMENT_LEN+1]))
+            request.inputs['x'].CopyFrom(tf.contrib.util.make_tensor_proto(batch_x, 
+                         shape=[FLAGS.batch_size, CONF.SEGMENT_LEN]))
+            request.inputs['seq_len'].CopyFrom(tf.contrib.util.make_tensor_proto(seq_len,
+                         shape=[FLAGS.batch_size]))
             collector.throttle()
             result_future = stub.Predict.future(request, 100.0)  # 5 seconds
-            result_future.add_done_callback(_post_process(collector,i,f,N))
+            result_future.add_done_callback(_post_process(collector,i,f,N,reads_n))
             pbars.update(0,total = reads_n,progress = (i+1)*FLAGS.batch_size)
             pbars.update_bar()
     submiter = threading.Thread(target=submit_fn,args=())
