@@ -35,7 +35,7 @@ def output_list(x,seq_length):
     prob_logits = path_prob(logits)
     predict,log_prob = tf.nn.ctc_beam_search_decoder(tf.transpose(logits, perm=[1, 0, 2]), 
                                             seq_length_r, 
-                                            merge_repeated=True,
+                                            merge_repeated=False,
                                             beam_width = FLAGS.beam_width)
     return predict[0],logits,prob_logits,log_prob
 
@@ -47,17 +47,10 @@ def build_and_run_exports():
     prediction_graph = tf.Graph()
     
     with prediction_graph.as_default():
-        serialized_tf_example = tf.placeholder(tf.string, name='tf_example')
-        feature_configs = {'combined_input': tf.FixedLenFeature(shape=[FLAGS.segment_len+1], dtype=tf.float32)}
-        tf_example = tf.parse_example(serialized_tf_example, feature_configs)
-        combined_input = tf.identity(tf_example['combined_input'],name = 'combined_input')
-        x,seq_length = tf.split(combined_input,
-                                num_or_size_splits = [FLAGS.segment_len,1],
-                                axis = 1)
-        seq_length_r = tf.reshape(seq_length,[tf.shape(seq_length)[0]])
-        seq_len_32 = tf.cast(seq_length_r,dtype = tf.int32)
+        x = tf.placeholder(tf.float32, shape=[None, FLAGS.segment_len])
+        seq_len = tf.placeholder(tf.int32, shape = [None])
         #Inference
-        predict,logits,prob_logits,log_prob = output_list(x,seq_len_32)
+        predict,logits,prob_logits,log_prob = output_list(x,seq_len)
         values, indices = tf.nn.top_k(logits,k=1)
         saver = tf.train.Saver()
 
@@ -75,25 +68,25 @@ def build_and_run_exports():
                     tf.compat.as_bytes(FLAGS.output_dir),
                     tf.compat.as_bytes(str(FLAGS.version)))
             exporter = tf.saved_model.builder.SavedModelBuilder(output_path)
-            # Build the signature_def_map.
-            classification_inputs = tf.saved_model.utils.build_tensor_info(
-                    serialized_tf_example)
-            classification_outputs_classes = tf.saved_model.utils.build_tensor_info(
-                    indices)
-            classification_outputs_scores = tf.saved_model.utils.build_tensor_info(values)
-            classification_signature = (tf.saved_model.signature_def_utils.build_signature_def(
-                inputs={tf.saved_model.signature_constants.CLASSIFY_INPUTS:classification_inputs},
-                outputs={
-                        tf.saved_model.signature_constants.CLASSIFY_OUTPUT_CLASSES:
-                  classification_outputs_classes,
-                        tf.saved_model.signature_constants.CLASSIFY_OUTPUT_SCORES:
-                  classification_outputs_scores
-                  },
-                method_name=tf.saved_model.signature_constants.CLASSIFY_METHOD_NAME))     
+#            # Build the signature_def_map.
+#            classification_inputs = tf.saved_model.utils.build_tensor_info(
+#                    x)
+#            classification_outputs_classes = tf.saved_model.utils.build_tensor_info(
+#                    indices)
+#            classification_outputs_scores = tf.saved_model.utils.build_tensor_info(values)
+#            classification_signature = (tf.saved_model.signature_def_utils.build_signature_def(
+#                inputs={tf.saved_model.signature_constants.CLASSIFY_INPUTS:classification_inputs},
+#                outputs={
+#                        tf.saved_model.signature_constants.CLASSIFY_OUTPUT_CLASSES:
+#                  classification_outputs_classes,
+#                        tf.saved_model.signature_constants.CLASSIFY_OUTPUT_SCORES:
+#                  classification_outputs_scores
+#                  },
+#                method_name=tf.saved_model.signature_constants.CLASSIFY_METHOD_NAME))     
                 
             # Build the predict_def_map
-            input_tensor_info = tf.saved_model.utils.build_tensor_info(
-                    combined_input)
+            x_tensor_info = tf.saved_model.utils.build_tensor_info(x)
+            seq_len_tensor_info = tf.saved_model.utils.build_tensor_info(seq_len)
             indices_output_tensor_info = tf.saved_model.utils.build_tensor_info(
                     predict.indices)
             values_output_tensor_info = tf.saved_model.utils.build_tensor_info(
@@ -108,7 +101,8 @@ def build_and_run_exports():
                     log_prob)
 
             prediction_signature = (tf.saved_model.signature_def_utils.build_signature_def(
-                inputs = {'combined_inputs':input_tensor_info},
+                inputs = {'x':x_tensor_info,
+                          'seq_len':seq_len_tensor_info},
                 outputs = {'indices':indices_output_tensor_info,
                            'values':values_output_tensor_info,
                            'dense_shape':dense_shape_output_tensor_info,
@@ -121,8 +115,9 @@ def build_and_run_exports():
                 sess,
                 tags=[tf.saved_model.tag_constants.SERVING],
                 signature_def_map={
-                    'predicted_sequences':prediction_signature,
-                    tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:classification_signature,
+                        tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:prediction_signature
+#                    'predicted_sequences':prediction_signature,
+#                    tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:classification_signature,
                 },
                 main_op=tf.tables_initializer(),
                 strip_default_attrs=True)
