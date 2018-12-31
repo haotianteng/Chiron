@@ -1,5 +1,6 @@
 import h5py
 import os
+import shutil
 import mappy
 import re
 import argparse
@@ -188,9 +189,9 @@ def label(abs_fast5):
             raw_signal,raw_seq,ref_seq = extract_fastq(abs_fast5,args.ref,args.mode,trans_start)
         except:
             return()
-        prefix = os.path.join(args.saving,'cwdtw_output',os.path.splitext(filename)[0])
-        fast5_svae = os.path.join(args.saving,'fast5s',filename)
-        os.shutil.copyfile(abs_fast5,fast5_save)
+        prefix = os.path.join(args.saving,'resquiggle',os.path.splitext(filename)[0])
+        fast5_save = os.path.join(args.saving,'fast5s',filename)
+        shutil.copyfile(abs_fast5,fast5_save)
         input_cmd = write_output(prefix,raw_signal,ref_seq)
         cmd = os.path.dirname(os.path.realpath(__file__))+"/utils/cwDTW_nano " + input_cmd +' -R ' + str(args.mode)
         args_cmd = shlex.split(cmd)
@@ -200,8 +201,6 @@ def label(abs_fast5):
         write_back(fast5_save,align_matrix,raw_seq,ref_seq)
 
 def run():
-    if not os.path.isdir(args.saving):
-        os.mkdir(args.saving)
     pool = Pool(args.thread)
     filelist = []
     for path , _ , files in os.walk(args.input):
@@ -214,8 +213,6 @@ def run():
     pool.close()
     pool.join()        
 def run_rna():
-    if not os.path.isdir(args.saving):
-        os.mkdir(args.saving)
     pool = Pool(args.thread)
     filelist = []
     for file,trans_start in fast5s_iter(args.dest_link,args.tsv_table):
@@ -247,6 +244,15 @@ if __name__ == "__main__":
     parser.add_argument('-t','--thread',default = 1,type = int,
                         help="Thread number.")
     args = parser.parse_args(sys.argv[1:])
+    if not os.path.isdir(args.saving):
+        os.mkdir(args.saving)
+    fast5_dir = os.path.join(args.saving,'fast5s')
+    resquiggle_dir = os.path.join(args.saving,'resquiggle')
+    if not os.path.isdir(fast5_dir):
+        os.mkdir(fast5_dir)
+    if not os.path.isdir(resquiggle_dir):
+        os.mkdir(resquiggle_dir)
+    
     if args.mode==1 or args.mode == -1 :
         run_rna()
     elif args.mode ==0 :
