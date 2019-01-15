@@ -199,7 +199,7 @@ def write_back(fast5_f,aln_matrix,raw,ref,resquiggle_method):
         if '/Analyses/Corrected_000' in fast5_fh:
             del fast5_fh['/Analyses/Corrected_000']
         event_h = fast5_fh.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Events', shape = (len(data),),maxshape=(None,),dtype = d_format)
-        fastq_h = fast5_fh.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Raw',shape = (),dtype = h5py.special_dtype(vlen=str))
+        fastq_h = fast5_fh.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Fastq',shape = (),dtype = h5py.special_dtype(vlen=str))
         ref_h = fast5_fh.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Reference',shape = (),dtype = h5py.special_dtype(vlen=str))
         event_h[...] = data
         event_h.attrs['read_start_rel_to_raw'] = 0
