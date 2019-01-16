@@ -129,7 +129,6 @@ def extract_fastq(input_f,ref_f,mode = 0,trans_start = None):
         ref = mappy.Aligner(ref_f,preset = "map-ont",best_n = 5)
         aligns = ref.map(raw_seq.split(b'\n')[1])
         maxmapq = -np.inf
-        align = None
         for aln in aligns:
             if aln.mapq > maxmapq:
                 maxmapq = aln.mapq
