@@ -10,12 +10,11 @@
 # from rnn import rnn_layers
 from __future__ import absolute_import
 from __future__ import print_function
-import argparse
-import sys
 import os
+import sys
 import time
 import json
-
+import argparse
 from distutils.dir_util import copy_tree
 
 import tensorflow as tf
@@ -28,7 +27,7 @@ from chiron.cnn import getcnnfeature
 from chiron.cnn import getcnnlogit
 from six.moves import range
 
-
+DEFAULT_OFFSET = 10
 def train():
     training = tf.placeholder(tf.bool)
     global_step = tf.get_variable('global_step', trainable=False, shape=(),
@@ -60,7 +59,10 @@ def train():
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
     summary = tf.summary.merge_all()
-
+    print("Begin training using following setting:")
+    for pro in dir(FLAGS):
+        if not pro.startswith('_'):
+            print("%s:%s"%(pro,getattr(FLAGS,pro)))
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     if FLAGS.retrain == False:
         sess.run(init)
@@ -72,9 +74,14 @@ def train():
     summary_writer = tf.summary.FileWriter(
         FLAGS.log_dir + FLAGS.model_name + '/summary/', sess.graph)
     model.save_model(default_config,config)
-    train_ds,valid_ds = generate_train_valid_datasets()
+    train_ds,valid_ds = generate_train_valid_datasets(initial_offset = DEFAULT_OFFSET)
     start = time.time()
+    resample_n = 0
     for i in range(FLAGS.max_steps):
+        if FLAGS.resample_after_epoch == 0:
+            pass
+        elif train_ds.epochs_completed >= FLAGS.resample_after_epoch:
+            train_ds,valid_ds = generate_train_valid_datasets(initial_offset = resample_n*FLAGS.offset_increment + DEFAULT_OFFSET)
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
         indxs, values, shape = batch_y
         feed_dict = {x: batch_x, seq_length: seq_len / ratio, y_indexs: indxs,
@@ -105,8 +112,8 @@ def train():
     print("Reads number %d" % (train_ds.reads_n))
     saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt',
                global_step=global_step_val)
-
-def generate_train_valid_datasets():
+    
+def generate_train_valid_datasets(initial_offset = 10):
     if FLAGS.read_cache:
         train_ds = read_cache_dataset(FLAGS.train_cache)
         if FLAGS.validation is not None:
@@ -124,7 +131,8 @@ def generate_train_valid_datasets():
                              FLAGS.train_cache,
                              FLAGS.sequence_len, 
                              k_mer=FLAGS.k_mer,
-                             max_segments_num=FLAGS.segments_num)
+                             max_segments_num=FLAGS.segments_num,
+                             skip_start = initial_offset)
     sys.stdout.write("Begin reading validation dataset.\n")
     if FLAGS.validation is not None:
         valid_ds = read_tfrecord(FLAGS.data_dir, 
@@ -161,7 +169,7 @@ if __name__ == "__main__":
     parser.add_argument('--valid_cache', default=None, help="Cache file for validation dataset.")
     parser.add_argument('-s', '--sequence_len', type=int, default=400,
                         help='the length of sequence')
-    parser.add_argument('-b', '--batch_size', type=int, default=400,
+    parser.add_argument('-b', '--batch_size', type=int, default=300,
                         help='Batch size')
     parser.add_argument('-t', '--step_rate', type=float, default=1e-2,
                         help='Step rate')
@@ -172,6 +180,14 @@ if __name__ == "__main__":
     parser.add_argument('--configure', default = None,
                         help="Model structure configure json file.")
     parser.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
+    parser.add_argument('--resample_after_epoch',
+                        type = int,
+                        default = 0, 
+                        help='Resample the reads data every n epoches, with an increasing initial offset.')
+    parser.add_argument('--offset_increment',
+                        type = int,
+                        default = 3,
+                        help='The increament of initial offset if the resample_after_epoch has been set.')
     parser.add_argument('--retrain', dest='retrain', action='store_true',
                         help='Set retrain to true')
     parser.add_argument('--read_cache',dest='read_cache',action='store_true',

@@ -23,8 +23,8 @@ import tensorflow as tf
 from chiron.utils import progress
 
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
-
-
+MIN_LABEL_LENGTH = 5
+MIN_SIGNAL_PRO = 0.5
 class Flags(object):
     def __init__(self):
         self.max_segments_number = None
@@ -317,7 +317,8 @@ def read_tfrecord(data_dir,
                   h5py_file_path=None, 
                   seq_length=300, 
                   k_mer=1, 
-                  max_segments_num=None):
+                  max_segments_num=None,
+                  skip_start = 10):
     ###Read from raw data
     count_bar = progress.multi_pbars("Extract tfrecords")
     if max_segments_num is None:
@@ -374,7 +375,7 @@ def read_tfrecord(data_dir,
             if len(f_signal) == 0:
                 continue
             #try:
-            f_label = read_label_tfrecord(features_data, skip_start=10, window_n=(k_mer - 1) / 2)
+            f_label = read_label_tfrecord(features_data, skip_start=skip_start, window_n=(k_mer - 1) / 2)
             #except:
             #    sys.stdout.write("Read the label fail.Skipped.")
             #    continue
@@ -527,7 +528,7 @@ def read_label(file_path, skip_start=10, window_n=0):
     f_h.seek(0, 0)  # Back to the start
     file_len = len(all_base)
     for count, line in enumerate(f_h):
-        record = line.split()
+        record = line.split()   
         if count < skip_start or count > (file_len - skip_start - 1):
             continue
         start.append(int(record[0]))
@@ -540,6 +541,12 @@ def read_label(file_path, skip_start=10, window_n=0):
 
 
 def read_label_tfrecord(raw_label_array, skip_start=10, window_n=0):
+    """
+    Args:
+        raw_label_array: raw label string from tfrecord file.
+        skip_start: Skip the first n label.
+        window_n: If > 0, then a k-tuple nucleotide bases will be considered. 
+    """
     start = list()
     length = list()
     base = list()
@@ -567,7 +574,16 @@ def read_label_tfrecord(raw_label_array, skip_start=10, window_n=0):
     return raw_labels(start=start, length=length, base=base)
 
 
-def read_raw(raw_signal, raw_label, max_seq_length):
+def read_raw(raw_signal, 
+             raw_label, 
+             max_seq_length):
+    """
+    Generate signal-label pair from the input raw signal and label.
+    Args:
+        raw_signal: 1d Vector contain the raw signal.
+        raw_label:label data with start, length, base.
+        max_seq_length: The segment length appointed by the training module.
+    """
     label_val = list()
     label_length = list()
     event_val = list()
@@ -585,7 +601,7 @@ def read_raw(raw_signal, raw_label, max_seq_length):
             current_length += segment_length
         else:
             # Save current event and label, conduct a quality controle step of the label.
-            if current_length > (max_seq_length / 2) and len(current_label) > 5:
+            if current_length > (max_seq_length * MIN_SIGNAL_PRO) and len(current_label) > MIN_LABEL_LENGTH:
                 padding(current_event, max_seq_length,
                         raw_signal[
                         current_start + segment_length:current_start + segment_length + max_seq_length])
