@@ -65,8 +65,8 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
                     indata, W, strides=strides, padding=padding, name=name)
     if BN:
         with tf.variable_scope(name + '_bn') as scope:
-            #conv_out = batchnorm(conv_out,scope=scope,training = training)
-            conv_out = simple_global_bn(conv_out, name=name + '_bn')
+            conv_out = batchnorm(conv_out,scope=scope,training = training)
+#            conv_out = simple_global_bn(conv_out, name=name + '_bn')
             #conv_out = tf.layers.batch_normalization(conv_out,axis = -1,training = training,name = 'bn')
     if active:
         if active_function == 'relu':
