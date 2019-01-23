@@ -40,10 +40,11 @@ def read_config(config_file):
                   'rnn':{'layer_num':3,
                          'hidden_num':100,
                          'cell_type':'LSTM'},
-                         'opt_method':'Adam'}
+                  'opt_method':'Adam',
+                  'fl_gamma': 2}
     return config
 
-def loss(logits, seq_len, label):
+def loss(logits, seq_len, label, fl_gamma = 0):
     """Calculate a CTC loss from the input logits and label.
 
     Args:
@@ -51,13 +52,15 @@ def loss(logits, seq_len, label):
             Fully connected layyer.
         seq_len: Tensor of shape [batch_size], sequence length for each sample in the batch.
         label: A Sparse Tensor of labels, sparse tensor of the true label.
-
+        fl_gamma: The gamma parameter of the focal loss(see paper: https://arxiv.org/pdf/1708.02002.pdf), if 0 then no focal loss is enabled.
     Returns:
         Tensor of shape [batch_size], losses of the batch.
     """
-    loss = tf.reduce_mean(
-        tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
-                       time_major=False,ignore_longer_outputs_than_inputs=True))
+    loss = tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
+                       time_major=False,ignore_longer_outputs_than_inputs=True)
+    if fl_gamma > 0:
+        loss = tf.math.pow(1-tf.math.exp(-loss),fl_gamma)*loss
+    loss = tf.reduce_mean(loss)
     tf.add_to_collection('losses',loss)
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
     tf.summary.scalar('loss', loss)

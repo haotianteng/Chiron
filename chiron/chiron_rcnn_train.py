@@ -49,7 +49,10 @@ def train():
         config_file = FLAGS.configure   
     config = model.read_config(config_file)
     logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len,configure = config)
-    ctc_loss = model.loss(logits, seq_length, y)
+    if 'fl_gamma' in config.keys():
+        ctc_loss = model.loss(logits, seq_length, y, fl_gamma = config['fl_gamma'])
+    else:
+        ctc_loss = model.loss(logits, seq_length, y)
     opt = model.train_opt(FLAGS.step_rate,
                           FLAGS.max_steps, 
                           global_step=global_step,
