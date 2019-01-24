@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from distutils.version import StrictVersion
 import tensorflow as tf
 import json
 import os
@@ -59,7 +60,10 @@ def loss(logits, seq_len, label, fl_gamma = 0):
     loss = tf.nn.ctc_loss(label, logits, seq_len, ctc_merge_repeated=True,
                        time_major=False,ignore_longer_outputs_than_inputs=True)
     if fl_gamma > 0:
-        loss = tf.math.pow(1-tf.math.exp(-loss),fl_gamma)*loss
+        if StrictVersion(tf.__version__) >= StrictVersion('1.11.0'):
+            loss = tf.math.pow(1-tf.math.exp(-loss),fl_gamma)*loss
+        else:
+            loss = tf.pow(1-tf.exp(-loss),fl_gamma)*loss
     loss = tf.reduce_mean(loss)
     tf.add_to_collection('losses',loss)
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
