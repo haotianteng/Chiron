@@ -81,8 +81,12 @@ def fast5s_iter(dest_link,tsv_table):
     Return:
         An interator of (start_position, transcript start position)
     """
+    if args.eval:
+        accept_tags = [b'PASS',b'SUFFCLIP',b'ADAPTER']
+    else:
+        accept_tags = [b'PASS']
     for idx,tag in enumerate(tsv_table['qc_tag']):
-        if tag == b'PASS':
+        if tag in accept_tags:
             yield dest_link[tsv_table['readname'][idx]],tsv_table['transcript_start'][idx]
     
 def _decap(fast5_root, trans_start,raw_signal,raw_seq):
@@ -124,8 +128,8 @@ def extract_fastq(input_f,ref_f,mode = 0,trans_start = None):
             raw_signal,raw_seq,decap_event = _decap(input_fh,trans_start,raw_signal,raw_seq)
         else:
             decap_event = input_fh[BASECALL_ENTRY+'/BaseCalled_template/Events'].value
-        ref = mappy.Aligner(ref_f)
-        align = ref.map(raw_seq)
+        align = None
+        ref_seq = None
         ref = mappy.Aligner(ref_f,preset = "map-ont",best_n = 5)
         aligns = ref.map(raw_seq.split(b'\n')[1])
         maxmapq = -np.inf
@@ -135,16 +139,15 @@ def extract_fastq(input_f,ref_f,mode = 0,trans_start = None):
                 align = aln
         if align is None:
             print("FAIL MAPPING "+input_f)
-        if align.strand == -1:
-            ref_seq = mappy.revcomp(ref.seq(align.ctg,start = align.r_st,end = align.r_en))
         else:
-            ref_seq = ref.seq(align.ctg,start = align.r_st,end = align.r_en)
-        if (mode == 1) or (mode == -1):
-            raw_signal = raw_signal[::-1]
+            if align.strand == -1:
+                ref_seq = mappy.revcomp(ref.seq(align.ctg,start = align.r_st,end = align.r_en))
+            else:
+                ref_seq = ref.seq(align.ctg,start = align.r_st,end = align.r_en)
+            if (mode == 1) or (mode == -1):
+                raw_signal = raw_signal[::-1]
     if ref_seq is None:
         print("No Reference sequence found in %s"%(input_f))
-        print(aligns)
-        raise
     return raw_signal,raw_seq,ref_seq,decap_event
 
 def write_output(prefix,raw_signal,ref_seq):
@@ -239,10 +242,7 @@ def label(abs_fast5):
     abs_fast5 = abs_fast5[0]
     if abs_fast5.endswith("fast5"):
         filename = os.path.basename(abs_fast5)                
-        try:
-            raw_signal,raw_seq,ref_seq,decap_event = extract_fastq(abs_fast5,args.ref,args.mode,trans_start)
-        except:
-            return()
+        raw_signal,raw_seq,ref_seq,decap_event = extract_fastq(abs_fast5,args.ref,args.mode,trans_start)
         prefix = os.path.join(args.saving,'resquiggle',os.path.splitext(filename)[0])
         fast5_save = os.path.join(args.saving,'fast5s',filename)
         if args.copy_original:
@@ -252,13 +252,17 @@ def label(abs_fast5):
         
         ######Begin cwDTW pipeline
         if args.resquiggle_method == 'cwdtw':
-            input_cmd = write_output(prefix,raw_signal,ref_seq)
-            cmd = os.path.dirname(os.path.realpath(__file__))+"/utils/cwDTW_nano " + input_cmd +' -R ' + str(args.mode)
-            args_cmd = shlex.split(cmd)
-            p = subprocess.Popen(args_cmd,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
-            p_out,_ = p.communicate()
-            p.wait()
-            align_matrix = parse_cwDTW(prefix+'.aln')
+            if ref_seq is not None:
+                input_cmd = write_output(prefix,raw_signal,ref_seq)
+                cmd = os.path.dirname(os.path.realpath(__file__))+"/utils/cwDTW_nano " + input_cmd +' -R ' + str(args.mode)
+                args_cmd = shlex.split(cmd)
+                p = subprocess.Popen(args_cmd,stdout = subprocess.PIPE,stderr = subprocess.STDOUT)
+                p_out,_ = p.communicate()
+                p.wait()
+                align_matrix = parse_cwDTW(prefix+'.aln')
+            else:
+                pass
+#                return
         elif args.resquiggle_method == 'raw':
             align_matrix = decap_event
         ######End cwDTW pipeline
@@ -311,6 +315,8 @@ if __name__ == "__main__":
                         help="If set, copy the original file else create a new fast5 file with raw_signal and resquiggle only.")
     parser.add_argument('--resquiggle_method',default = 'raw',choices = RESQUIGGLE_METHODS, 
                         help="Resquiggle method, can be only chosen from %s"%(RESQUIGGLE_METHODS))
+    parser.add_argument('--for_eval',dest = 'eval',action = 'store_true',
+                        help="If set, the SUFFCLIP and ADAPTER reads will also beincluded.")
     args = parser.parse_args(sys.argv[1:])
     
     if not os.path.isdir(args.saving):
