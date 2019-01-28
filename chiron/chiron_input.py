@@ -23,8 +23,8 @@ import tensorflow as tf
 from chiron.utils import progress
 
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
-MIN_LABEL_LENGTH = 5
-MIN_SIGNAL_PRO = 0.5
+MIN_LABEL_LENGTH = 2
+MIN_SIGNAL_PRO = 0.3
 class Flags(object):
     def __init__(self):
         self.max_segments_number = None
