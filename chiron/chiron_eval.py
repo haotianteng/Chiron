@@ -336,11 +336,12 @@ def evaluation():
 
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
+            js_ratio = FLAGS.jump/FLAGS.segment_len
             if FLAGS.extension == 'fastq':
-                consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list)
+                consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list,js_ratio)
                 qs_string = qs(consensus, qs_consensus)
             else:
-                consensus = simple_assembly(bpreads)
+                consensus = simple_assembly(bpreads,js_ratio)
             c_bpread = index2base(np.argmax(consensus, axis=0))
             assembly_time = time.time() - start_time
             list_of_time = [start_time, reading_time,

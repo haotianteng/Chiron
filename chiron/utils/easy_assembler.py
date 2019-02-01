@@ -14,7 +14,7 @@ import operator
 import time
 from collections import Counter
 from itertools import groupby
-
+from itertools import zip_longest
 import numpy as np
 import six
 from six.moves import range
@@ -206,7 +206,46 @@ def mc_decoding(logits, base_type, sample_n=300):
 ###############################################################################
 
 #########################Simple assembly method################################
-def simple_assembly(bpreads):
+def simple_assembly_kernal(bpread, prev_bpread,error_rate, jump_step_ratio):
+    """
+    Kernal function of the assembly method.
+    log_P ~ x*log((N*n1/L)) - log(x!) + Ns * log(P1/0.25) + Nd * log(P2/0.25)
+    bpread: current read.
+    prev_bpread: previous read.
+    error_rate: Average basecalling error rate.
+    jump_step_ratio: Jump step/Segment len
+    """
+    back_ratio = 6.5 * 10e-4
+    p_same = 1 - 2*error_rate + 26/25*(error_rate**2)
+    p_diff = 1 - p_same
+    ns = dict() # number of same base
+    nd = dict()
+    log_px = dict()
+    N = len(bpread)
+    for offset in range(-3,len(prev_bpread)):
+        pair = zip_longest(prev_bpread[offset:],bpread[:-offset],fillvalue=None)
+        comparison = [int(i==j) for i,j in pair]
+        ns[offset] = sum(comparison)
+        nd[offset] = len(comparison) - ns[offset]
+    for key in ns.keys():
+        if key < 0:
+            k = -key
+            log_px[key] = k*np.log((back_ratio)*N*jump_step_ratio) - sum([np.log(x+1) for x in range(k)]) +\
+            ns[key]*np.log(p_same/0.25) + nd[key]*np.log(p_diff/0.25)
+        else:
+            log_px[key] = key*np.log(N*jump_step_ratio) - sum([np.log(x+1) for x in range(key)]) +\
+            ns[key]*np.log(p_same/0.25) + nd[key]*np.log(p_diff/0.25)
+    disp = max(log_px.keys(),key = lambda x: log_px[x])
+    return disp,log_px[disp]
+
+def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2):
+    """
+    Assemble the read from the chunks. Log probability is 
+    Args:
+        bpreads: Input chunks.
+        jump_step_ratio: Jump step divided by segment length.
+        error_rate: An estimating basecalling error rate.
+    """
     concensus = np.zeros([4, 1000])
     pos = 0
     length = 0
@@ -215,9 +254,8 @@ def simple_assembly(bpreads):
         if indx == 0:
             add_count(concensus, 0, bpread)
             continue
-        d = difflib.SequenceMatcher(None, bpreads[indx - 1], bpread)
-        match_block = max(d.get_matching_blocks(), key=lambda x: x[2])
-        disp = match_block[0] - match_block[1]
+        prev_bpread = bpreads[indx - 1]
+        disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
         if disp + pos + len(bpreads[indx]) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)
@@ -240,7 +278,16 @@ def add_count(concensus, start_indx, segment):
 ###############################################################################
 
 #########################Simple assembly method with quality score################################
-def simple_assembly_qs(bpreads, qs_list):
+def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2):
+    """
+    Assemble the read from the chunks. Log probability is 
+    log_P ~ x*log((N*n1/L)) - log(x!) + Ns * log(P1/0.25) + Nd * log(P2/0.25)
+    Args:
+        bpreads: Input chunks.
+        qs_list: Quality score logits list.
+        jump_step_ratio: Jump step divided by segment length.
+        error_rate: An estimating basecalling error rate.
+    """
     concensus = np.zeros([4, 1000])
     concensus_qs = np.zeros([4, 1000])
     pos = 0
@@ -251,9 +298,8 @@ def simple_assembly_qs(bpreads, qs_list):
         if indx == 0:
             add_count_qs(concensus, concensus_qs, 0, bpread, qs_list[indx])
             continue
-        d = difflib.SequenceMatcher(None, bpreads[indx - 1], bpread)
-        match_block = max(d.get_matching_blocks(), key=lambda x: x[2])
-        disp = match_block[0] - match_block[1]
+        prev_bpread = bpreads[indx - 1]
+        disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
         if disp + pos + len(bpread) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)

@@ -13,6 +13,8 @@ import numpy as np
 import difflib
 import mappy
 import bisect
+from scipy.interpolate import interp1d
+import itertools
 
 def LIS(sequence):
     """
@@ -41,21 +43,71 @@ def LIS(sequence):
         out[i] = sequence[index]
         index = P[index]
         idxs = [index] + idxs
-    return out,idxs[1:]
-def simple_assembly_pos(bpreads):
+    idxs = idxs[1:]
+    if idxs[0]!=0:
+        out = [sequence[0]]+out
+        idxs = [0] + idxs
+    if idxs[-1]!=len(sequence)-1:
+        idxs = idxs + [len(sequence)-1]
+        out = out + [sequence[-1]]
+    return np.asarray(out),np.asarray(idxs)
+
+def get_squiggle_pos(bound):
+    """
+    Get the position of the persudo squiggles by interpolating the bounds.
+    """
+    bot_val, bot_idx = LIS(bound[:,0])
+    up_val, up_idx = LIS(bound[:,1])
+    bot_f = interp1d(bot_idx,bot_val)
+    up_f = interp1d(up_idx,up_val)
+    up_bound = up_f(range(len(bound)))
+    bot_bound = bot_f(range(len(bound)))
+    return np.asarray(list(zip(bot_bound,up_bound)))
+    
+def simple_assembly_pos(bpreads,jump_step_ratio, error_rate = 0.2):
+    """
+    Assemble the read from the chunks. Log probability is 
+    log_P ~ x*log((N*n1/L)) - log(x!) + Ns * log(P1/0.25) + Nd * log(P2/0.25)
+    Args:
+        bpreads: Input chunks.
+        jump_step_ratio: Jump step divided by segment length.
+        error_rate: An estimating basecalling error rate.
+    """
     concensus = np.zeros([4, 1000])
     concensus_bound = np.zeros([4,1000,2])
     concensus_bound[:,:,0] = np.inf
+    pos_collection = [[0,len(bpreads[0])]]
+    pos_log_p = [1]
     pos = 0
     length = 0
     census_len = 1000
+    back_ratio = 6.5 * 10e-4
+    p_same = 1 - 2*error_rate + 26/25*(error_rate**2)
+    p_diff = 1 - p_same
     for idx, bpread in enumerate(bpreads):
         if idx == 0:
             add_bound(concensus,concensus_bound, 0, bpread,idx)
             continue
-        d = difflib.SequenceMatcher(None, bpreads[idx - 1], bpread)
-        match_block = max(d.get_matching_blocks(), key=lambda x: x[2])
-        disp = match_block[0] - match_block[1]
+        prev_bpread = bpreads[idx - 1]
+        ns = dict() # number of same base
+        nd = dict()
+        log_px = dict()
+        N = len(bpread)
+        for offset in range(-3,len(prev_bpread)):
+            pair = itertools.zip_longest(prev_bpread[offset:],bpread[:-offset],fillvalue=None)
+            comparison = [int(i==j) for i,j in pair]
+            ns[offset] = sum(comparison)
+            nd[offset] = len(comparison) - ns[offset]
+        for key in ns.keys():
+            if key < 0:
+                k = -key
+                log_px[key] = k*np.log((back_ratio)*N*jump_step_ratio) - sum([np.log(x+1) for x in range(k)]) +\
+                ns[key]*np.log(p_same/0.25) + nd[key]*np.log(p_diff/0.25)
+            else:
+                log_px[key] = key*np.log(N*jump_step_ratio) - sum([np.log(x+1) for x in range(key)]) +\
+                ns[key]*np.log(p_same/0.25) + nd[key]*np.log(p_diff/0.25)
+        disp = max(log_px.keys(),key = lambda x: log_px[x])
+#        disp = match_block[0] - match_block[1]
         if disp + pos + len(bpread) > census_len:
             concensus = np.lib.pad(concensus, 
                                    ((0, 0), (0, 1000)),
@@ -69,8 +121,10 @@ def simple_assembly_pos(bpreads):
             census_len += 1000
         add_bound(concensus,concensus_bound, pos + disp, bpread,idx)
         pos += disp
+        pos_collection.append([pos,pos+len(bpread)])
+        pos_log_p.append(log_px[disp])
         length = max(length, pos + len(bpread))
-    return concensus[:, :length],concensus_bound[:, :length,:]
+    return concensus[:, :length],concensus_bound[:, :length,:],pos_collection
 
 
 def add_bound(concensus,concensus_bound, start_indx, segment,segment_idx):
@@ -96,6 +150,7 @@ def read_chunks(filepath):
             else:
                 chunks.append(line.strip())
     return chunks
+
 def read_meta(filepath):
     keys = []
     meta_dict = {}
@@ -110,7 +165,13 @@ def read_meta(filepath):
                 keys = []
     return meta_dict
 
-def write_back_to_fast5():
+def get_events(consensus, aligner):
+    return
+
+def write_fast5(locs, fast5_h, consensus, ):
+    """
+    Write the event matrix back to fast5 files.
+    """
     pass 
 
 def resquiggle(root_folder,fast5_folder,file_pre):
@@ -122,26 +183,35 @@ def resquiggle(root_folder,fast5_folder,file_pre):
     if not os.path.isfile(chunk_path):
         raise ValueError("Segments file not found")
     chunks = read_chunks(chunk_path)
-    meta_pre= read_meta(meta_path)
-    concensus,bound = simple_assembly_pos(chunks)
+    metainfo= read_meta(meta_path)
+    concensus,bound,coors = simple_assembly_pos(chunks,0.1)
     c_indexs = np.argmax(concensus,axis = 0)
     bound = bound[c_indexs,np.arange(bound.shape[1]),:]
+    bound  = get_squiggle_pos(bound)
     loc = np.mean(bound,axis = 1)
-    return chunks,bound,loc
+    return chunks,bound,loc,concensus,coors
 
+def revise(concensus, ref_file):
+    pass
 ### Test Script ###
+    
 LIS([1,8,3,4,5,2])
-ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/test_data/output/"
-FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/test_data/output/fast5s"
-FILE_PRE = "IMB14_011406_LT_20170322_FNFAF13375_MN17027_sequencing_run_C4_watermang_22032017_12981_ch2_read2558_strand"
+ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
 
-chunks,bounds,locs = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
+chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
 from matplotlib import pyplot as plt
 chunk_size = len(chunks)
-#for idx,_ in enumerate(bounds):
-#    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
-#plt.yticks(np.arange(0,400,30))
+for idx,_ in enumerate(bounds):
+    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
 plt.plot(np.arange(len(locs)),locs)
+plt.yticks(np.arange(0,400,30))
+
+#coors = np.asarray(coors)
+#con_len = len(concensus[0])
+#for idx,_ in enumerate(coors):
+#    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
 ###################
 
 #if __name__ == "__main__":
