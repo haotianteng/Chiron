@@ -93,11 +93,20 @@ def simple_assembly_pos(bpreads,jump_step_ratio, error_rate = 0.2):
         nd = dict()
         log_px = dict()
         N = len(bpread)
-        for offset in range(-3,len(prev_bpread)):
-            pair = itertools.zip_longest(prev_bpread[offset:],bpread[:-offset],fillvalue=None)
-            comparison = [int(i==j) for i,j in pair]
-            ns[offset] = sum(comparison)
-            nd[offset] = len(comparison) - ns[offset]
+        match_blocks = difflib.SequenceMatcher(a=bpread,b=prev_bpread).get_matching_blocks()
+        for idx, block in enumerate(match_blocks):
+            offset = block[1] - block[0]
+            if offset in ns.keys():
+                ns[offset] = ns[offset] + match_blocks[idx][2]
+            else:
+                ns[offset] = match_blocks[idx][2]
+            nd[offset] = 0
+        
+#        for offset in range(-3,len(prev_bpread)):
+#            pair = itertools.zip_longest(prev_bpread[offset:],bpread,fillvalue=None)
+#            comparison = [int(i==j) for i,j in pair]
+#            ns[offset] = sum(comparison)
+#            nd[offset] = len(comparison) - ns[offset]
         for key in ns.keys():
             if key < 0:
                 k = -key
@@ -166,7 +175,7 @@ def read_meta(filepath):
     return meta_dict
 
 def get_events(consensus, aligner):
-    return
+    pass
 
 def write_fast5(locs, fast5_h, consensus, ):
     """
@@ -177,7 +186,7 @@ def write_fast5(locs, fast5_h, consensus, ):
 def resquiggle(root_folder,fast5_folder,file_pre):
     meta_path = os.path.join(root_folder,'meta',file_pre+'.meta')
     chunk_path = os.path.join(root_folder,'segments',file_pre+'.fastq')
-    fast5_path = os.path.join(fast5_folder,file_pre+'.fast5')
+#    fast5_path = os.path.join(fast5_folder,file_pre+'.fast5')
     if not os.path.isfile(meta_path):
         raise ValueError("Metaparameter file not found")
     if not os.path.isfile(chunk_path):
@@ -198,20 +207,21 @@ def revise(concensus, ref_file):
 LIS([1,8,3,4,5,2])
 ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
 FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+#FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
 FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
 
 chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
-from matplotlib import pyplot as plt
-chunk_size = len(chunks)
-for idx,_ in enumerate(bounds):
-    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
-plt.plot(np.arange(len(locs)),locs)
-plt.yticks(np.arange(0,400,30))
+#from matplotlib import pyplot as plt
+#chunk_size = len(chunks)
+#for idx,_ in enumerate(bounds):
+#    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
+#plt.plot(np.arange(len(locs)),locs)
+#plt.yticks(np.arange(0,chunk_size,chunk_size/10))
 
-#coors = np.asarray(coors)
-#con_len = len(concensus[0])
-#for idx,_ in enumerate(coors):
-#    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
+coors = np.asarray(coors)
+con_len = len(concensus[0])
+for idx,_ in enumerate(coors):
+    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
 ###################
 
 #if __name__ == "__main__":

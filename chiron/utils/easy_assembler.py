@@ -222,11 +222,19 @@ def simple_assembly_kernal(bpread, prev_bpread,error_rate, jump_step_ratio):
     nd = dict()
     log_px = dict()
     N = len(bpread)
-    for offset in range(-3,len(prev_bpread)):
-        pair = zip_longest(prev_bpread[offset:],bpread[:-offset],fillvalue=None)
-        comparison = [int(i==j) for i,j in pair]
-        ns[offset] = sum(comparison)
-        nd[offset] = len(comparison) - ns[offset]
+    match_blocks = difflib.SequenceMatcher(a=bpread,b=prev_bpread).get_matching_blocks()
+    for idx, block in enumerate(match_blocks):
+        offset = block[1] - block[0]
+        if offset in ns.keys():
+            ns[offset] = ns[offset] + match_blocks[idx][2]
+        else:
+            ns[offset] = match_blocks[idx][2]
+        nd[offset] = 0
+#    for offset in range(-3,len(prev_bpread)):
+#        pair = zip_longest(prev_bpread[offset:],bpread[:-offset],fillvalue=None)
+#        comparison = [int(i==j) for i,j in pair]
+#        ns[offset] = sum(comparison)
+#        nd[offset] = len(comparison) - ns[offset]
     for key in ns.keys():
         if key < 0:
             k = -key
