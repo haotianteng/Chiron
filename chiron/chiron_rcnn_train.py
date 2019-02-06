@@ -13,21 +13,21 @@ from __future__ import print_function
 import os
 import sys
 import time
-import json
 import argparse
-from distutils.dir_util import copy_tree
 
 import tensorflow as tf
 import chiron.chiron_model as model
-
-from chiron.chiron_input import read_raw_data_sets
 from chiron.chiron_input import read_tfrecord
 from chiron.chiron_input import read_cache_dataset
-from chiron.cnn import getcnnfeature
-from chiron.cnn import getcnnlogit
 from six.moves import range
 
 DEFAULT_OFFSET = 10
+
+def save_hyper_parameter():
+    """
+    TODO: Function to save the hyper parameter.
+    """
+
 def train():
     training = tf.placeholder(tf.bool)
     global_step = tf.get_variable('global_step', trainable=False, shape=(),
