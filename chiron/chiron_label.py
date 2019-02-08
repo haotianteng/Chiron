@@ -111,13 +111,14 @@ def _decap(fast5_root, trans_start,raw_signal,raw_seq):
     if len(raw_seq) > 3:
         raw_seq[3] = raw_seq[3][:-skip_n]
     return raw_signal[int(trans_start):],b'\n'.join(raw_seq),event_entry
-def extract_fastq(input_f,ref_f,mode = 0,trans_start = None):
+def extract_fastq(input_f,ref_f,mode = 0,trans_start = None,alignment = True):
     """
     Args:
         input_f: intput fast5 file handle
         ref_f: file name of the reference
         mode: 0-dna, 1-rna, -1-rna 180mV
         trans_start: Start position of the transcription(required in RNA mode).
+        alignment: If requrie alignment.
     """
     with h5py.File(input_f,'r') as input_fh:
         raw_entry = list(input_fh['/Raw/Reads'].values())[0]
@@ -130,23 +131,24 @@ def extract_fastq(input_f,ref_f,mode = 0,trans_start = None):
             decap_event = input_fh[BASECALL_ENTRY+'/BaseCalled_template/Events'].value
         align = None
         ref_seq = None
-        ref = mappy.Aligner(ref_f,preset = "map-ont",best_n = 5)
-        aligns = ref.map(raw_seq.split(b'\n')[1])
-        maxmapq = -np.inf
-        for aln in aligns:
-            if aln.mapq > maxmapq:
-                maxmapq = aln.mapq
-                align = aln
-        if align is None:
-            print("FAIL MAPPING "+input_f)
-        else:
-            if align.strand == -1:
-                ref_seq = mappy.revcomp(ref.seq(align.ctg,start = align.r_st,end = align.r_en))
+        if alignment:
+            ref = mappy.Aligner(ref_f,preset = "map-ont",best_n = 5)
+            aligns = ref.map(raw_seq.split(b'\n')[1])
+            maxmapq = -np.inf
+            for aln in aligns:
+                if aln.mapq > maxmapq:
+                    maxmapq = aln.mapq
+                    align = aln
+            if align is None:
+                print("FAIL MAPPING "+input_f)
             else:
-                ref_seq = ref.seq(align.ctg,start = align.r_st,end = align.r_en)
-            if (mode == 1) or (mode == -1):
-                raw_signal = raw_signal[::-1]
-    if ref_seq is None:
+                if align.strand == -1:
+                    ref_seq = mappy.revcomp(ref.seq(align.ctg,start = align.r_st,end = align.r_en))
+                else:
+                    ref_seq = ref.seq(align.ctg,start = align.r_st,end = align.r_en)
+        if (mode == 1) or (mode == -1):
+            raw_signal = raw_signal[::-1]
+    if ref_seq is None and alignment:
         print("No Reference sequence found in %s"%(input_f))
     return raw_signal,raw_seq,ref_seq,decap_event
 
@@ -241,8 +243,11 @@ def label(abs_fast5):
     trans_start = abs_fast5[1]
     abs_fast5 = abs_fast5[0]
     if abs_fast5.endswith("fast5"):
-        filename = os.path.basename(abs_fast5)                
-        raw_signal,raw_seq,ref_seq,decap_event = extract_fastq(abs_fast5,args.ref,args.mode,trans_start)
+        filename = os.path.basename(abs_fast5)
+        align = True
+        if args.resquiggle_method == 'raw':
+            align = False
+        raw_signal,raw_seq,ref_seq,decap_event = extract_fastq(abs_fast5,args.ref,args.mode,trans_start,align)
         prefix = os.path.join(args.saving,'resquiggle',os.path.splitext(filename)[0])
         fast5_save = os.path.join(args.saving,'fast5s',filename)
         if args.copy_original:
