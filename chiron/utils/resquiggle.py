@@ -301,7 +301,7 @@ def run(args):
     for file in os.listdir(args.source):
         if file.endswith('fast5'):
             file_list.append(os.path.join(args.source,file)) 
-    pool = Pool(8)
+    pool = Pool(args.thread)
     for state in tqdm(pool.imap_unordered(wrapper_reformat_hmm,zip(file_list,itertools.repeat(fail_count))),total = len(file_list)):
         if state in fail_count.keys():
             fail_count[state] +=1
@@ -317,6 +317,8 @@ if __name__ == "__main__":
         description='Transfer fast5 to raw_pair file.')
     parser.add_argument('-s', '--source', required = True,
                         help="Directory that store the output subfolders.")
+    parser.add_argument('-t', '--thread', default = 1,
+                        help="Thread number used.")
 #    parser.add_argument('-d', '--dest', required = True, 
 #                        help="Folder that contain fast5 files to resquiggle")
 #    parser.add_argument('--basecall_group',default = "Chiron_Basecall_1D_000",
