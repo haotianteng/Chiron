@@ -270,6 +270,7 @@ def reformat_hmm(fast5_f):
             del root['/Analyses/Corrected_000']
         event_h = root.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Events', shape = (len(matrix),),maxshape=(None,),dtype = DATA_FORMAT)
         event_h[...] = matrix
+        event_h.attrs['read_start_rel_to_raw'] = 0
 
 def wrapper_reformat_hmm(args):
     fast5_f, fail_count = args
@@ -280,6 +281,7 @@ def wrapper_reformat_hmm(args):
         else:
             fail_count['Succeed'] =1
     except ValueError as e:
+        print(str(e))
         if e in fail_count.keys():
             fail_count[str(e)]+=1
         else:
