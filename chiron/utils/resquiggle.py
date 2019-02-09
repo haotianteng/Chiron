@@ -5,17 +5,15 @@ Created on Thu Oct 25 09:29:40 2018
 
 @author: heavens
 """
-#import argparse
-#import sys
-#import h5py
+import argparse
+import sys
+import h5py
 import os
 import numpy as np
 import difflib
-import mappy
 import bisect
 from scipy.interpolate import interp1d
 import itertools
-import h5py
 from tqdm import tqdm
 from multiprocessing import Pool
 OVERMOVE_ERROR = "Encounter a movement bigger than 4!"
@@ -276,16 +274,9 @@ def wrapper_reformat_hmm(args):
     fast5_f, fail_count = args
     try:
         reformat_hmm(fast5_f)
-        if 'Succeed' in fail_count.keys():
-            fail_count['Succeed']+=1
-        else:
-            fail_count['Succeed'] =1
+        return('Succeed')
     except ValueError as e:
-        print(str(e))
-        if e in fail_count.keys():
-            fail_count[str(e)]+=1
-        else:
-            fail_count[str(e)] =1
+        return(str(e))
 #LIS([1,8,3,4,5,2])
 #ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNfrom multiprocessing import PoolA_Analysis/RNA_GN131/test/"
 #FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
@@ -304,27 +295,28 @@ def wrapper_reformat_hmm(args):
 #con_len = len(concensus[0])
 #for idx,_ in enumerate(coors):
 #    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
-        
-read_dir = '/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_Nanopore/reads/reads'
-fail_count = {OVERMOVE_ERROR:0, NEGTIVE_ERROR:0}
-success = 0
-file_list = []
-for file in os.listdir(read_dir):
-    if file.endswith('fast5'):
-        file_list.append(os.path.join(read_dir,file)) 
-pool = Pool(8)
-for _ in tqdm(pool.imap_unordered(wrapper_reformat_hmm,zip(file_list,itertools.repeat(fail_count))),total = len(file_list)):
-    pass
-pool.close()
-pool.join()        
-print(fail_count)
+def run(args):
+    fail_count = {OVERMOVE_ERROR:0, NEGTIVE_ERROR:0,'Succeed':0}
+    file_list = []
+    for file in os.listdir(args.source):
+        if file.endswith('fast5'):
+            file_list.append(os.path.join(args.source,file)) 
+    pool = Pool(8)
+    for state in tqdm(pool.imap_unordered(wrapper_reformat_hmm,zip(file_list,itertools.repeat(fail_count))),total = len(file_list)):
+        if state in fail_count.keys():
+            fail_count[state] +=1
+        else:
+            fail_count[state] = 1
+    pool.close()
+    pool.join() 
+    print(fail_count)       
 ###################
 
-#if __name__ == "__main__":
-#    parser = argparse.ArgumentParser(
-#        description='Transfer fast5 to raw_pair file.')
-#    parser.add_argument('-s', '--source', required = True,
-#                        help="Directory that store the output subfolders.")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Transfer fast5 to raw_pair file.')
+    parser.add_argument('-s', '--source', required = True,
+                        help="Directory that store the output subfolders.")
 #    parser.add_argument('-d', '--dest', required = True, 
 #                        help="Folder that contain fast5 files to resquiggle")
 #    parser.add_argument('--basecall_group',default = "Chiron_Basecall_1D_000",
@@ -333,4 +325,5 @@ print(fail_count)
 #                        help='Basecall subgroup ')
 #    parser.add_argument('--mode',default = 'dna',
 #                        help='Type of data to resquiggle, default is dna, can be chosen from dna or rna.')
-#    args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(sys.argv[1:])
+    run(args)
