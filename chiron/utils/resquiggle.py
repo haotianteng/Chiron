@@ -15,6 +15,11 @@ import mappy
 import bisect
 from scipy.interpolate import interp1d
 import itertools
+import h5py
+from tqdm import tqdm
+from multiprocessing import Pool
+OVERMOVE_ERROR = "Encounter a movement bigger than 4!"
+NEGTIVE_ERROR = "Negative movement detected."
 
 def LIS(sequence):
     """
@@ -204,24 +209,113 @@ def revise(concensus, ref_file):
     pass
 ### Test Script ###
     
-LIS([1,8,3,4,5,2])
-ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
-FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
-#FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
-FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
+def reformat_hmm(fast5_f):
+    DATA_FORMAT = np.dtype([('mean','<f4'),
+                            ('std','<f4'),
+                            ('start','<i4'),
+                            ('length','<i4'),
+                            ('base','S1')])
+    event_entry_id = "/Analyses/AlignToRef_000/CurrentSpaceMapped_template/Events"
+    with h5py.File(fast5_f,'r+') as root:
+        events = root[event_entry_id].value
+        raw_entry = list(root['/Raw/Reads'].values())[0]
+        start_time = raw_entry.attrs['start_time']
+        raw_signal = raw_entry['Signal'].value
+        sample_rate = int(root["/UniqueGlobalKey/context_tags"].attrs['sample_frequency'])
+        start_int = np.round(events['start'] *sample_rate).astype(int) - start_time
+        total_len = len(raw_signal)
+        start = list()
+        rev_start = list()
+        length = list()
+        base = list()
+        means = list()
+        stds = list()
+        for idx,pos in enumerate(events['seq_pos']):
+            if idx == 0:
+                prev_start = start_int[idx]
+                prev_kmer = events['kmer'][idx].decode("utf-8")
+                prev_pos = pos
+            elif pos > prev_pos:
+                curr_start = start_int[idx]
+                move = pos - prev_pos
+                if move > 4:
+                    raise ValueError(OVERMOVE_ERROR)
+                prev_kmer = prev_kmer + events['kmer'][idx].decode("utf-8")[-move:]
+                avg_len = int(round((curr_start - prev_start)/move))
+                for i in range(move):
+                    start.append(prev_start)
+                    length.append(avg_len)
+                    prev_start = prev_start + avg_len
+                    base.append(prev_kmer[2+i])
+                    chunk = raw_signal[start[-1]:(start[-1] + length[-1])]
+                    means.append(np.mean(chunk))
+                    stds.append(np.std(chunk))
+                length[-1] = curr_start - start[-1]
+                prev_pos = pos
+                prev_start = curr_start
+                prev_kmer = events['kmer'][idx].decode("utf-8")
+            elif pos < prev_pos:
+                raise ValueError(NEGTIVE_ERROR)
+        for s in start:
+            rev_start.append(total_len - s)
+        matrix = list()
+        rev_start = rev_start[::-1]
+        length = length[::-1]
+        base = base[::-1]
+        means = means[::-1]
+        stds = stds[::-1]
+        matrix = np.asarray(list(zip(means,stds,rev_start,length,base)),dtype = DATA_FORMAT)
+        np.asarray(matrix,dtype = DATA_FORMAT)
+        if '/Analyses/Corrected_000' in root:
+            del root['/Analyses/Corrected_000']
+        event_h = root.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Events', shape = (len(matrix),),maxshape=(None,),dtype = DATA_FORMAT)
+        event_h[...] = matrix
 
-chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
-#from matplotlib import pyplot as plt
-#chunk_size = len(chunks)
-#for idx,_ in enumerate(bounds):
-#    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
-#plt.plot(np.arange(len(locs)),locs)
-#plt.yticks(np.arange(0,chunk_size,chunk_size/10))
-
-coors = np.asarray(coors)
-con_len = len(concensus[0])
-for idx,_ in enumerate(coors):
-    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
+def wrapper_reformat_hmm(args):
+    fast5_f, fail_count = args
+    try:
+        reformat_hmm(fast5_f)
+        if 'Succeed' in fail_count.keys():
+            fail_count['Succeed']+=1
+        else:
+            fail_count['Succeed'] =1
+    except ValueError as e:
+        if e in fail_count.keys():
+            fail_count[str(e)]+=1
+        else:
+            fail_count[str(e)] =1
+#LIS([1,8,3,4,5,2])
+#ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNfrom multiprocessing import PoolA_Analysis/RNA_GN131/test/"
+#FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+##FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
+#FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_11842_ch_59_strand"
+#
+#chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
+##from matplotlib import pyplot as plt
+##chunk_size = len(chunks)
+##for idx,_ in enumerate(bounds):
+##    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
+##plt.plot(np.arange(len(locs)),locs)
+##plt.yticks(np.arange(0,chunk_size,chunk_size/10))
+#
+#coors = np.asarray(coors)
+#con_len = len(concensus[0])
+#for idx,_ in enumerate(coors):
+#    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
+        
+read_dir = '/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_Nanopore/reads/reads'
+fail_count = {OVERMOVE_ERROR:0, NEGTIVE_ERROR:0}
+success = 0
+file_list = []
+for file in os.listdir(read_dir):
+    if file.endswith('fast5'):
+        file_list.append(os.path.join(read_dir,file)) 
+pool = Pool(8)
+for _ in tqdm(pool.imap_unordered(wrapper_reformat_hmm,zip(file_list,itertools.repeat(fail_count))),total = len(file_list)):
+    pass
+pool.close()
+pool.join()        
+print(fail_count)
 ###################
 
 #if __name__ == "__main__":
