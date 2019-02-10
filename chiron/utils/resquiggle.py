@@ -254,8 +254,8 @@ def reformat_hmm(fast5_f):
                 prev_kmer = events['kmer'][idx].decode("utf-8")
             elif pos < prev_pos:
                 raise ValueError(NEGTIVE_ERROR)
-        for s in start:
-            rev_start.append(total_len - s)
+        for idx,s in enumerate(start):
+            rev_start.append(total_len - s - length[idx])
         matrix = list()
         rev_start = rev_start[::-1]
         length = length[::-1]
@@ -317,7 +317,7 @@ if __name__ == "__main__":
         description='Transfer fast5 to raw_pair file.')
     parser.add_argument('-s', '--source', required = True,
                         help="Directory that store the output subfolders.")
-    parser.add_argument('-t', '--thread', default = 1,
+    parser.add_argument('-t', '--thread', default = 1, type = int,
                         help="Thread number used.")
 #    parser.add_argument('-d', '--dest', required = True, 
 #                        help="Folder that contain fast5 files to resquiggle")
