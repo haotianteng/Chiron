@@ -69,7 +69,6 @@ def extract_file(input_file):
     except Exception as e:
         print(str(e))
         return False, (None, None)
-
     raw_data_array = []
     for index, start in enumerate(raw_start):
 #        if raw_length[index]==0:

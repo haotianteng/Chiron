@@ -157,7 +157,7 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
         raise RuntimeError((
             'Corrected data not found.'))
 
-    fast5_info = fast5_data['UniqueGlobalKey/channel_id'].attrs
+    #fast5_info = fast5_data['UniqueGlobalKey/channel_id'].attrs
     # sampling_rate = fast5_info['sampling_rate'].astype('int_')
 
     # Reading extra information

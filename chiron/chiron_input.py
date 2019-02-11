@@ -28,7 +28,7 @@ MIN_SIGNAL_PRO = 0.3
 class Flags(object):
     def __init__(self):
         self.max_segments_number = None
-        self.MAXLEN = 1e4  # Maximum Length of the holder in biglist. 1e5 by default
+        self.MAXLEN = 1e5  # Maximum Length of the holder in biglist. 1e5 by default
 
 
 #        self.max_segment_len = 200
@@ -591,12 +591,13 @@ def read_raw(raw_signal,
     current_length = 0
     current_label = []
     current_event = []
+    signal_len = len(raw_signal)
     for indx, segment_length in enumerate(raw_label.length):
         current_start = raw_label.start[indx]
         current_base = raw_label.base[indx]
+        assert(current_start+segment_length < signal_len)
         if current_length + segment_length < max_seq_length:
-            current_event += raw_signal[
-                             current_start:current_start + segment_length]
+            current_event += raw_signal[current_start:current_start + segment_length]
             current_label.append(current_base)
             current_length += segment_length
         else:
@@ -668,15 +669,87 @@ def base2ind(base, alphabet_n=4, base_n=1):
         return alphabeta.index(base)
     #
 
-
-def main():
-    ### Input Test ###
-    Data_dir = '/home/heavens/label/data/output_test/'
-    train = read_tfrecord(Data_dir,"train.tfrecords",seq_length=1000)
+def test_chiron_input():
+    DATA_FORMAT = np.dtype([('start','<i4'),
+                            ('length','<i4'),
+                            ('base','S1')]) 
+    ### Generate dummy dataset and check input ###
+    dummy_dir = '/home/heavens/UQ/Chiron_project/Dummy_data/'
+    if not os.path.isdir(dummy_dir):
+        os.makedirs(dummy_dir)
+    dummy_fast5 = os.path.join(dummy_dir,'fast5s')
+    if not os.path.isdir(dummy_fast5):
+        os.makedirs(dummy_fast5)
+    file_num = 10
+    base_signal = {'A':100,'C':200,'G':300,'T':400}
+    bases = ['A','C','G','T']
+    for i in range(file_num):
+        file_n = os.path.join(dummy_fast5,'dummy_' + str(i) + '.fast5')
+        length = np.random.randint(40000,50000)
+        start = 0
+        start_list = []
+        length_list = []
+        base_list = []
+        raw_signal = []
+        while start < length-1:
+            start_list.append(start)
+            step = min(length-start-1, np.random.randint(5,150))
+            length_list.append(step)
+            start = start + step
+            base = bases[np.random.randint(len(bases))]
+            base_list.append(base)
+            raw_signal = raw_signal + [base_signal[base]] + [base_signal[base]-1]*(step-1)
+        event_matrix = np.asarray(list(zip(start_list,length_list,base_list)),dtype = DATA_FORMAT)
+        with h5py.File(file_n,'w') as root:
+            if '/Raw' in root:
+                del root['/Raw']
+            raw_h = root.create_dataset('/Raw/Reads/Read_'+ str(i)+'/Signal',
+                                        shape = (len(raw_signal),),
+                                        dtype = np.int16)
+            raw_h[...] = raw_signal[::-1]
+            if '/Analyses' in root:
+                del root['/Analyses']
+            event_h = root.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Events', 
+                                          shape = (len(event_matrix),),
+                                          maxshape=(None,),
+                                          dtype = DATA_FORMAT)
+            event_h[...] = event_matrix
+            event_h.attrs['read_start_rel_to_raw'] = 0
+            
+    class Args(object):
+        def __init__(self):
+            self.input = dummy_fast5
+            self.output = dummy_dir
+            self.basecall_group = 'Corrected_000'
+            self.mode = 'rna'
+            self.tffile = 'train.tfrecords'
+            self.basecall_subgroup = 'BaseCalled_template'
+            
+    from chiron.utils import raw
+    args = Args()
+    raw.run(args)
+    train = read_tfrecord(dummy_dir,"train.tfrecords",seq_length=1000)
     for i in range(100):
         inputX, sequence_length, label = train.next_batch(10)
+        accum_len = 0
+        for idx,x in enumerate(inputX):
+            x = inputX[idx][:sequence_length[idx]]
+            y = list()
+            for x_idx, signal in enumerate(x):
+                if x_idx==0:
+                    y.append(signal)
+                else:
+                    if (abs(signal - x[x_idx-1]) > 0.1) or (signal - x[x_idx-1] > 0.0001):
+                        y.append(signal)
+            corr = np.corrcoef(y, label[1][accum_len:accum_len + len(y)])[0, 1]
+            for loc in label[0][accum_len:accum_len + len(y)]:
+                assert(loc[0] == idx)
+            accum_len += len(y)
+            assert abs(corr - 1)< 1e-6
+    print("Input dummy data test passed!")
 
+                    
 
 if __name__ == '__main__':
-    main()
+    test_chiron_input()
 

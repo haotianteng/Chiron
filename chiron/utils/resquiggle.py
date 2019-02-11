@@ -263,7 +263,6 @@ def reformat_hmm(fast5_f):
         means = means[::-1]
         stds = stds[::-1]
         matrix = np.asarray(list(zip(means,stds,rev_start,length,base)),dtype = DATA_FORMAT)
-        np.asarray(matrix,dtype = DATA_FORMAT)
         if '/Analyses/Corrected_000' in root:
             del root['/Analyses/Corrected_000']
         event_h = root.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Events', shape = (len(matrix),),maxshape=(None,),dtype = DATA_FORMAT)
@@ -277,24 +276,6 @@ def wrapper_reformat_hmm(args):
         return('Succeed')
     except ValueError as e:
         return(str(e))
-#LIS([1,8,3,4,5,2])
-#ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNfrom multiprocessing import PoolA_Analysis/RNA_GN131/test/"
-#FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
-##FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
-#FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_11842_ch_59_strand"
-#
-#chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
-##from matplotlib import pyplot as plt
-##chunk_size = len(chunks)
-##for idx,_ in enumerate(bounds):
-##    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
-##plt.plot(np.arange(len(locs)),locs)
-##plt.yticks(np.arange(0,chunk_size,chunk_size/10))
-#
-#coors = np.asarray(coors)
-#con_len = len(concensus[0])
-#for idx,_ in enumerate(coors):
-#    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
 def run(args):
     fail_count = {OVERMOVE_ERROR:0, NEGTIVE_ERROR:0,'Succeed':0}
     file_list = []
@@ -328,4 +309,26 @@ if __name__ == "__main__":
 #    parser.add_argument('--mode',default = 'dna',
 #                        help='Type of data to resquiggle, default is dna, can be chosen from dna or rna.')
     args = parser.parse_args(sys.argv[1:])
-    run(args)
+    run(args)   
+    
+    ### Test Code ###
+    #LIS([1,8,3,4,5,2])
+    #ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNfrom multiprocessing import PoolA_Analysis/RNA_GN131/test/"
+    #FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+    ##FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
+    #FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_11842_ch_59_strand"
+    #
+    #chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
+    ##from matplotlib import pyplot as plt
+    ##chunk_size = len(chunks)
+    ##for idx,_ in enumerate(bounds):
+    ##    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
+    ##plt.plot(np.arange(len(locs)),locs)
+    ##plt.yticks(np.arange(0,chunk_size,chunk_size/10))
+    #
+    #coors = np.asarray(coors)
+    #con_len = len(concensus[0])
+    #for idx,_ in enumerate(coors):
+    #    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
+    ###
+
