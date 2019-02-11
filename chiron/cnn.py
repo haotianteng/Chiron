@@ -66,7 +66,7 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
     if BN:
         with tf.variable_scope(name + '_bn') as scope:
             conv_out = batchnorm(conv_out,scope=scope,training = training)
-            conv_out = simple_global_bn(conv_out, name=name + '_bn')
+#            conv_out = simple_global_bn(conv_out, name=name + '_bn')
             #conv_out = tf.layers.batch_normalization(conv_out,axis = -1,training = training,name = 'bn')
     if active:
         if active_function == 'relu':
@@ -83,9 +83,8 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
                 conv_out = tf.nn.elu(conv_out, name='elu')
     return conv_out
 
-def gated_conv(indata, kernal_width, out_channel, training, name):
+def gated_conv_layer(indata, kernal_width, out_channel, training):
     """
-    TODO: Implemented the gated convolution: https://arxiv.org/abs/1612.08083
     Gated Convolutional layer
     Args:
         indata: input data.
@@ -93,28 +92,26 @@ def gated_conv(indata, kernal_width, out_channel, training, name):
         out_channel: Number of out channel.
         padding: A string from: "SAME" "VALID", padding type
         training: If the convolutional network is called from training.
-        name: A String give the name of this layer, other variables and options created in this layer will have this name as prefix.
     """
     fea_shape = indata.get_shape().as_list()
     in_channel = fea_shape[-1]
-    with tf.variable_scope(name):
-        gate_out = conv_layer(indata = indata, 
-                              ksize = [1,kernal_width,in_channel, out_channel], 
-                              padding = 'SAME', 
-                              training = training, 
-                              name = 'gate', 
-                              bias_term = True, 
-                              active = False)
-        
-        conv_out = conv_layer(indata = indata,
-                              ksize = [1,kernal_width,in_channel, out_channel],
-                              paddding = 'SAME',
-                              training = training,
-                              name = 'conv',
-                              bias_term = True,
-                              active = 'tanh')
-        out = gate_out * conv_out
-        return out
+    gate_out = conv_layer(indata = indata, 
+                          ksize = [1,kernal_width,in_channel, out_channel], 
+                          padding = 'SAME', 
+                          training = training, 
+                          name = 'gate', 
+                          bias_term = True, 
+                          active = False)
+    
+    conv_out = conv_layer(indata = indata,
+                          ksize = [1,kernal_width,in_channel, out_channel],
+                          paddding = 'SAME',
+                          training = training,
+                          name = 'conv',
+                          bias_term = True,
+                          active = 'tanh')
+    out = gate_out * conv_out
+    return out
 def batchnorm(inp, scope, training, decay=0.99, epsilon=1e-5):
     """Applied batch normalization on the last axis of the tensor.
 
@@ -371,23 +368,22 @@ def DNA_model1(net,training):
         net = residual_layer(net, out_channel=256, training=training)
     return net
 
+def gate_conv_net(net,training):
+    with tf.variable_scope('gated_conv1'):
+        pass
+            """TODO: Implemented the gated convolution: https://arxiv.org/abs/1612.08083"""
+
 def rna_test(net,training):
-    fea_shape = net.get_shape().as_list()
-    in_channel = fea_shape[-1]
-    with tf.variable_scope('conv_layer'):
-        net = conv_layer(net,
-                         ksize=[1, 5, in_channel, 256],
-                         padding='SAME',
-                         training=training,
-                         name='conv1',
-                         BN=True,
-                         strides = 3)
     with tf.variable_scope('res_layer1'):
         net = residual_layer(net,out_channel=256,training = training,i_bn = True)
     with tf.variable_scope('res_layer2'):
         net = residual_layer(net,out_channel = 256, training = training)
     with tf.variable_scope('res_layer3'):
         net = residual_layer(net,out_channel = 256, training = training)
+    with tf.variable_scope('res_layer4'):
+        net = residual_layer(net, out_channel=256, training=training)
+    with tf.variable_scope('res_layer5'):
+        net = residual_layer(net, out_channel=256, training=training)
     return net
 
 
