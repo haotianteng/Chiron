@@ -371,7 +371,7 @@ def DNA_model1(net,training):
 def gate_conv_net(net,training):
     with tf.variable_scope('gated_conv1'):
         pass
-            """TODO: Implemented the gated convolution: https://arxiv.org/abs/1612.08083"""
+        """TODO: Implemented the gated convolution: https://arxiv.org/abs/1612.08083"""
 
 def rna_test(net,training):
     with tf.variable_scope('res_layer1'):
