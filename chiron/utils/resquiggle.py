@@ -263,9 +263,9 @@ def reformat_hmm(fast5_f):
         means = means[::-1]
         stds = stds[::-1]
         matrix = np.asarray(list(zip(means,stds,rev_start,length,base)),dtype = DATA_FORMAT)
-        if '/Analyses/Corrected_000' in root:
-            del root['/Analyses/Corrected_000']
-        event_h = root.create_dataset('/Analyses/Corrected_000/BaseCalled_template/Events', shape = (len(matrix),),maxshape=(None,),dtype = DATA_FORMAT)
+        if '/Analyses/RawGenomeCorrected_000' in root:
+            del root['/Analyses/RawGenomeCorrected_000']
+        event_h = root.create_dataset('/Analyses/RawGenomeCorrected_000/BaseCalled_template/Events', shape = (len(matrix),),maxshape=(None,),dtype = DATA_FORMAT)
         event_h[...] = matrix
         event_h.attrs['read_start_rel_to_raw'] = 0
 
