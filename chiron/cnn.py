@@ -370,6 +370,11 @@ def DNA_model1(net,training):
     return net
 
 def gate_conv_net_low(net,training):
+    """
+    https://arxiv.org/pdf/1609.03193.pdf
+    https://arxiv.org/abs/1712.09444
+    https://arxiv.org/pdf/1612.08083.pdf
+    """
     fea_shape = net.get_shape().as_list()
     in_channel = fea_shape[-1]
     arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
