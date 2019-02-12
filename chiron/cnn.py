@@ -105,7 +105,7 @@ def gated_conv_layer(indata, kernal_width, out_channel, training):
     
     conv_out = conv_layer(indata = indata,
                           ksize = [1,kernal_width,in_channel, out_channel],
-                          paddding = 'SAME',
+                          padding = 'SAME',
                           training = training,
                           name = 'conv',
                           bias_term = True,
@@ -345,7 +345,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
                   'incp_v2': incp_v2,
                   'custom': custom,
                   'gate_conv_net_low':gate_conv_net_low,
-                  'gat_conv_net_high':gate_conv_net_high}
+                  'gate_conv_net_high':gate_conv_net_high}
     net = model_dict[cnn_config](net,training)
     feashape = net.get_shape().as_list()
     print("CNN output has the segment length %d, and %d channels"%(feashape[2],feashape[3]))
