@@ -343,7 +343,9 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
                   'res_x': Res_x, 
                   'variant_wavnet': Variant_wavnet,
                   'incp_v2': incp_v2,
-                  'custom': custom}
+                  'custom': custom,
+                  'gate_conv_net_low':gate_conv_net_low,
+                  'gat_conv_net_high':gate_conv_net_high}
     net = model_dict[cnn_config](net,training)
     feashape = net.get_shape().as_list()
     print("CNN output has the segment length %d, and %d channels"%(feashape[2],feashape[3]))
