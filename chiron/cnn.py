@@ -284,6 +284,7 @@ def residual_layer_identity_mapping(indata, out_channel, training, k = 3, stride
         conv_2 = conv_layer(relu_2, ksize=[1, k, out_channel, out_channel], padding='SAME', training=training,
                                name='conv2b', bias_term=True,BN = False,strides = 1,active = False)
     return conv_2+indata_cp
+
 def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, i_bn=True):
     """    An implementation of a variant of the Wavenet layer. https://arxiv.org/abs/1609.03499
 
@@ -368,10 +369,136 @@ def DNA_model1(net,training):
         net = residual_layer(net, out_channel=256, training=training)
     return net
 
-def gate_conv_net(net,training):
+def gate_conv_net_low(net,training):
+    fea_shape = net.get_shape().as_list()
+    in_channel = fea_shape[-1]
+    arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
+            'kw':[17,7,7,7,7,7,7,7,41,1],
+            'dropout':[0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.6,0.6],
+            'strides':[9,1,1,1,1,1,1,1,1,1]}
+    with tf.variable_scope('conv_1'):
+        idx = 0
+        net = conv_layer(net,
+                         ksize=[1, arch['kw'][idx], in_channel, arch['hu'][idx]],
+                         padding='SAME',
+                         training=training,
+                         name='conv1',
+                         BN=True,
+                         strides = arch['strides'][idx])
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
     with tf.variable_scope('gated_conv1'):
-        pass
-        """TODO: Implemented the gated convolution: https://arxiv.org/abs/1612.08083"""
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv2'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv3'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv4'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv5'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv6'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1        
+    with tf.variable_scope('gated_conv7'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv8'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('fc_1'):
+        net = conv_layer(net,ksize=[1,arch['kw'][idx], arch['hu'][idx-1], arch['hu'][idx]],padding='SAME',training = training,name = 'fc1')
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+    return net
+        
+
+def gate_conv_net_high(net,training):
+    fea_shape = net.get_shape().as_list()
+    in_channel = fea_shape[-1]
+    arch = {'hu':[200]+ list(range(200,1601,200))+[1600],
+            'kw':[17]+list(range(7,36,4))+[1],
+            'dropout':[0.25]+ list(np.asarray(range(8))*0.05 + 0.25) +[0.6],
+            'strides':[9]+ [1]* 9}
+    with tf.variable_scope('conv_1'):
+        idx = 0
+        net = conv_layer(net,
+                         ksize=[1, arch['kw'][idx], in_channel, arch['hu'][idx]],
+                         padding='SAME',
+                         training=training,
+                         name='conv1',
+                         BN=True,
+                         strides = arch['strides'][idx])
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv1'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv2'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv3'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv4'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv5'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv6'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1        
+    with tf.variable_scope('gated_conv7'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('gated_conv8'):
+        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+        idx+=1
+    with tf.variable_scope('fc_1'):
+        net = conv_layer(net,ksize=[1,arch['kw'][idx], arch['hu'][idx-1], arch['hu'][idx]],padding='SAME',training = training,name = 'fc1')
+        net = tf.nn.elu(net)
+        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+    return net
 
 def rna_test(net,training):
     with tf.variable_scope('res_layer1'):
