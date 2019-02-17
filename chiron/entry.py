@@ -54,6 +54,10 @@ def main(arguments=sys.argv[1:]):
                              help="Concisely output the result, the meta and segments files will not be output.")
     parser_call.add_argument('--mode', default = 'dna',
                         help="Output mode, can be chosen from dna or rna.")
+    parser_call.add_argument('--test_number',
+                        default = None,
+                        type = int,
+                        help="Extract test_number reads, default is None, extract all reads.")
     parser_call.set_defaults(func=evaluation)
 
     # parser for 'extract' command
