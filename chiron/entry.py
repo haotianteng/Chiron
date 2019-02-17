@@ -74,20 +74,47 @@ def main(arguments=sys.argv[1:]):
 
     # parser for 'train' command
     parser_train = subparsers.add_parser('train', description='Model training', help='Train a model.')
-    parser_train.add_argument('-i', '--data_dir', required=True, help="Folder containing the labelled data.")
-    parser_train.add_argument('-f', '--tfrecord', default="train.tfrecords", help='tfrecord file')
-    parser_train.add_argument('-o', '--log_dir', required=True, help="Log dir which save the trained model")
-    parser_train.add_argument('-m', '--model_name', required=True, help="Model name saved.")
-    parser_train.add_argument('-c', '--cache_dir', default=None, help="Output folder")
-    parser_train.add_argument('-t', '--retrain', type=bool, default=False,
-                              help="If retrain is true, the previous trained model will be loaded from LOG_DIR before training.")
-    parser_train.add_argument('-l', '--sequence_len', type=int, default=300, help="Segment length to be divided into.")
-    parser_train.add_argument('-b', '--batch_size', type=int, default=400,
-                              help="Batch size to train, large batch size require more ram but give faster training speed.")
-    parser_train.add_argument('-x', '--max_steps', type=int, default=20000, help="Maximum training steps conducted.")
-    parser_train.add_argument('-r', '--step_rate', type=float, default=1e-3,
-                              help="Learning rate used for optimiztion algorithm.")
-    parser_train.add_argument('-k', '--k_mer', type=int, default=1, help="Output k-mer size.")
+    parser_train.add_argument('-i', '--data_dir', required = True,
+                        help="Directory that store the tfrecord files.")
+    parser_train.add_argument('-o', '--log_dir', required = True  ,
+                        help="log directory that store the training model.")
+    parser_train.add_argument('-m', '--model_name', required = True,
+                        help='model_name')
+    parser_train.add_argument('-v', '--validation', default = None, 
+                        help="validation tfrecord file, default is None, which conduct no validation")
+    parser_train.add_argument('-f', '--tfrecord', default="train.tfrecords",
+                        help='tfrecord file')
+    parser_train.add_argument('--train_cache', default=None, help="Cache file for training dataset.")
+    parser_train.add_argument('--valid_cache', default=None, help="Cache file for validation dataset.")
+    parser_train.add_argument('-s', '--sequence_len', type=int, default=400,
+                        help='the length of sequence')
+    parser_train.add_argument('-b', '--batch_size', type=int, default=300,
+                        help='Batch size')
+    parser_train.add_argument('-t', '--step_rate', type=float, default=4e-3,
+                        help='Step rate')
+    parser_train.add_argument('-x', '--max_steps', type=int, default=10000,
+                        help='Maximum step')
+    parser_train.add_argument('-n', '--segments_num', type = int, default = None,
+                        help='Maximum number of segments read into the training queue, default(None) read all segments.')
+    parser_train.add_argument('--configure', default = None,
+                        help="Model structure configure json file.")
+    parser_train.add_argument('-k', '--k_mer', default=1, help='Output k-mer size')
+    parser_train.add_argument('--resample_after_epoch',
+                        type = int,
+                        default = 0, 
+                        help='Resample the reads data every n epoches, with an increasing initial offset.')
+    parser_train.add_argument('--threads',
+                        type = int,
+                        default = 0, 
+                        help='The threads that available, if 0 use all threads that can be found.')
+    parser_train.add_argument('--offset_increment',
+                        type = int,
+                        default = 3,
+                        help='The increament of initial offset if the resample_after_epoch has been set.')
+    parser_train.add_argument('--retrain', dest='retrain', action='store_true',
+                        help='Set retrain to true')
+    parser_train.add_argument('--read_cache',dest='read_cache',action='store_true',
+                        help="Read from cached hdf5 file.")
     parser_train.set_defaults(func=chiron_rcnn_train.run)
 
     args = parser.parse_args(arguments)

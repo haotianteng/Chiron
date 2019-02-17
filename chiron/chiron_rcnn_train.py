@@ -66,7 +66,9 @@ def train():
     for pro in dir(FLAGS):
         if not pro.startswith('_'):
             print("%s:%s"%(pro,getattr(FLAGS,pro)))
-    sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+    sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=FLAGS.threads,
+                                            intra_op_parallelism_threads=FLAGS.threads,
+                                            allow_soft_placement=True))
     if FLAGS.retrain == False:
         sess.run(init)
         print("Model init finished, begin loading data. \n")
@@ -150,6 +152,10 @@ def generate_train_valid_datasets(initial_offset = 10):
 def run(args):
     global FLAGS
     FLAGS = args
+    if FLAGS.train_cache is None:
+        FLAGS.train_cache = FLAGS.data_dir + '/train_cache.hdf5'
+    if (FLAGS.valid_cache is None) and (FLAGS.validation is not None):
+        FLAGS.valid_cache = FLAGS.data_dir + '/valid_cache.hdf5'
     FLAGS.data_dir = FLAGS.data_dir + os.path.sep
     FLAGS.log_dir = FLAGS.log_dir + os.path.sep
     train()
@@ -174,7 +180,7 @@ if __name__ == "__main__":
                         help='the length of sequence')
     parser.add_argument('-b', '--batch_size', type=int, default=300,
                         help='Batch size')
-    parser.add_argument('-t', '--step_rate', type=float, default=1e-2,
+    parser.add_argument('-t', '--step_rate', type=float, default=4e-3,
                         help='Step rate')
     parser.add_argument('-x', '--max_steps', type=int, default=10000,
                         help='Maximum step')
@@ -187,6 +193,10 @@ if __name__ == "__main__":
                         type = int,
                         default = 0, 
                         help='Resample the reads data every n epoches, with an increasing initial offset.')
+    parser.add_argument('--threads',
+                        type = int,
+                        default = 0, 
+                        help='The threads that available, if 0 use all threads that can be found.')
     parser.add_argument('--offset_increment',
                         type = int,
                         default = 3,
@@ -197,8 +207,4 @@ if __name__ == "__main__":
                         help="Read from cached hdf5 file.")
     parser.set_defaults(retrain=False)
     args = parser.parse_args(sys.argv[1:])
-    if args.train_cache is None:
-        args.train_cache = args.data_dir + '/train_cache.hdf5'
-    if (args.valid_cache is None) and (args.validation is not None):
-        args.valid_cache = args.data_dir + '/valid_cache.hdf5'
     run(args)
