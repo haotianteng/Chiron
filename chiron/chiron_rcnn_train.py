@@ -57,7 +57,12 @@ def train():
                           FLAGS.max_steps, 
                           global_step=global_step,
                           opt_name = config['opt_method'])
-    step = opt.minimize(ctc_loss,global_step = global_step)
+    if FLAGS.gradient_clip is None:
+        step = opt.minimize(ctc_loss,global_step = global_step)
+    else:
+        gradients, variables = zip(*opt.compute_gradients(ctc_loss))
+        gradients = [None if gradient is None else tf.clip_by_norm(gradient, FLAGS.gradient_clip) for gradient in gradients]
+        step = opt.apply_gradients(zip(gradients, variables),global_step = global_step)
     error = model.prediction(logits, seq_length, y)
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
@@ -201,6 +206,10 @@ if __name__ == "__main__":
                         type = int,
                         default = 3,
                         help='The increament of initial offset if the resample_after_epoch has been set.')
+    parser.add_argument('--gradient_clip',
+                        type = float,
+                        default = None,
+                        help = 'Clip the gradient by the gradient_clip x normalization, a good estimate is 5.')
     parser.add_argument('--retrain', dest='retrain', action='store_true',
                         help='Set retrain to true')
     parser.add_argument('--read_cache',dest='read_cache',action='store_true',
