@@ -391,52 +391,52 @@ def gate_conv_kernal(net,training,hp):
                          name='conv1',
                          BN=True,
                          strides = arch['strides'][idx])
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv1'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv2'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv3'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv4'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv5'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv6'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1        
     with tf.variable_scope('gated_conv7'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('gated_conv8'):
         net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
         idx+=1
     with tf.variable_scope('fc_1'):
         net = conv_layer(net,ksize=[1,arch['kw'][idx], arch['hu'][idx-1], arch['hu'][idx]],padding='SAME',training = training,name = 'fc1')
-        net = tf.nn.elu(net)
+        net = tf.nn.sigmoid(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
     return net
 
