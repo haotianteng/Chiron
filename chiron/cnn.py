@@ -12,7 +12,7 @@ import numpy as np
 import tensorflow as tf
 from chiron.utils.variable import _variable_on_cpu
 from chiron.utils.variable import _variable_with_weight_decay
-
+model_dict = {}
 def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, bias_term=False, active=True,
                BN=True, active_function='relu',wd = None):
     """A convolutional layer
@@ -335,6 +335,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
     signal_shape = signal.get_shape().as_list()
     batch_n = tf.shape(signal)[0]
     net = tf.reshape(signal, [batch_n, 1, signal_shape[1], 1])
+    global model_dict
     model_dict = {'dna_model1': DNA_model1, 
                   'rna_model1': RNA_model1,
                   'rna_model2': RNA_model2,
@@ -344,6 +345,7 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
                   'variant_wavnet': Variant_wavnet,
                   'incp_v2': incp_v2,
                   'custom': custom,
+                  'gate_conv_net':gate_conv_net,
                   'gate_conv_net_low':gate_conv_net_low,
                   'gate_conv_net_high':gate_conv_net_high}
     net = model_dict[cnn_config](net,training)
@@ -370,19 +372,16 @@ def DNA_model1(net,training):
     with tf.variable_scope('res_layer3'):
         net = residual_layer(net, out_channel=256, training=training)
     return net
-
-def gate_conv_net_low(net,training):
+def gate_conv_kernal(net,training,hp):
     """
+    Kernal function of the gated convolution net
     https://arxiv.org/pdf/1609.03193.pdf
     https://arxiv.org/abs/1712.09444
     https://arxiv.org/pdf/1612.08083.pdf
     """
     fea_shape = net.get_shape().as_list()
     in_channel = fea_shape[-1]
-    arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
-            'kw':[17,7,7,7,7,7,7,7,41,1],
-            'dropout':[0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.6,0.6],
-            'strides':[9,1,1,1,1,1,1,1,1,1]}
+    arch =  hp
     with tf.variable_scope('conv_1'):
         idx = 0
         net = conv_layer(net,
@@ -440,71 +439,28 @@ def gate_conv_net_low(net,training):
         net = tf.nn.elu(net)
         net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
     return net
-        
+
+def gate_conv_net(net,training):
+    arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
+            'kw':[17,7,7,7,7,7,7,7,41,1],
+            'dropout':[0] * 10,
+            'strides':[9,1,1,1,1,1,1,1,1,1]}
+    net = gate_conv_kernal(net,training,hp = arch)
+    return net
+def gate_conv_net_low(net,training):
+    arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
+            'kw':[17,7,7,7,7,7,7,7,41,1],
+            'dropout':[0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.6,0.6],
+            'strides':[9,1,1,1,1,1,1,1,1,1]}
+    net = gate_conv_kernal(net,training,hp = arch)
+    return net
 
 def gate_conv_net_high(net,training):
-    fea_shape = net.get_shape().as_list()
-    in_channel = fea_shape[-1]
     arch = {'hu':[200]+ list(range(200,1601,200))+[1600],
             'kw':[17]+list(range(7,36,4))+[1],
             'dropout':[0.25]+ list(np.asarray(range(8))*0.05 + 0.25) +[0.6],
             'strides':[9]+ [1]* 9}
-    with tf.variable_scope('conv_1'):
-        idx = 0
-        net = conv_layer(net,
-                         ksize=[1, arch['kw'][idx], in_channel, arch['hu'][idx]],
-                         padding='SAME',
-                         training=training,
-                         name='conv1',
-                         BN=True,
-                         strides = arch['strides'][idx])
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv1'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv2'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv3'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv4'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv5'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv6'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1        
-    with tf.variable_scope('gated_conv7'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('gated_conv8'):
-        net = gated_conv_layer(net,kernal_width = arch['kw'][idx], out_channel = arch['hu'][idx], training = training)
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
-        idx+=1
-    with tf.variable_scope('fc_1'):
-        net = conv_layer(net,ksize=[1,arch['kw'][idx], arch['hu'][idx-1], arch['hu'][idx]],padding='SAME',training = training,name = 'fc1')
-        net = tf.nn.elu(net)
-        net = tf.nn.dropout(net,keep_prob = 1 - arch['dropout'][idx])
+    net = gate_conv_kernal(net,training,hp = arch)
     return net
 
 def rna_test(net,training):
