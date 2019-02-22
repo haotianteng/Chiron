@@ -441,10 +441,10 @@ def gate_conv_kernal(net,training,hp):
     return net
 
 def gate_conv_net(net,training):
-    arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
-            'kw':[17,7,7,7,7,7,7,7,41,1],
-            'dropout':[0] * 10,
-            'strides':[9,1,1,1,1,1,1,1,1,1]}
+    arch = {'hu':[200]+ list(range(200,1601,200))+[1600],
+            'kw':[17]+list(range(7,36,4))+[1],
+            'dropout':[0]*10,
+            'strides':[9]+ [1]* 9}
     net = gate_conv_kernal(net,training,hp = arch)
     return net
 def gate_conv_net_low(net,training):

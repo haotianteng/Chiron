@@ -64,7 +64,7 @@ def loss(logits, seq_len, label, fl_gamma = 0):
             loss = tf.math.pow(1-tf.math.exp(-loss),fl_gamma)*loss
         else:
             loss = tf.pow(1-tf.exp(-loss),fl_gamma)*loss
-    tf.summary.histogram('loss_histogram', loss)
+#    tf.summary.histogram('loss_histogram', loss)
     loss = tf.reduce_mean(loss)
     tf.add_to_collection('losses',loss)
     """Note here ctc_loss will perform softmax, so no need to softmax the logits."""
