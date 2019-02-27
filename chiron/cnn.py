@@ -372,6 +372,18 @@ def DNA_model1(net,training):
     with tf.variable_scope('res_layer3'):
         net = residual_layer(net, out_channel=256, training=training)
     return net
+
+def RNA_model1(net,training):
+    with tf.variable_scope('avg_pool1'):
+        net = tf.nn.avg_pool(net, ksize = [1,3,1,1], stides = [1,1,2,1])
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net, out_channel=256,
+                              training=training, i_bn=True,strides = 2)
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net, out_channel=256, training=training)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net, out_channel=256, training=training)
+    return net
 def gate_conv_kernal(net,training,hp):
     """
     Kernal function of the gated convolution net
@@ -448,10 +460,10 @@ def gate_conv_net(net,training):
     net = gate_conv_kernal(net,training,hp = arch)
     return net
 def gate_conv_net_low(net,training):
-    arch = {'hu':[256,256,256,256,256,256,256,256,1500,1500],
-            'kw':[17,7,7,7,7,7,7,7,41,1],
-            'dropout':[0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.6,0.6],
-            'strides':[9,1,1,1,1,1,1,1,1,1]}
+    arch = {'hu':[256,256,256,256,256,256,256,256,512,512],
+            'kw':[9,3,3,3,3,3,3,3,21,1],
+            'dropout':[0.25]+ list(np.asarray(range(8))*0.05 + 0.25) +[0.6],
+            'strides':[3,1,1,1,1,1,1,1,1,1]}
     net = gate_conv_kernal(net,training,hp = arch)
     return net
 
@@ -474,27 +486,6 @@ def rna_test(net,training):
         net = residual_layer(net, out_channel=256, training=training)
     with tf.variable_scope('res_layer5'):
         net = residual_layer(net, out_channel=256, training=training)
-    return net
-
-
-def RNA_model1(net,training):
-    #   RNA model(test1)
-    fea_shape = net.get_shape().as_list()
-    in_channel = fea_shape[-1]
-    with tf.variable_scope('conv_layer'):
-        net = conv_layer(net,
-                         ksize=[1, 7, in_channel, 256],
-                         padding='SAME',
-                         training=training,
-                         name='conv1',
-                         BN=True,
-                         strides = 3)
-    with tf.variable_scope('res_layer2'):
-        net = residual_layer_identity_mapping(net,out_channel = 256, training = training,k=3)
-    with tf.variable_scope('res_layer3'):
-        net = residual_layer_identity_mapping(net,out_channel = 256, training = training, strides = 2,k=3)
-    with tf.variable_scope('res_layer4'):
-        net = residual_layer_identity_mapping(net,out_channel = 256, training = training,k=3)
     return net
 
 def RNA_model2(net, training):
