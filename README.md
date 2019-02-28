@@ -104,7 +104,7 @@ python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m <model
 
 We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) in the GitHub repository and two models (DNA_default and RNA_default) which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
 ```
-python chiron/entry.py call -i chiron/example_folder/ -o <output_folder> -m chiron/model/DNA_default
+python chiron/entry.py call -i chiron/example_data/ -o <output_folder> -m chiron/model/DNA_default
 ```
 
 ### Decoder choice
