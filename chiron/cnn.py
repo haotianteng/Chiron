@@ -375,7 +375,7 @@ def DNA_model1(net,training):
 
 def RNA_model1(net,training):
     with tf.variable_scope('avg_pool1'):
-        net = tf.nn.avg_pool(net, ksize = [1,3,1,1], stides = [1,1,2,1])
+        net = tf.nn.avg_pool(net, ksize = [1,3,1,1], strides = [1,1,2,1])
     with tf.variable_scope('res_layer1'):
         net = residual_layer(net, out_channel=256,
                               training=training, i_bn=True,strides = 2)
@@ -488,37 +488,25 @@ def rna_test(net,training):
         net = residual_layer(net, out_channel=256, training=training)
     return net
 
-def RNA_model2(net, training):
-    fea_shape = net.get_shape().as_list()
-    in_channel = fea_shape[-1]
-    with tf.variable_scope('conv_layer'):
-        net = conv_layer(net, 
-                         ksize=[1, 9, in_channel, 256], 
-                         padding='SAME', 
-                         training=training,
-                         name='conv1', 
-                         BN=True,
-                         strides = 5)
-    return net
-
-
-def RNA_model3(net, training):
-    fea_shape = net.get_shape().as_list()
-    in_channel = fea_shape[-1]
-    with tf.variable_scope('conv_layer'):
-        net = conv_layer(net, 
-                         ksize=[1, 14, in_channel, 256], 
-                         padding='SAME', 
-                         training=training,
-                         name='conv1', 
-                         BN=True,
-                         strides = 7)
+def RNA_model_grid(net, training, structure_hp):
+    """
+    A grid search function based on RNA model1.
+    Args:
+        net: A Tensor, the input network.
+        training: If training.
+        structure_hp: A string contain the structure information:
+            hu: A list contain the number of hidden unit.
+            st
+    """
+    with tf.variable_scope('avg_pool1'):
+        net = tf.nn.avg_pool(net, ksize = [1,3,1,1], strides = [1,1,3,1])
     with tf.variable_scope('res_layer1'):
-        net = residual_layer(net,out_channel=256,training = training,i_bn = True)
+        net = residual_layer(net, out_channel=256,
+                              training=training, i_bn=True,strides = 2)
     with tf.variable_scope('res_layer2'):
-        net = residual_layer(net,out_channel = 256, training = training)
+        net = residual_layer(net, out_channel=256, training=training)
     with tf.variable_scope('res_layer3'):
-        net = residual_layer(net,out_channel = 256, training = training)
+        net = residual_layer(net, out_channel=256, training=training)
     return net
 
 def Variant_wavnet(net,training,res_layer = 1, dilate_layer = 7,dilate_repeat = 1):
