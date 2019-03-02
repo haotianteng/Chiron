@@ -12,7 +12,6 @@ import numpy as np
 import tensorflow as tf
 from chiron.utils.variable import _variable_on_cpu
 from chiron.utils.variable import _variable_with_weight_decay
-model_dict = {}
 def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, bias_term=False, active=True,
                BN=True, active_function='relu',wd = None):
     """A convolutional layer
@@ -320,13 +319,13 @@ def wavenet_layer(indata, out_channel, training, dilate, gated_activation=True, 
     return relu_out
 
 
-def getcnnfeature(signal, training, cnn_config='dna_model1'):
+def getcnnfeature(signal, training, cnn_config):
     """Compute the CNN feature given the signal input.  
 
     Args:
         signal (Float): A 2D-Tensor of shape [batch_size,max_time]
         training (Boolean): A 0-D Boolean Tensor indicate if it's in training.      
-        cnn_config(string): A string indicate the configuration of CNN.
+        cnn_config(Dictionary): A dictionary indicate the configuration of CNN.
     Returns:
         cnn_fea: A 3D-Tensor of shape [batch_size, max_time, channel]
     """
@@ -335,11 +334,11 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
     signal_shape = signal.get_shape().as_list()
     batch_n = tf.shape(signal)[0]
     net = tf.reshape(signal, [batch_n, 1, signal_shape[1], 1])
-    global model_dict
+    net_name = cnn_config['model']
     model_dict = {'dna_model1': DNA_model1, 
                   'rna_model1': RNA_model1,
-                  'rna_model2': RNA_model2,
-                  'rna_model3': RNA_model3,
+                  'rna_model2' : RNA_model2,
+                  'rna_model3' : RNA_model3,
                   'rna_test':rna_test,
                   'res_x': Res_x, 
                   'variant_wavnet': Variant_wavnet,
@@ -347,8 +346,12 @@ def getcnnfeature(signal, training, cnn_config='dna_model1'):
                   'custom': custom,
                   'gate_conv_net':gate_conv_net,
                   'gate_conv_net_low':gate_conv_net_low,
-                  'gate_conv_net_high':gate_conv_net_high}
-    net = model_dict[cnn_config](net,training)
+                  'gate_conv_net_high':gate_conv_net_high,
+                  'dynamic_net':dynamic_net}
+    if net_name == 'dynamic_net':
+        net = model_dict[net_name](net,training,cnn_config)
+    else:
+        net = model_dict[net_name](net,training)
     feashape = net.get_shape().as_list()
     print("CNN output has the segment length %d, and %d channels"%(feashape[2],feashape[3]))
     net = tf.reshape(net, [batch_n, feashape[2],
@@ -384,6 +387,78 @@ def RNA_model1(net,training):
     with tf.variable_scope('res_layer3'):
         net = residual_layer(net, out_channel=256, training=training)
     return net
+
+def dynamic_net(net, training, hp):
+    """
+    A function dynamically create a network based on the configuration.
+    Args:
+        net: A Tensor, the input network.
+        training: If training.
+        structure_hp: A string contain the structure information:
+            tp: A list contain the type of each layers, must have same length of hu.
+                  type can be one of the following: 
+                      res: residual layer:
+                      conv: convolutional layer
+                      p_avg: average pooling layer
+                      p_max: max pooling layer
+            hu: A list contain the numbers of hidden unit for each layer.
+            kw: A list contain the width of the kernals, must have same lenth of hu.
+            st: A list contain the strides of the kernals, must have same length of hu.
+            pd: A list contain the padding type. "VALID" or "SAME"
+                      
+    """
+    hidden_num = hp['hu']
+    kernals = hp['kw']
+    strides = hp['st']
+    layer_type = hp['tp']
+    paddings = hp['pd']
+    assert(len(hidden_num)==len(kernals)==len(strides)==len(layer_type)==len(paddings))
+    for i,layer in enumerate(layer_type):
+        with tf.variable_scope(layer+'_layer'+str(i)):
+            if layer_type=='res':
+                net = residual_layer(net,
+                                     out_channel=hidden_num[i],
+                                     training = training,
+                                     k=kernals[i],
+                                     strides = strides[i])
+            elif layer_type=='conv':
+                net = conv_layer(net,
+                                 ksize = [1,kernals[i],1,hidden_num[i]],
+                                 padding = paddings[i],
+                                 training = training,
+                                 name = 'conv')
+            elif layer_type=='p_avg':
+                net = tf.nn.avg_pool(net,
+                                     ksize = [1,1,kernals[i],1],
+                                     strides = [1,1,strides[i],1],
+                                     padding = paddings[i])
+            elif layer_type=='p_max':
+                net = tf.nn.max_pool(net,
+                                     ksize = [1,1,kernals[i],1],
+                                     strides = [1,1,strides[i],1],
+                                     padding = paddings[i])
+    return net
+
+def RNA_model2(net,training):
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net, out_channel=256,
+                              training=training, i_bn=True,strides = 2)
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net, out_channel=256, training=training,strides = 2)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net, out_channel=256, training=training,strides = 2)
+    return net
+
+def RNA_model3(net,training):
+    with tf.variable_scope('res_layer1'):
+        net = residual_layer(net, out_channel=256,
+                              training=training, k=13,i_bn=True,strides = 5)
+    with tf.variable_scope('res_layer2'):
+        net = residual_layer(net, out_channel=256, training=training)
+    with tf.variable_scope('res_layer3'):
+        net = residual_layer(net, out_channel=256, training=training)
+    return net
+
 def gate_conv_kernal(net,training,hp):
     """
     Kernal function of the gated convolution net
@@ -488,27 +563,8 @@ def rna_test(net,training):
         net = residual_layer(net, out_channel=256, training=training)
     return net
 
-def RNA_model_grid(net, training, structure_hp):
-    """
-    A grid search function based on RNA model1.
-    Args:
-        net: A Tensor, the input network.
-        training: If training.
-        structure_hp: A string contain the structure information:
-            hu: A list contain the number of hidden unit.
-            st
-    """
-    with tf.variable_scope('avg_pool1'):
-        net = tf.nn.avg_pool(net, ksize = [1,3,1,1], strides = [1,1,3,1])
-    with tf.variable_scope('res_layer1'):
-        net = residual_layer(net, out_channel=256,
-                              training=training, i_bn=True,strides = 2)
-    with tf.variable_scope('res_layer2'):
-        net = residual_layer(net, out_channel=256, training=training)
-    with tf.variable_scope('res_layer3'):
-        net = residual_layer(net, out_channel=256, training=training)
-    return net
 
+            
 def Variant_wavnet(net,training,res_layer = 1, dilate_layer = 7,dilate_repeat = 1):
     #   Dilate connection(Variant Wavenet) (res3_dilate7)
     with tf.variable_scope('res_layer1'):
