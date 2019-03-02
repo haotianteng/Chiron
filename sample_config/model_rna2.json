@@ -1,0 +1,12 @@
+{
+	"cnn":{
+		"model":"rna_model2"
+		},
+	"rnn":{
+		"layer_num":3,
+		"cell_type":"LSTM",
+		"hidden_num":100
+		},
+	"opt_method":"Adam",
+	"fl_gamma":0
+}

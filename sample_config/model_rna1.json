@@ -1,0 +1,12 @@
+{
+	"cnn":{
+		"model":"dna_model1"
+		},
+	"rnn":{
+		"layer_num":4,
+		"cell_type":"LSTM",
+		"hidden_num":100
+		},
+	"opt_method":"Momentum",
+	"fl_gamma":2
+}
