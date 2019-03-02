@@ -20,25 +20,50 @@ import chiron.chiron_model as model
 from chiron.chiron_input import read_tfrecord
 from chiron.chiron_input import read_cache_dataset
 from six.moves import range
-
 DEFAULT_OFFSET = 10
+
+from chiron.chiron_eval import sparse2dense
+from matplotlib import pyplot as plt
 
 def save_hyper_parameter():
     """
     TODO: Function to save the hyper parameter.
     """
-
-def train():
-    training = tf.placeholder(tf.bool)
-    global_step = tf.get_variable('global_step', trainable=False, shape=(),
+def compile_train_graph(config,hp):
+    class net:
+        pass
+    net.training = tf.placeholder(tf.bool)
+    net.global_step = tf.get_variable('global_step', trainable=False, shape=(),
                                   dtype=tf.int32,
                                   initializer=tf.zeros_initializer())
-    x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.sequence_len])
-    seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
-    y_indexs = tf.placeholder(tf.int64)
-    y_values = tf.placeholder(tf.int32)
-    y_shape = tf.placeholder(tf.int64)
-    y = tf.SparseTensor(y_indexs, y_values, y_shape)
+    net.x = tf.placeholder(tf.float32, shape=[hp.batch_size, hp.sequence_len])
+    net.seq_length = tf.placeholder(tf.int32, shape=[hp.batch_size])
+    net.y_indexs = tf.placeholder(tf.int64)
+    net.y_values = tf.placeholder(tf.int32)
+    net.y_shape = tf.placeholder(tf.int64)
+    net.y = tf.SparseTensor(net.y_indexs, net.y_values, net.y_shape)
+    net.logits, net.ratio = model.inference(net.x, net.seq_length, net.training,hp.sequence_len,configure = config)
+    if 'fl_gamma' in config.keys():
+        net.ctc_loss = model.loss(net.logits, net.seq_length, net.y, fl_gamma = config['fl_gamma'])
+    else:
+        net.ctc_loss = model.loss(net.logits, net.seq_length, net.y)
+    net.opt = model.train_opt(hp.step_rate,
+                          hp.max_steps, 
+                          global_step=net.global_step,
+                          opt_name = config['opt_method'])
+    if hp.gradient_clip is None:
+        net.step = net.opt.minimize(net.ctc_loss,global_step = net.global_step)
+    else:
+        net.gradients, net.variables = zip(*net.opt.compute_gradients(net.ctc_loss))
+        net.gradients = [None if gradient is None else tf.clip_by_norm(gradient, hp.gradient_clip) for gradient in net.gradients]
+        net.step = net.opt.apply_gradients(zip(net.gradients, net.variables),global_step = net.global_step)
+    net.error,net.errors,net.y_ = model.prediction(net.logits, net.seq_length, net.y)
+    net.init = tf.global_variables_initializer()
+    net.saver = tf.train.Saver()
+    net.summary = tf.summary.merge_all()
+    return net
+
+def train():
     default_config = os.path.join(FLAGS.log_dir,FLAGS.model_name,'model.json')
     if FLAGS.retrain:
         if os.path.isfile(default_config):
@@ -48,37 +73,19 @@ def train():
     else:
         config_file = FLAGS.configure   
     config = model.read_config(config_file)
-    logits, ratio = model.inference(x, seq_length, training,FLAGS.sequence_len,configure = config)
-    if 'fl_gamma' in config.keys():
-        ctc_loss = model.loss(logits, seq_length, y, fl_gamma = config['fl_gamma'])
-    else:
-        ctc_loss = model.loss(logits, seq_length, y)
-    opt = model.train_opt(FLAGS.step_rate,
-                          FLAGS.max_steps, 
-                          global_step=global_step,
-                          opt_name = config['opt_method'])
-    if FLAGS.gradient_clip is None:
-        step = opt.minimize(ctc_loss,global_step = global_step)
-    else:
-        gradients, variables = zip(*opt.compute_gradients(ctc_loss))
-        gradients = [None if gradient is None else tf.clip_by_norm(gradient, FLAGS.gradient_clip) for gradient in gradients]
-        step = opt.apply_gradients(zip(gradients, variables),global_step = global_step)
-    error = model.prediction(logits, seq_length, y)
-    init = tf.global_variables_initializer()
-    saver = tf.train.Saver()
-    summary = tf.summary.merge_all()
     print("Begin training using following setting:")
     for pro in dir(FLAGS):
         if not pro.startswith('_'):
             print("%s:%s"%(pro,getattr(FLAGS,pro)))
+    net = compile_train_graph(config,FLAGS)
     sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=FLAGS.threads,
                                             intra_op_parallelism_threads=FLAGS.threads,
                                             allow_soft_placement=True))
     if FLAGS.retrain == False:
-        sess.run(init)
+        sess.run(net.init)
         print("Model init finished, begin loading data. \n")
     else:
-        saver.restore(sess, tf.train.latest_checkpoint(
+        net.saver.restore(sess, tf.train.latest_checkpoint(
             FLAGS.log_dir + FLAGS.model_name))
         print("Model loaded finished, begin loading data. \n")
     summary_writer = tf.summary.FileWriter(
@@ -94,33 +101,36 @@ def train():
             train_ds,valid_ds = generate_train_valid_datasets(initial_offset = resample_n*FLAGS.offset_increment + DEFAULT_OFFSET)
         batch_x, seq_len, batch_y = train_ds.next_batch(FLAGS.batch_size)
         indxs, values, shape = batch_y
-        feed_dict = {x: batch_x, seq_length: seq_len / ratio, y_indexs: indxs,
-                     y_values: values, y_shape: shape,
-                     training: True}
-        loss_val, _ = sess.run([ctc_loss, step], feed_dict=feed_dict)
+        feed_dict = {net.x: batch_x, net.seq_length: seq_len / net.ratio, net.y_indexs: indxs,
+                     net.y_values: values, net.y_shape: shape,
+                     net.training: True}
+        loss_val, _ = sess.run([net.ctc_loss, net.step], feed_dict=feed_dict)
         if i % 10 == 0:
-            global_step_val = tf.train.global_step(sess, global_step)
+            global_step_val = tf.train.global_step(sess, net.global_step)
             valid_x, valid_len, valid_y = valid_ds.next_batch(FLAGS.batch_size)
             indxs, values, shape = valid_y
-            feed_dict = {x: valid_x, seq_length: valid_len / ratio,
-                         y_indexs: indxs, y_values: values, y_shape: shape,
-                         training: True}
-            error_val = sess.run(error, feed_dict=feed_dict)
+            feed_dict = {net.x: valid_x, net.seq_length: valid_len / net.ratio,
+                         net.y_indexs: indxs, net.y_values: values, net.y_shape: shape,
+                         net.training: True}
+            error_val = sess.run(net.error, feed_dict=feed_dict)
+#            x_val,errors_val,y_predict,y = sess.run([x,errors,y_,y],feed_dict = feed_dict)
+#            predict_seq,_ = sparse2dense([y_predict,0])
+#            true_seq,_ = sparse2dense([[y],0])
             end = time.time()
             print(
             "Step %d/%d Epoch %d, batch number %d, train_loss: %5.3f validate_edit_distance: %5.3f Elapsed Time/step: %5.3f" \
             % (i, FLAGS.max_steps, train_ds.epochs_completed,
                train_ds.index_in_epoch, loss_val, error_val,
                (end - start) / (i + 1)))
-            saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt',
+            net.saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/model.ckpt',
                        global_step=global_step_val)
-            summary_str = sess.run(summary, feed_dict=feed_dict)
+            summary_str = sess.run(net.summary, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step_val)
             summary_writer.flush()
-    global_step_val = tf.train.global_step(sess, global_step)
+    global_step_val = tf.train.global_step(sess, net.global_step)
     print("Model %s saved." % (FLAGS.log_dir + FLAGS.model_name))
     print("Reads number %d" % (train_ds.reads_n))
-    saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt',
+    net.saver.save(sess, FLAGS.log_dir + FLAGS.model_name + '/final.ckpt',
                global_step=global_step_val)
     
 def generate_train_valid_datasets(initial_offset = 10):
