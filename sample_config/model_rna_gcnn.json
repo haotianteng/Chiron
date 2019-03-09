@@ -1,0 +1,12 @@
+{
+	"cnn":{
+		"model":"gate_conv_net"
+		},
+	"rnn":{
+		"layer_num":0,
+		"cell_type":"LSTM",
+		"hidden_num":100
+		},
+	"opt_method":"Adam",
+	"fl_gamma":0
+}
