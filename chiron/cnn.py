@@ -102,7 +102,7 @@ def gated_conv_layer(indata, kernal_width, out_channel, training, residual_form 
                           name = 'gate', 
                           dilate = dilation,
                           bias_term = True, 
-                          active = False,
+                          active = 'sigmoid',
                           )
     
     conv_out = conv_layer(indata = indata,
@@ -529,10 +529,10 @@ def gate_conv_net(net,training):
     net = gate_conv_kernal(net,training,hp = arch)
     return net
 def gate_conv_net_low(net,training):
-    arch = {'hu':[256,256,256,256,256,256,256,256,512,512],
-            'kw':[9,3,3,3,3,3,3,3,21,1],
-            'dropout':[0.25]+ list(np.asarray(range(8))*0.05 + 0.25) +[0.6],
-            'strides':[3,1,1,1,1,1,1,1,1,1]}
+    arch = {'hu':[256]*5,
+            'kw':[13]+[3,3,3,3],
+            'dropout':[0]*5,
+            'strides':[5]+ [1,3,6,9]}
     net = gate_conv_kernal(net,training,hp = arch)
     return net
 
