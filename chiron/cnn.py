@@ -85,6 +85,9 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
 def gated_conv_layer(indata, kernal_width, out_channel, training, residual_form = True,dilation = 1):
     """
     Gated Convolutional layer(residual form)
+    https://arxiv.org/pdf/1606.05328.pdf
+    Linear form of the gated convolutional suffer a severe weight explode problem
+    without the weight normalization.
     Args:
         indata: input data.
         kernal_width: width of the kernal.
@@ -143,14 +146,13 @@ def batchnorm(inp, scope, training, decay=0.99, epsilon=1e-5):
             'pop_mean', shape=[size], initializer=tf.zeros_initializer(), trainable=False)
         pop_var = tf.get_variable(
             'pop_var', shape=[size], initializer=tf.ones_initializer(), trainable=False)
-        batch_mean, batch_var = tf.nn.moments(inp, [0, 1, 2])
-
-        train_mean_op = tf.assign(
-            pop_mean, pop_mean * decay + batch_mean * (1 - decay))
-        train_var_op = tf.assign(
-            pop_var, pop_var * decay + batch_var * (1 - decay))
 
         def batch_statistics():
+            batch_mean, batch_var = tf.nn.moments(inp, [0, 1, 2])
+            train_mean_op = tf.assign(
+                    pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+            train_var_op = tf.assign(
+                    pop_var, pop_var * decay + batch_var * (1 - decay))
             with tf.control_dependencies([train_mean_op, train_var_op]):
                 return tf.nn.batch_normalization(inp, batch_mean, batch_var, offset, scale, epsilon)
 
