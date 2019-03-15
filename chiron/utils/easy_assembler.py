@@ -18,7 +18,7 @@ from itertools import zip_longest
 import numpy as np
 import six
 from six.moves import range
-
+from Bio import pairwise2
 
 def mapping(full_path, blank_pos=4):
     """Perform a many to one mapping in the CTC paper, merge the repeat and remove the blank
@@ -246,13 +246,37 @@ def simple_assembly_kernal(bpread, prev_bpread,error_rate, jump_step_ratio):
     disp = max(log_px.keys(),key = lambda x: log_px[x])
     return disp,log_px[disp]
 
-def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2):
+def global_alignment_kernal(bpread, prev_bpread):
+    gap_open = -5
+    gap_extend = -2
+    mismatch = -3
+    match = 1
+    min_block_size = 3
+    global_alignment = pairwise2.align.globalms(prev_bpread,bpread,match,mismatch,gap_open,gap_extend)
+    if len(global_alignment) == 0:
+        print(bpread)
+        print(prev_bpread)
+        raise ValueError("Alignment not found")
+    blocks = match_blocks(global_alignment[0])
+#    if criteria == 'first':
+#        for block in blocks:
+#            if block[0] >= min_block_size:
+#                disp = block[1] - block[2]
+#                break
+#    elif criteria == "max":
+    block = max(blocks, key = lambda x: x[0])
+    disp = block[1] - block[2]
+    if disp is None:
+        disp = blocks[0][1] - blocks[0][2]
+    return disp
+def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2,kernal = 'global'):
     """
     Assemble the read from the chunks. Log probability is 
     Args:
         bpreads: Input chunks.
         jump_step_ratio: Jump step divided by segment length.
         error_rate: An estimating basecalling error rate.
+        kernal: 'global': global alignment kernal, 'simple':simple assembly
     """
     concensus = np.zeros([4, 1000])
     pos = 0
@@ -263,7 +287,10 @@ def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2):
             add_count(concensus, 0, bpread)
             continue
         prev_bpread = bpreads[indx - 1]
-        disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
+        if kernal == 'simple':
+            disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
+        elif kernal == 'global':
+            disp = global_alignment_kernal(bpread,prev_bpread)
         if disp + pos + len(bpreads[indx]) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)
@@ -273,6 +300,49 @@ def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2):
         length = max(length, pos + len(bpreads[indx]))
     return concensus[:, :length]
 
+def match_blocks(alignment):
+    tmp_start = -1 
+    blocks = []
+    pos_0 = 0
+    pos_1 = 0
+    for idx,base in enumerate(alignment[0]):
+        if (alignment[0][idx] == '-') or (alignment[1][idx] == '-'):
+            if tmp_start >= 0:
+                blocks.append([idx - tmp_start,pos_0,pos_1])
+                tmp_start = -1
+        else:
+            if tmp_start == -1:
+                tmp_start = idx
+        if alignment[0][idx] != '-':
+            pos_0 += 1
+        if alignment[1][idx] != '-':
+            pos_1 += 1
+    if tmp_start >=0:
+        blocks.append([idx - tmp_start,pos_0,pos_1])
+    return blocks
+
+def global_alignment_assembly(bpreads,criteria = 'max'):
+    concensus = np.zeros([4, 1000])
+    pos = 0
+    length = 0
+    census_len = 1000
+    for idx, bpread in enumerate(bpreads):
+        disp = None
+        if idx == 0:
+            add_count(concensus, 0, bpread)
+            continue
+        prev_bpread = bpreads[idx - 1]
+        disp = global_alignment_kernal(bpread,prev_bpread)
+        if disp + pos + len(bpread) > census_len:
+            concensus = np.lib.pad(concensus, 
+                                   ((0, 0), (0, 1000)),
+                                   mode='constant', 
+                                   constant_values=0)
+            census_len += 1000
+        add_count(concensus, pos + disp, bpreads[idx])
+        pos += disp
+        length = max(length, pos + len(bpread))    
+    return concensus[:, :length]
 
 def add_count(concensus, start_indx, segment):
     base_dict = {'A': 0, 'C': 1, 'G': 2, 'T': 3, 'a': 0, 'c': 1, 'g': 2, 't': 3}
@@ -286,7 +356,7 @@ def add_count(concensus, start_indx, segment):
 ###############################################################################
 
 #########################Simple assembly method with quality score################################
-def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2):
+def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2,kernal = 'global'):
     """
     Assemble the read from the chunks. Log probability is 
     log_P ~ x*log((N*n1/L)) - log(x!) + Ns * log(P1/0.25) + Nd * log(P2/0.25)
@@ -295,6 +365,7 @@ def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2):
         qs_list: Quality score logits list.
         jump_step_ratio: Jump step divided by segment length.
         error_rate: An estimating basecalling error rate.
+        kernal: 'global': global alignment kernal, 'simple':simple assembly
     """
     concensus = np.zeros([4, 1000])
     concensus_qs = np.zeros([4, 1000])
@@ -307,7 +378,10 @@ def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2):
             add_count_qs(concensus, concensus_qs, 0, bpread, qs_list[indx])
             continue
         prev_bpread = bpreads[indx - 1]
-        disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
+        if kernal == 'simple':
+            disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
+        elif kernal == 'global':
+            disp = global_alignment_kernal(bpread,prev_bpread)
         if disp + pos + len(bpread) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)
