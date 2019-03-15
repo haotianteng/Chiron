@@ -270,6 +270,8 @@ def evaluation():
                         logits_index:i,
                         logits_fname: name,
                     }
+                    #Training: True for a temporary fix of the batch normalization problem: https://github.com/haotianteng/Chiron/commit/8fce3a3b4dac8e9027396bb8c9152b7b5af953ce
+                    #TODO: change the training FLAG back to False after the new model has been trained.
                     sess.run(logits_enqueue,feed_dict=feed_dict)
                     pbars.update(0,progress=i+FLAGS.batch_size)
                     pbars.update_bar()
