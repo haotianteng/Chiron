@@ -14,7 +14,10 @@ import difflib
 import bisect
 from scipy.interpolate import interp1d
 import itertools
+import mappy
 from tqdm import tqdm
+from Bio import pairwise2
+from Bio.pairwise2 import format_alignment
 from multiprocessing import Pool
 OVERMOVE_ERROR = "Encounter a movement bigger than 4!"
 NEGTIVE_ERROR = "Negative movement detected."
@@ -66,7 +69,74 @@ def get_squiggle_pos(bound):
     up_bound = up_f(range(len(bound)))
     bot_bound = bot_f(range(len(bound)))
     return np.asarray(list(zip(bot_bound,up_bound)))
-    
+
+def match_blocks(alignment):
+    tmp_start = -1 
+    blocks = []
+    pos_0 = 0
+    pos_1 = 0
+    for idx,base in enumerate(alignment[0]):
+        if (alignment[0][idx] == '-') or (alignment[1][idx] == '-'):
+            if tmp_start >= 0:
+                blocks.append([idx - tmp_start,pos_0,pos_1])
+                tmp_start = -1
+        else:
+            if tmp_start == -1:
+                tmp_start = idx
+        if alignment[0][idx] != '-':
+            pos_0 += 1
+        if alignment[1][idx] != '-':
+            pos_1 += 1
+    if tmp_start >=0:
+        blocks.append([idx - tmp_start,pos_0,pos_1])
+    return blocks
+
+def global_alignment_assembly_pos(bpreads):
+    concensus = np.zeros([4, 1000])
+    concensus_bound = np.zeros([4,1000,2])
+    concensus_bound[:,:,0] = np.inf
+    pos_collection = [[0,len(bpreads[0])]]
+    pos = 0
+    length = 0
+    census_len = 1000
+    gap_open = -5
+    gap_extend = -2
+    mismatch = -3
+    match = 1
+    min_block_size = 3
+    for idx, bpread in enumerate(bpreads):
+        disp = None
+        if idx == 0:
+            add_bound(concensus,concensus_bound, 0, bpread,idx)
+            continue
+        prev_bpread = bpreads[idx - 1]
+        global_alignment = pairwise2.align.globalms(prev_bpread,bpread,match,mismatch,gap_open,gap_extend)
+        if len(global_alignment) == 0:
+            continue
+        blocks = match_blocks(global_alignment[0])
+        for block in blocks:
+            if block[0] >= min_block_size:
+                disp = block[1] - block[2]
+                break
+        if disp is None:
+            disp = blocks[0][1] - blocks[0][2]
+        if disp + pos + len(bpread) > census_len:
+            concensus = np.lib.pad(concensus, 
+                                   ((0, 0), (0, 1000)),
+                                   mode='constant', 
+                                   constant_values=0)
+            concensus_bound = np.lib.pad(concensus_bound,
+                                         ((0, 0), (0, 1000),(0,0)),
+                                         mode='constant', 
+                                         constant_values=0)
+            concensus_bound[:,census_len:census_len+1000,0] = np.inf
+            census_len += 1000
+        add_bound(concensus,concensus_bound, pos + disp, bpread,idx)
+        pos += disp
+        pos_collection.append([pos,pos+len(bpread)])
+        length = max(length, pos + len(bpread))    
+    return concensus[:, :length],concensus_bound[:, :length,:],pos_collection
+  
 def simple_assembly_pos(bpreads,jump_step_ratio, error_rate = 0.2):
     """
     Assemble the read from the chunks. Log probability is 
@@ -196,7 +266,8 @@ def resquiggle(root_folder,fast5_folder,file_pre):
         raise ValueError("Segments file not found")
     chunks = read_chunks(chunk_path)
     metainfo= read_meta(meta_path)
-    concensus,bound,coors = simple_assembly_pos(chunks,0.1)
+    concensus,bound,coors = global_alignment_assembly_pos(chunks)
+#    concensus,bound,coors = simple_assembly_pos(chunks,0.1)
     c_indexs = np.argmax(concensus,axis = 0)
     bound = bound[c_indexs,np.arange(bound.shape[1]),:]
     bound  = get_squiggle_pos(bound)
@@ -293,42 +364,51 @@ def run(args):
     print(fail_count)       
 ###################
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Transfer fast5 to raw_pair file.')
-    parser.add_argument('-s', '--source', required = True,
-                        help="Directory that store the output subfolders.")
-    parser.add_argument('-t', '--thread', default = 1, type = int,
-                        help="Thread number used.")
-#    parser.add_argument('-d', '--dest', required = True, 
-#                        help="Folder that contain fast5 files to resquiggle")
-#    parser.add_argument('--basecall_group',default = "Chiron_Basecall_1D_000",
-#                        help='The attribute group to resquiggle the training data in.')
-#    parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
-#                        help='Basecall subgroup ')
-#    parser.add_argument('--mode',default = 'dna',
-#                        help='Type of data to resquiggle, default is dna, can be chosen from dna or rna.')
-    args = parser.parse_args(sys.argv[1:])
-    run(args)   
+#if __name__ == "__main__":
+#    parser = argparse.ArgumentParser(
+#        description='Transfer fast5 to raw_pair file.')
+#    parser.add_argument('-s', '--source', required = True,
+#                        help="Directory that store the output subfolders.")
+#    parser.add_argument('-t', '--thread', default = 1, type = int,
+#                        help="Thread number used.")
+##    parser.add_argument('-d', '--dest', required = True, 
+##                        help="Folder that contain fast5 files to resquiggle")
+##    parser.add_argument('--basecall_group',default = "Chiron_Basecall_1D_000",
+##                        help='The attribute group to resquiggle the training data in.')
+##    parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
+##                        help='Basecall subgroup ')
+##    parser.add_argument('--mode',default = 'dna',
+##                        help='Type of data to resquiggle, default is dna, can be chosen from dna or rna.')
+#    args = parser.parse_args(sys.argv[1:])
+#    run(args)   chunks
     
     ### Test Code ###
-    #LIS([1,8,3,4,5,2])
-    #ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNfrom multiprocessing import PoolA_Analysis/RNA_GN131/test/"
-    #FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
-    ##FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
-    #FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_11842_ch_59_strand"
-    #
-    #chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
-    ##from matplotlib import pyplot as plt
-    ##chunk_size = len(chunks)
-    ##for idx,_ in enumerate(bounds):
-    ##    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
-    ##plt.plot(np.arange(len(locs)),locs)
-    ##plt.yticks(np.arange(0,chunk_size,chunk_size/10))
-    #
-    #coors = np.asarray(coors)
-    #con_len = len(concensus[0])
-    #for idx,_ in enumerate(coors):
-    #    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
+LIS([1,8,3,4,5,2])
+ROOT_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+FAST5_FOLDER = "/home/heavens/UQ/Chiron_project/RNA_Analysis/RNA_GN131/test/"
+FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_1002_ch_242_strand"
+FILE_PRE = "imb17_013486_20171113_FAB45360_MN17279_sequencing_run_20171113_RNAseq_GN131_17776_read_11842_ch_59_strand"
+REF_FILE = "/home/heavens/UQ/Chiron_project/RNA_Analysis/Reference/S00000028.fasta"
+
+chunks,bounds,locs,concensus,coors = resquiggle(ROOT_FOLDER, FAST5_FOLDER, FILE_PRE)
+from matplotlib import pyplot as plt
+chunk_size = len(chunks)
+for idx,_ in enumerate(bounds):
+    plt.axvline(x = idx, ymin = bounds[idx,0]/chunk_size, ymax = bounds[idx,1]/chunk_size)
+plt.plot(np.arange(len(locs)),locs)
+plt.yticks(np.arange(0,chunk_size,chunk_size/10))
+gap_open = -5
+gap_extend = -2
+mismatch = -3
+match = 1
+global_alignment = pairwise2.align.globalms(chunks[0],chunks[1],match,mismatch,gap_open,gap_extend)
+print(format_alignment(*global_alignment[0]))
+match_blocks(global_alignment[0])
+    
+print("#################################")
+#coors = np.asarray(coors)
+#con_len = len(concensus[0])
+#for idx,_ in enumerate(coors):
+#    plt.axhline(y = idx, xmin = coors[idx,0]/float(con_len), xmax = coors[idx,1]/float(con_len))
     ###
 
