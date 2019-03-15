@@ -23,6 +23,7 @@ from chiron.cnn import getcnnlogit
 from chiron.rnn import rnn_layers
 from chiron.utils.easy_assembler import simple_assembly
 from chiron.utils.easy_assembler import simple_assembly_qs
+from chiron.utils.easy_assembler import global_alignment_assembly
 from chiron.utils.unix_time import unix_time
 from chiron.utils.progress import multi_pbars
 from six.moves import range
@@ -300,7 +301,6 @@ def evaluation():
             pbars.update_bar()
             reading_time = time.time() - start_time
             reads = list()
-
             N = len(range(0, reads_n, FLAGS.batch_size))
             while True:
                 l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
@@ -333,7 +333,6 @@ def evaluation():
                     qs_list = np.concatenate((qs_list, logits_prob))
                 reads += predict_read
             val.pop(name)  # Release the memory
-
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             js_ratio = FLAGS.jump/FLAGS.segment_len
