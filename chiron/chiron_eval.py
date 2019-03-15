@@ -266,7 +266,7 @@ def evaluation():
                     feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: False,
+                        training: True,
                         logits_index:i,
                         logits_fname: name,
                     }
