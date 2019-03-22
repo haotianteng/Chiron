@@ -269,6 +269,33 @@ def global_alignment_kernal(bpread, prev_bpread):
     if disp is None:
         disp = blocks[0][1] - blocks[0][2]
     return disp
+
+def glue_kernal(bpread,prev_bpread):
+    """
+    This is a alignment for a larger jump step.
+    A good setting would be jumpstep ~ 0.95 * segment_len
+    """
+    prev_n = len(prev_bpread)
+    n = len(bpread)    
+    max_overlap = min(math.floor(0.1 * prev_n),n)
+    max_hit_disp = (0,0)
+    for i in range(1,max_overlap):
+        head=bpread[:i]
+        tail=prev_bpread[-i:]
+        head = np.asarray([x for x in head])
+        tail = np.asarray([x for x in tail])
+        score = 2*sum(head==tail) - i
+        if score > max_hit_disp[1]:
+            max_hit_disp = (i,score)
+    disp = max_hit_disp[0]
+    return disp
+
+def stick_kernal(bpread,prev_bpread):
+    """
+    Stick assembly,so basically it's just patch the reads together.
+    """
+    return(len(prev_bpread))
+
 def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2,kernal = 'global'):
     """
     Assemble the read from the chunks. Log probability is 
@@ -291,6 +318,10 @@ def simple_assembly(bpreads, jump_step_ratio, error_rate = 0.2,kernal = 'global'
             disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
         elif kernal == 'global':
             disp = global_alignment_kernal(bpread,prev_bpread)
+        elif kernal == 'glue':
+            disp = glue_kernal(bpread,prev_bpread)
+        elif kernal == 'stick':
+            disp = stick_kernal(bpread,prev_bpread)
         if disp + pos + len(bpreads[indx]) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)
@@ -365,7 +396,7 @@ def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2,kernal
         qs_list: Quality score logits list.
         jump_step_ratio: Jump step divided by segment length.
         error_rate: An estimating basecalling error rate.
-        kernal: 'global': global alignment kernal, 'simple':simple assembly
+        kernal: 'global': global alignment kernal, 'simple':simple assembly, 'glue':glue assembly, 'stick':stick assembly
     """
     concensus = np.zeros([4, 1000])
     concensus_qs = np.zeros([4, 1000])
@@ -382,6 +413,10 @@ def simple_assembly_qs(bpreads, qs_list, jump_step_ratio,error_rate = 0.2,kernal
             disp,log_p = simple_assembly_kernal(bpread,prev_bpread,error_rate,jump_step_ratio)
         elif kernal == 'global':
             disp = global_alignment_kernal(bpread,prev_bpread)
+        elif kernal == 'glue':
+            disp = glue_kernal(bpread,prev_bpread)
+        elif kernal == 'stick':
+            disp = stick_kernal(bpread,prev_bpread)
         if disp + pos + len(bpread) > census_len:
             concensus = np.lib.pad(concensus, ((0, 0), (0, 1000)),
                                    mode='constant', constant_values=0)

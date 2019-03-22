@@ -102,6 +102,18 @@ def path_prob(logits):
     prob_logits = tf.reduce_mean(logits_diff, axis=-2)
     return prob_logits
 
+def get_assembler_kernal(jump, segment_len):
+    """
+    Args:
+        jump: jump size
+        segment_len: length of segment
+    """
+    assembler='global'
+    if jump > 0.9*segment_len:
+        assembler='glue'
+    if jump >= segment_len:
+        assembler='stick'
+    return assembler
 
 def qs(consensus, consensus_qs, output_standard='phred+33'):
     """Calculate the quality score for the consensus read.
@@ -338,11 +350,12 @@ def evaluation():
             basecall_time = time.time() - start_time
             bpreads = [index2base(read) for read in reads]
             js_ratio = FLAGS.jump/FLAGS.segment_len
+            kernal = get_assembler_kernal(FLAGS.jump,FLAGS.segment_len)
             if FLAGS.extension == 'fastq':
-                consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list,js_ratio)
+                consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list,js_ratio,kernal=kernal)
                 qs_string = qs(consensus, qs_consensus)
             else:
-                consensus = simple_assembly(bpreads,js_ratio)
+                consensus = simple_assembly(bpreads,js_ratio,kernal=kernal)
             c_bpread = index2base(np.argmax(consensus, axis=0))
             assembly_time = time.time() - start_time
             list_of_time = [start_time, reading_time,
@@ -350,7 +363,6 @@ def evaluation():
             write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
                          q_score=qs_string,global_setting=FLAGS)
     pbars.end()
-
 
 def decoding_queue(logits_queue, num_threads=6):
     q_logits, q_name, q_index, seq_length = logits_queue.dequeue()
