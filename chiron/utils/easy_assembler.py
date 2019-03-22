@@ -287,7 +287,7 @@ def glue_kernal(bpread,prev_bpread):
         score = 2*sum(head==tail) - i
         if score > max_hit_disp[1]:
             max_hit_disp = (i,score)
-    disp = max_hit_disp[0]
+    disp = prev_n - max_hit_disp[0]
     return disp
 
 def stick_kernal(bpread,prev_bpread):
