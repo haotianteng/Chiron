@@ -6,6 +6,15 @@ Built with **TensorFlow** and python 2.7.
 If you found Chiron useful, please consider to cite:  
 > Haotian Teng, Minh Duc Cao, Michael B Hall, Tania Duarte, Sheng Wang, Lachlan J M Coin; Chiron: translating nanopore raw signal directly into nucleotide sequence using deep learning, GigaScience, Volume 7, Issue 5, 1 May 2018, giy037, https://doi.org/10.1093/gigascience/giy037
 
+DNA basecall:
+```
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/DNA_default -b 1100 -l 400 -j 40 --beam 30 --mode dna
+```
+RNA basecall:
+```
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 200 -l 2000 -j 200 --beam 30 --mode rna
+```
+
 ---
 ## Table of contents
 
@@ -27,8 +36,7 @@ If you found Chiron useful, please consider to cite:
 - [Train on Google Cloud ML engine](#train-on-google-cloud-ml-engine)
     - [Local testing](#local-testing)
     - [Create a new bucket](#create-a-new-bucket)
-    - [Copy fast5 files to your Cloud Storage bucket](#copy-fsat5-files-to-your-cloud-storage-bucket)
-    - [Transfer fast5 files to tfrecord](#transfer-fast5-files-to-tfrecord)
+    - [Use gsutil to copy the fast5 files to your Cloud Storage bucket](#use-gsutil-to-copy-the-fast5-files-to-your-Cloud-Storage-bucket)
     - [Train model on Google Cloud ML engine](#train-model-on-google-cloud-ml-engine)
 - [Distributed training on Google CLoud ML Engine](#distributed-training-on-google-cloud-ml-engine)
     - [Configure](#configure)
@@ -104,8 +112,13 @@ python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m <model
 
 We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) in the GitHub repository and two models (DNA_default and RNA_default) which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
 ```
-python chiron/entry.py call -i chiron/example_folder/ -o <output_folder> -m chiron/model/DNA_default
+python chiron/entry.py call -i chiron/example_folder/ -o <output_folder> -m chiron/model/DNA_default -b 1100 -l 400 -j 40 --beam 30 --mode dna
 ```
+And from v0.5 we have provide a good RNA model for the direct-RNA basecall.  
+```
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 200 -l 2000 -j 200 --beam 30 --mode rna
+```
+You can change the batch size to smaller one if you have limited RAM/GPU-RAM, bigger batch size has (very)slightly better result.  
 
 ### Decoder choice
 (From v0.3)  
@@ -227,7 +240,7 @@ REGION=us-central1
 gsutil mb -l $REGION gs://$BUCKET_NAME
 ```
 
-### Use gsutil to copy the all fast5 files to your Cloud Storage bucket.
+### Use gsutil to copy the fast5 files to your Cloud Storage bucket
 
 ```
 gsutil cp -r raw_fast_folder gs://$BUCKET_NAME/fast5-data
