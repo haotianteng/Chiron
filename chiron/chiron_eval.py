@@ -29,11 +29,14 @@ from chiron.utils.progress import multi_pbars
 from six.moves import range
 import threading
 from collections import defaultdict
+from collections import namedtuple
+
+SparseTensor = namedtuple("SparseTensor","indices values dense_shape")
 
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
     Args:
-        predict_val ((docded, log_probabilities)): Tuple of shape 2, output from the tf.nn.ctc_beam_search_decoder or tf.nn.ctc_greedy_decoder.
+        predict_val (docoded, log_probabilities): Tuple of shape 2, output from the tf.nn.ctc_beam_search_decoder or tf.nn.ctc_greedy_decoder.
             decoded:A list of length `top_paths`, where decoded[j] is a SparseTensor containing the decoded outputs:
                 decoded[j].indices: Matrix of shape [total_decoded_outputs[j], 2], each row stand for [batch, time] index in dense representation.
                 decoded[j].values: Vector of shape [total_decoded_outputs[j]]. The vector stores the decoded classes for beam j.
@@ -49,20 +52,50 @@ def sparse2dense(predict_val):
     predict_val_top5 = predict_val[0]
     predict_read = list()
     uniq_list = list()
-    for i in range(len(predict_val_top5)):
-        predict_val = predict_val_top5[i]
+    for decode in predict_val_top5:
         unique, pre_counts = np.unique(
-            predict_val.indices[:, 0], return_counts=True)
+            decode.indices[:, 0], return_counts=True)
         uniq_list.append(unique)
         pos_predict = 0
         predict_read_temp = list()
         for indx, _ in enumerate(pre_counts):
             predict_read_temp.append(
-                predict_val.values[pos_predict:pos_predict + pre_counts[indx]])
+                decode.values[pos_predict:pos_predict + pre_counts[indx]])
             pos_predict += pre_counts[indx]
         predict_read.append(predict_read_temp)
     return predict_read, uniq_list
 
+def slice_sparse_tensor(input_sp,start,end):
+    """
+    Slice the given sparse_tensor from start to end by batches.
+    Args:
+        input_sp: the input sparse tensor
+        start: start index.
+        end: end index, the boundary behaviour is like numpy indexing. e.g. start<=array<end
+    Return:
+        sliced_sp: The slicing sparse tensor.
+    """
+    axis = 0
+    mask = np.logical_and(input_sp.indices[:,axis]>=start,input_sp.indices[:,axis]<end)
+    new_indices=input_sp.indices[mask] - [start,0]
+    return SparseTensor(indices=new_indices,
+                        values=input_sp.values[mask],
+                        dense_shape=np.asarray([end-start,input_sp.dense_shape[1-axis]]))
+    
+def slice_ctc_decoding_result(input_decode,start,end):
+    """
+    Slice the result from tf.nn.ctc_beamsearch_decoder
+    Args:
+        input_decode: The result from the beam search decoder.
+        start: slicing batch start index.
+        end: slicing batch end index.
+    """
+    decodes = input_decode[0]
+    log_p = input_decode[1]
+    slices = list()
+    for decode in decodes:
+        slices.append(slice_sparse_tensor(decode,start,end))
+    return (slices,log_p[start:end,:])
 
 def index2base(read):
     """Transfer the number into dna base.
@@ -224,8 +257,8 @@ def evaluation():
     config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
-    logits_index = tf.placeholder(tf.int32, shape=())
-    logits_fname = tf.placeholder(tf.string, shape=())
+    logits_index = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
+    logits_fname = tf.placeholder(tf.string, shape=[FLAGS.batch_size])
     logits_queue = tf.FIFOQueue(
         capacity=1000,
         dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
@@ -258,6 +291,10 @@ def evaluation():
         if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
             os.makedirs(os.path.join(FLAGS.output, 'meta'))
         def worker_fn():
+            batch_x = np.asarray([[]]).reshape(0,FLAGS.segment_len)
+            seq_len = np.asarray([])
+            logits_idx = np.asarray([])
+            logits_fn = np.asarray([])
             for f_i, name in enumerate(file_list):
                 if not name.endswith('.signal'):
                     continue
@@ -268,29 +305,57 @@ def evaluation():
                 reads_n = eval_data.reads_n
                 pbars.update(0,total = reads_n,progress = 0)
                 pbars.update_bar()
-                for i in range(0, reads_n, FLAGS.batch_size):
-                    batch_x, seq_len, _ = eval_data.next_batch(
-                        FLAGS.batch_size, shuffle=False, sig_norm=False)
-                    batch_x = np.pad(
-                        batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
-                    seq_len = np.pad(
-                        seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
+                i=0
+                while(eval_data.epochs_completed == 0):
+                    current_batch, current_seq_len, _ = eval_data.next_batch(
+                        FLAGS.batch_size-len(batch_x), shuffle=False, sig_norm=False)
+                    current_n = len(current_batch)
+                    batch_x = np.concatenate((batch_x,current_batch),axis = 0)
+                    seq_len = np.concatenate((seq_len,current_seq_len),axis = 0)
+                    logits_idx = np.concatenate((logits_idx,[i]*current_n),axis = 0)
+                    logits_fn = np.concatenate((logits_fn,[name]*current_n),axis = 0)
+                    i+=current_n
+                    if len(batch_x) < FLAGS.batch_size:
+                        pbars.update(0,progress=i)
+                        pbars.update_bar()
+                        continue
                     feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
                         training: True,
-                        logits_index:i,
-                        logits_fname: name,
+                        logits_index:logits_idx,
+                        logits_fname:logits_fn,
                     }
-                    #Training: True for a temporary fix of the batch normalization problem: https://github.com/haotianteng/Chiron/commit/8fce3a3b4dac8e9027396bb8c9152b7b5af953ce
+                    #Training: Set it to  True for a temporary fix of the batch normalization problem: https://github.com/haotianteng/Chiron/commit/8fce3a3b4dac8e9027396bb8c9152b7b5af953ce
                     #TODO: change the training FLAG back to False after the new model has been trained.
                     sess.run(logits_enqueue,feed_dict=feed_dict)
-                    pbars.update(0,progress=i+FLAGS.batch_size)
+                    batch_x = np.asarray([[]]).reshape(0,FLAGS.segment_len)
+                    seq_len = np.asarray([])
+                    logits_idx = np.asarray([])
+                    logits_fn = np.asarray([])
+                    pbars.update(0,progress=i)
                     pbars.update_bar()
                 pbars.update(2,progress = f_i+1)
                 pbars.update_bar()
+            ### All files has been processed.
+            batch_n = len(batch_x)
+            if batch_n >0:
+                pad_width = FLAGS.batch_size - batch_n
+                batch_x = np.pad(
+                        batch_x, ((0, pad_width), (0, 0)), mode='wrap')
+                seq_len = np.pad(
+                        seq_len, ((0, pad_width)), mode='wrap')
+                logits_idx = np.pad(logits_idx,(0,pad_width),mode = 'constant',constant_values=-1)
+                logits_fn = np.pad(logits_fn,(0,pad_width),mode = 'constant',constant_values='')
+                sess.run(logits_enqueue,feed_dict = {
+                        x: batch_x,
+                        seq_length: np.round(seq_len/ratio).astype(np.int32),
+                        training: True,
+                        logits_index:logits_idx,
+                        logits_fname:logits_fn,
+                    })
             sess.run(logits_queue_close)
-
+#
         worker = threading.Thread(target=worker_fn,args=() )
         worker.setDaemon(True)
         worker.start()
@@ -315,23 +380,44 @@ def evaluation():
             pbars.update_bar()
             reading_time = time.time() - start_time
             reads = list()
-            N = len(range(0, reads_n, FLAGS.batch_size))
+            if 'total_count' not in val[name].keys():
+                val[name]['total_count'] = 0
+            if 'index_list' not in val[name].keys():
+                val[name]['index_list'] = []
             while True:
-                l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])
+                l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])   
+                if val[name]['total_count'] == reads_n:
+                    pbars.update(1,progress = val[name]['total_count'])
+                    break
                 decode_ops = [decoded_fname_op, decode_idx_op, decode_predict_op, decode_prob_op]
                 decoded_fname, i, predict_val, logits_prob = sess.run(decode_ops, feed_dict={training: False})
-                decoded_fname = decoded_fname.decode("UTF-8")
-                val[decoded_fname][i] = (predict_val, logits_prob)               
-                pbars.update(1,progress = len(val[name])*FLAGS.batch_size)
+                decoded_fname = np.asarray([x.decode("UTF-8") for x in decoded_fname])
+                ##Have difficulties integrate it into the tensorflow graph, as the number of file names in a batch is variable.
+                ##And for loop can't be implemented as the eager execution is disabled due to the use of queue.
+                uniq_fname,uniq_fn_idx = np.unique(decoded_fname,return_index = True)
+                for fn_idx,fn in enumerate(uniq_fname):
+                    i = uniq_fn_idx[fn_idx]
+                    if fn != '':
+                        occurance = np.where(decoded_fname==fn)[0]
+                        start = occurance[0]
+                        end = occurance[-1]+1
+                        assert(len(occurance)==end-start)
+                        if 'total_count' not in val[fn].keys():
+                            val[fn]['total_count'] = 0
+                        if 'index_list' not in val[fn].keys():
+                            val[fn]['index_list'] = []
+                        val[fn]['total_count'] += (end-start)
+                        val[fn]['index_list'].append(i)
+                        sliced_sparse = slice_ctc_decoding_result(predict_val,start,end)                
+                        val[fn][i] = (sliced_sparse, logits_prob[decoded_fname==fn])               
+                pbars.update(1,progress = val[name]['total_count'])
                 pbars.update_bar()
-                if len(val[name]) == N:
-                    break
 
             pbars.update(3,progress = f_i+1)
             pbars.update_bar()
             qs_list = np.empty((0, 1), dtype=np.float)
             qs_string = None
-            for i in range(0, reads_n, FLAGS.batch_size):
+            for i in np.sort(val[name]['index_list']):
                 predict_val, logits_prob = val[name][i]
                 predict_read, unique = sparse2dense(predict_val)
                 predict_read = predict_read[0]
@@ -339,10 +425,6 @@ def evaluation():
 
                 if FLAGS.extension == 'fastq':
                     logits_prob = logits_prob[unique]
-                if i + FLAGS.batch_size > reads_n:
-                    predict_read = predict_read[:reads_n - i]
-                    if FLAGS.extension == 'fastq':
-                        logits_prob = logits_prob[:reads_n - i]
                 if FLAGS.extension == 'fastq':
                     qs_list = np.concatenate((qs_list, logits_prob))
                 reads += predict_read
@@ -365,11 +447,25 @@ def evaluation():
     pbars.end()
 
 def decoding_queue(logits_queue, num_threads=6):
+    """
+    Build the decoding queue graph.
+    Args:
+        logits_queue: the logits queue.
+        num_threads: number of threads.
+    Return:
+        decode_predict: (decoded_sparse_tensor,decoded_probability)
+            decoded_sparse_tensor is a [sparse tensor]
+        decode_prob: a [batch_size] array contain the probability of each path.
+        decode_fname: a [batch_size] array contain the filenames.
+        decode_idx: a [batch_size] array contain the indexs.
+        decodeedQueue.size(): The number of instances in the queue.
+    """
     q_logits, q_name, q_index, seq_length = logits_queue.dequeue()
+    batch_n = q_logits.get_shape().as_list()[0]
     if FLAGS.extension == 'fastq':
         prob = path_prob(q_logits)
     else:
-        prob = tf.constant(0.0)  # We just need to have the right type, because of the queues
+        prob = tf.constant([0.0]*batch_n)  # We just need to have the right type, because of the queues
     if FLAGS.beam == 0:
         decode_decoded, decode_log_prob = tf.nn.ctc_greedy_decoder(tf.transpose(
             q_logits, perm=[1, 0, 2]), seq_length, merge_repeated=True)
@@ -377,7 +473,7 @@ def decoding_queue(logits_queue, num_threads=6):
         decode_decoded, decode_log_prob = tf.nn.ctc_beam_search_decoder(
             tf.transpose(q_logits, perm=[1, 0, 2]),
             seq_length, merge_repeated=False,
-            beam_width=FLAGS.beam)  # There will be a second merge operation after the decoding process
+            beam_width=FLAGS.beam,top_paths = 1)  # There will be a second merge operation after the decoding process
         # if the merge_repeated for decode search decoder set to True.
         # Check this issue https://github.com/tensorflow/tensorflow/issues/9550
     decodeedQueue = tf.FIFOQueue(

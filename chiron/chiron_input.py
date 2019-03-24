@@ -205,7 +205,7 @@ class DataSet(object):
             if shuffle:
                 np.random.shuffle(self._perm)
         # Go to the next epoch
-        if start + batch_size > self.reads_n:
+        if start + batch_size >= self.reads_n:
             # Finished epoch
             self._epochs_completed += 1
             # Get the rest samples in this epoch
