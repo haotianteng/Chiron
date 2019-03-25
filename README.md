@@ -14,6 +14,10 @@ RNA basecall:
 ```
 python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 200 -l 2000 -j 200 --beam 30 --mode rna
 ```
+RNA fast basecall:
+```
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 500 -l 2000 -j 1900 --beam 30 --mode rna
+```
 
 ---
 ## Table of contents
