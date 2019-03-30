@@ -11,6 +11,7 @@ import os
 import sys
 import h5py
 import logging
+import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
 from multiprocessing import cpu_count
@@ -91,7 +92,7 @@ def extract_file_wrapper(args):
                 raise ValueError("Fail in extracting raw signal.")
             if len(raw_signal) == 0:
                 raise ValueError("Got empty raw signal")
-#            FLAGS.count += 1
+                #FLAGS.count += 1
         except Exception as e:
             logger.error("Cannot extract file %s. %s"%(full_file_n,e))
             return
@@ -112,15 +113,15 @@ def extract_file(input_file,mode = 'dna'):
     except Exception as e:
         logger.error(e)
         raise Exception(e)
-    raw_signal = list(input_data['/Raw/Reads'].values())[0]['Signal'].value
+    raw_signal = np.asarray(list(input_data['/Raw/Reads'].values())[0][('Signal')])
     if mode == 'rna':
         raw_signal = raw_signal[::-1]
     try:
-        reference = input_data['Analyses/Basecall_1D_000/BaseCalled_template/Fastq'].value
+        reference = np.asarray(input_data[('Analyses/Basecall_1D_000/BaseCalled_template/Fastq')])
         reference = '@%s\n'%(os.path.basename(input_file).split('.')[0]) + '\n'.join(reference.decode('UTF-8').split('\n')[1:])
     except:
         try:
-            reference = input_data['Analyses/Alignment_000/Aligned_template/Fasta'].value
+            reference = np.asarray(input_data[('Analyses/Alignment_000/Aligned_template/Fasta')])
         except Exception as e:
             logger.info('%s has no reference.'%(input_file))
             reference = ''
