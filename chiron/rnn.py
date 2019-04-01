@@ -58,13 +58,15 @@ def rnn_layers(x,
             raise ValueError("Cell type unrecognized.")
         cells_fw.append(cell_fw)
         cells_bw.append(cell_bw)
-    multi_cells_fw = tf.nn.rnn_cell.MultiRNNCell(cells_fw)
-    multi_cells_bw = tf.nn.rnn_cell.MultiRNNCell(cells_bw)
-    with tf.variable_scope('BDGRU_rnn') as scope:
-        outputs, _ = tf.nn.bidirectional_dynamic_rnn(
-                cell_fw=multi_cells_fw, cell_bw=multi_cells_bw, inputs=x, sequence_length=seq_length, dtype=dtype, scope=scope)
-        lasth = tf.concat(outputs, 2, name='birnn_output_concat')
+    #multi_cells_fw = tf.nn.rnn_cell.MultiRNNCell(cells_fw)
+    #multi_cells_bw = tf.nn.rnn_cell.MultiRNNCell(cells_bw)
+    with tf.variable_scope('BDLSTM_rnn') as scope:
+        lasth,_,_ = stack_bidirectional_dynamic_rnn(
+                cells_fw=cells_fw, cells_bw=cells_bw, inputs=x, sequence_length=seq_length, dtype=dtype, scope=scope)
+        #lasth = tf.concat(outputs, 2, name='birnn_output_concat')
     # shape of lasth [batch_size,max_time,hidden_num*2]
+    # Difference between bidrectional_dynamic_rnn and stack_bidirectional_dynamic_rnn
+    # https://stackoverflow.com/questions/49242266/difference-between-multirnncell-and-stack-bidirectional-dynamic-rnn-in-tensorflo
     batch_size = tf.shape(lasth)[0]
     max_time = lasth.get_shape().as_list()[1]
     with tf.variable_scope('rnn_fnn_layer'):
