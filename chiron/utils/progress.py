@@ -24,7 +24,7 @@ class multi_pbars:
     def update_bar(self):
         text = '\r'
         for i in range(self.bar_n):
-            p = float(self.progress[i])/self.total[i]
+            p = float(self.progress[i])/(self.total[i]+1e-6)
             if p>1:
                 p=1
             elif p<0:
