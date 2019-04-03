@@ -252,7 +252,7 @@ def read_data_for_eval(file_path,
 					   start_index=0,
                        step=20, 
 	                   seg_length=200, 
-                       sig_norm=True,
+                       sig_norm="Median",
                        reverse = False):
     """
     Input Args:
@@ -260,7 +260,7 @@ def read_data_for_eval(file_path,
         start_index: the index of the signal start to read.
         step: sliding step size.
         seg_length: length of segments.
-        sig_norm: if the signal need to be normalized.
+        sig_norm: The way signal being normalized, keep it the same as it during training.
         reverse: if the signal need to be reversed.
     """
     if not file_path.endswith('.signal'):
