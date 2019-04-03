@@ -187,13 +187,11 @@ class DataSet(object):
             label = []
         return event, label
 
-    def next_batch(self, batch_size, shuffle=True, sig_norm=False):
+    def next_batch(self, batch_size, shuffle=True):
         """Return next batch in batch_size from the data set.
             Input Args:
                 batch_size:A scalar indicate the batch size.
                 shuffle: boolean, indicate if the data should be shuffled after each epoch.
-                sig_norm: If the signal need to be normalized, if sig_norm set
-                to True when read the data, then the redundant sig_norm is not required.
             Output Args:
                 inputX,sequence_length,label_batch: tuple of (indx,vals,shape)
         """
