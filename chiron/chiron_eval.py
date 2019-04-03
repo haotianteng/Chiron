@@ -141,7 +141,8 @@ def get_assembler_kernal(jump, segment_len):
         jump: jump size
         segment_len: length of segment
     """
-    assembler='global'
+    #assembler='global'
+    assembler='simple'
     if jump > 0.9*segment_len:
         assembler='glue'
     if jump >= segment_len:
@@ -322,7 +323,7 @@ def evaluation():
                     feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: True,
+                        training: False,
                         logits_index:logits_idx,
                         logits_fname:logits_fn,
                     }
@@ -350,7 +351,7 @@ def evaluation():
                 sess.run(logits_enqueue,feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: True,
+                        training: False,
                         logits_index:logits_idx,
                         logits_fname:logits_fn,
                     })
