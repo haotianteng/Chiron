@@ -25,6 +25,8 @@ from chiron.utils import progress
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 MIN_LABEL_LENGTH = 2
 MIN_SIGNAL_PRO = 0.3
+MEDIAN=0
+MEAN=1
 class Flags(object):
     def __init__(self):
         self.max_segments_number = None
@@ -250,7 +252,7 @@ def read_data_for_eval(file_path,
 					   start_index=0,
                        step=20, 
 	                   seg_length=200, 
-                       sig_norm="Median",
+                       sig_norm=MEDIAN,
                        reverse = False):
     """
     Input Args:
@@ -486,29 +488,31 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, m
     return train
 
 
-def read_signal(file_path, normalize="median"):
+def read_signal(file_path, normalize=MEAN):
     f_h = open(file_path, 'r')
     signal = list()
     for line in f_h:
         signal += [float(x) for x in line.split()]
     signal = np.asarray(signal)
+    uniq_arr=np.unique(signal)
     if len(signal) == 0:
         return signal.tolist()
-    if normalize == "mean":
-        signal = (signal - np.mean(signal)) / np.float(np.std(signal))
-    elif normalize == "median":
-        signal = (signal - np.median(signal)) / np.float(robust.mad(signal))
+    if normalize == MEAN:
+        signal = (signal - np.mean(uniq_arr)) / np.float(np.std(uniq_arr))
+    elif normalize == MEDIAN:
+        signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
     return signal.tolist()
 
-def read_signal_tfrecord(data_array, normalize="median"):
+def read_signal_tfrecord(data_array, normalize=MEAN):
 
     signal = data_array
+    uniq_arr=np.unique(signal)
     if len(signal) == 0:
         return signal.tolist()
-    if normalize == "mean":
-        signal = (signal - np.mean(signal)) / np.float(np.std(signal))
-    elif normalize == "median":
-        signal = (signal - np.median(signal)) / np.float(robust.mad(signal))
+    if normalize == MEAN:
+        signal = (signal - np.mean(uniq_arr)) / np.float(np.std(uniq_arr))
+    elif normalize == MEDIAN:
+        signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
     return signal.tolist()
 
 

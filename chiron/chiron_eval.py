@@ -309,7 +309,7 @@ def evaluation():
                 i=0
                 while(eval_data.epochs_completed == 0):
                     current_batch, current_seq_len, _ = eval_data.next_batch(
-                        FLAGS.batch_size-len(batch_x), shuffle=False, sig_norm=False)
+                        FLAGS.batch_size-len(batch_x), shuffle=False)
                     current_n = len(current_batch)
                     batch_x = np.concatenate((batch_x,current_batch),axis = 0)
                     seq_len = np.concatenate((seq_len,current_seq_len),axis = 0)
@@ -323,7 +323,7 @@ def evaluation():
                     feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: False,
+                        training: True,
                         logits_index:logits_idx,
                         logits_fname:logits_fn,
                     }
@@ -351,7 +351,7 @@ def evaluation():
                 sess.run(logits_enqueue,feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: False,
+                        training: True,
                         logits_index:logits_idx,
                         logits_fname:logits_fn,
                     })
