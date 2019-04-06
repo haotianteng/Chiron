@@ -59,7 +59,7 @@ def compile_train_graph(config,hp):
         net.step = net.opt.apply_gradients(zip(net.gradients, net.variables),global_step = net.global_step)
     net.error,net.errors,net.y_ = model.prediction(net.logits, net.seq_length, net.y)
     net.init = tf.global_variables_initializer()
-    net.saver = tf.train.Saver()
+    net.saver = tf.train.Saver(save_relative_paths=True)
     net.summary = tf.summary.merge_all()
     return net
 
