@@ -270,7 +270,7 @@ def evaluation():
     logits_queue_close = logits_queue.close()
     ### Decoding logits into bases
     decode_predict_op, decode_prob_op, decoded_fname_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(var_list=tf.trainable_variables+tf.moving_average_variables)
     with tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config)) as sess:
         saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
         if os.path.isdir(FLAGS.input):
@@ -323,7 +323,7 @@ def evaluation():
                     feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: True,
+                        training: False,
                         logits_index:logits_idx,
                         logits_fname:logits_fn,
                     }
@@ -351,7 +351,7 @@ def evaluation():
                 sess.run(logits_enqueue,feed_dict = {
                         x: batch_x,
                         seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: True,
+                        training: False,
                         logits_index:logits_idx,
                         logits_fname:logits_fn,
                     })

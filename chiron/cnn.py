@@ -146,7 +146,8 @@ def batchnorm(inp, scope, training, decay=0.99, epsilon=1e-5):
             'pop_mean', shape=[size], initializer=tf.zeros_initializer(), trainable=False)
         pop_var = tf.get_variable(
             'pop_var', shape=[size], initializer=tf.ones_initializer(), trainable=False)
-
+        tf.add_to_collection(tf.GraphKeys.MOVING_AVERAGE_VARIABLES,pop_mean)
+        tf.add_to_collection(tf.GraphKeys.MOVING_AVERAGE_VARIABLES,pop_var)
         def batch_statistics():
             batch_mean, batch_var = tf.nn.moments(inp, [0, 1, 2])
             train_mean_op = tf.assign(

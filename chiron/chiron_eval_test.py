@@ -12,7 +12,7 @@ import argparse
 import os
 import sys
 import time
-
+from matplotlib import pyplot as plt
 import numpy as np
 import tensorflow as tf
 
@@ -127,74 +127,26 @@ def qs(consensus, consensus_qs, output_standard='phred+33'):
         q_string = [chr(x + 33) for x in quality_score.astype(int)]
         return ''.join(q_string)
 
-def evaluation():
-    pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])
-    x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
-    seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
-    training = tf.placeholder(tf.bool)
-    config_path = os.path.join(FLAGS.model,'model.json')
-    model_configure = chiron_model.read_config(config_path)
 
-    logits, ratio = chiron_model.inference(
-                                    x, 
-                                    seq_length, 
-                                    training=training,
-                                    full_sequence_len = FLAGS.segment_len,
-                                    configure = model_configure)
-    predict = tf.nn.ctc_beam_search_decoder(
-            tf.transpose(logits, perm=[1, 0, 2]),
-            seq_length, merge_repeated=False,
-            beam_width=FLAGS.beam)
-    config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
-                            inter_op_parallelism_threads=FLAGS.threads)
-    config.gpu_options.allow_growth = True
-    sess = tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config))
-    if os.path.isdir(FLAGS.input):
-        file_list = os.listdir(FLAGS.input)
-        file_dir = FLAGS.input
-    else:
-        file_list = [os.path.basename(FLAGS.input)]
-        file_dir = os.path.abspath(
-            os.path.join(FLAGS.input, os.path.pardir))
-    for file in file_list:
-        file_path = os.path.join(file_dir,file)
-        eval_data = read_data_for_eval(file_path, 
-                                       FLAGS.start,
-                                       seg_length=FLAGS.segment_len,
-                                       step=FLAGS.jump)
-        reads_n = eval_data.reads_n
-        for i in range(0, reads_n, FLAGS.batch_size):
-            batch_x, seq_len, _ = eval_data.next_batch(
-                FLAGS.batch_size, shuffle=False, sig_norm=False)
-            batch_x = np.pad(
-                batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
-            seq_len = np.pad(
-                seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
-            feed_dict = {
-                x: batch_x,
-                seq_length: np.round(seq_len/ratio).astype(np.int32),
-                training: False,
-            }
-            logits_val, predict_val = sess.run([logits,predict], feed_dict = feed_dict)
 
-def run(args):
-    global FLAGS
-    FLAGS = args
-    # logging.debug("Flags:\n%s", pformat(vars(args)))
-    time_dict = unix_time(evaluation)
-    print(FLAGS.output)
-    print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
-          (time_dict['real'], time_dict['sys'], time_dict['user']))
-    meta_folder = os.path.join(FLAGS.output, 'meta')
-    if os.path.isdir(FLAGS.input):
-        file_pre = 'all'
-    else:
-        file_pre = os.path.splitext(os.path.basename(FLAGS.input))[0]
-    path_meta = os.path.join(meta_folder, file_pre + '.meta')
-    with open(path_meta, 'a+') as out_meta:
-        out_meta.write("# Wall_time Sys_time User_time Cpu_time\n")
-        out_meta.write("%5.3f %5.3f %5.3f %5.3f\n" % (
-            time_dict['real'], time_dict['sys'], time_dict['user'], time_dict['sys'] + time_dict['user']))
+#def run(args):
+#    global FLAGS
+#    FLAGS = args
+#    # logging.debug("Flags:\n%s", pformat(vars(args)))
+#    time_dict = unix_time(evaluation)
+#    print(FLAGS.output)
+#    print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
+#          (time_dict['real'], time_dict['sys'], time_dict['user']))
+#    meta_folder = os.path.join(FLAGS.output, 'meta')
+#    if os.path.isdir(FLAGS.input):
+#        file_pre = 'all'
+#    else:
+#        file_pre = os.path.splitext(os.path.basename(FLAGS.input))[0]
+#    path_meta = os.path.join(meta_folder, file_pre + '.meta')
+#    with open(path_meta, 'a+') as out_meta:
+#        out_meta.write("# Wall_time Sys_time User_time Cpu_time\n")
+#        out_meta.write("%5.3f %5.3f %5.3f %5.3f\n" % (
+#            time_dict['real'], time_dict['sys'], time_dict['user'], time_dict['sys'] + time_dict['user']))
 
 
 if __name__ == "__main__":
@@ -224,5 +176,63 @@ if __name__ == "__main__":
                         help="Concisely output the result, the meta and segments files will not be output.")
     parser.add_argument('--mode', default = 'dna',
                         help="Output mode, can be chosen from dna or rna.")
-    args = parser.parse_args(sys.argv[1:])
-    run(args)
+    FLAGS = parser.parse_args(sys.argv[1:])
+
+    pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])
+    x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
+    seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
+    training = tf.placeholder(tf.bool)
+    config_path = os.path.join(FLAGS.model,'model.json')
+    model_configure = chiron_model.read_config(config_path)
+    logits, ratio = chiron_model.inference(
+                                    x, 
+                                    seq_length, 
+                                    training=training,
+                                    full_sequence_len = FLAGS.segment_len,
+                                    configure = model_configure)
+    prorbs=tf.nn.softmax(logits)
+    predict = tf.nn.ctc_beam_search_decoder(
+            tf.transpose(logits, perm=[1, 0, 2]),
+            seq_length, merge_repeated=False,
+            beam_width=FLAGS.beam)
+    config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
+                            inter_op_parallelism_threads=FLAGS.threads)
+    config.gpu_options.allow_growth = True
+    sess = tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config))
+    if os.path.isdir(FLAGS.input):
+        file_list = os.listdir(FLAGS.input)
+        file_dir = FLAGS.input
+    else:
+        file_list = [os.path.basename(FLAGS.input)]
+        file_dir = os.path.abspath(
+            os.path.join(FLAGS.input, os.path.pardir))
+    for file in file_list:
+        file_path = os.path.join(file_dir,file)
+        eval_data = read_data_for_eval(file_path, 
+                                       FLAGS.start,
+                                       seg_length=FLAGS.segment_len,
+                                       step=FLAGS.jump)
+        reads_n = eval_data.reads_n
+        for i in range(0, reads_n, FLAGS.batch_size):
+            batch_x, seq_len, _ = eval_data.next_batch(
+                FLAGS.batch_size, shuffle=False)
+            batch_x = np.pad(
+                batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
+            seq_len = np.pad(
+                seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
+            feed_dict = {
+                x: batch_x,
+                seq_length: np.round(seq_len/ratio).astype(np.int32),
+                training: True,
+            }
+            prob_val, logits_val,predict_val = sess.run([prorbs,logits,predict], feed_dict = feed_dict)
+    
+    INDEX=0
+    COLOR=['red','yellow','green','blue','--']
+    fig, ax1 = plt.subplots()
+    ax2=ax1.twinx()
+    x1=range(2000)
+    x2=range(400)
+    ax1.plot(x1,batch_x[INDEX,:],'black')
+    for i in range(5):
+        ax2.plot(x2,prob_val[INDEX,:,i],COLOR[i])        
