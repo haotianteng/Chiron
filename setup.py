@@ -33,7 +33,7 @@ setup(
   author = 'Haotian Teng',
   author_email = 'havens.teng@gmail.com',
   url = 'https://github.com/haotianteng/chiron', 
-  download_url = 'https://github.com/haotianteng/Chiron/archive/0.4.2.tar.gz', 
+  download_url = 'https://github.com/haotianteng/Chiron/archive/0.5.tar.gz', 
   keywords = ['basecaller', 'nanopore', 'sequencing','neural network'], 
   license="MPL 2.0",
   classifiers = ['License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)'],

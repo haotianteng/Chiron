@@ -22,9 +22,6 @@ from chiron.chiron_input import read_cache_dataset
 from six.moves import range
 DEFAULT_OFFSET = 10
 
-from chiron.chiron_eval import sparse2dense
-from matplotlib import pyplot as plt
-
 def save_hyper_parameter():
     """
     TODO: Function to save the hyper parameter.

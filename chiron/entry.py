@@ -9,7 +9,7 @@ import argparse
 import sys
 import logging
 from os import path
-
+import chiron
 from chiron import chiron_eval
 from chiron import chiron_rcnn_train
 from chiron.utils import raw
@@ -32,9 +32,10 @@ def export(args):
 
 def main(arguments=sys.argv[1:]):
     parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
+    parser.add_argument('-v','--version',action='version',version='Chiron version '+chiron.__version__,help="Print out the version.")
     subparsers = parser.add_subparsers(title='sub command', help='sub command help')
     model_default_path = path.join(path.abspath(path.dirname(__file__)), 'model', 'DNA_default')
-    print("model_default_path", model_default_path)
+
     # parser for 'call' command
     parser_call = subparsers.add_parser('call', description='Perform basecalling', help='Perform basecalling.')
     parser_call.add_argument('-i', '--input', required=True, help="File path or Folder path to the fast5 file.")
@@ -126,5 +127,5 @@ def main(arguments=sys.argv[1:]):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    print(sys.argv[1:])
+    #print(sys.argv[1:])
     main()

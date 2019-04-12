@@ -198,7 +198,9 @@ if __name__ == "__main__":
     config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
                             inter_op_parallelism_threads=FLAGS.threads)
     config.gpu_options.allow_growth = True
+    saver = tf.train.Saver(var_list=tf.trainable_variables()+tf.moving_average_variables())
     sess = tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config))
+    saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
     if os.path.isdir(FLAGS.input):
         file_list = os.listdir(FLAGS.input)
         file_dir = FLAGS.input
@@ -217,22 +219,27 @@ if __name__ == "__main__":
             batch_x, seq_len, _ = eval_data.next_batch(
                 FLAGS.batch_size, shuffle=False)
             batch_x = np.pad(
-                batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='constant')
+                batch_x, ((0, FLAGS.batch_size - len(batch_x)), (0, 0)), mode='wrap')
             seq_len = np.pad(
-                seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='constant')
+                seq_len, ((0, FLAGS.batch_size - len(seq_len))), mode='wrap')
+            batch_x[0,:] = batch_x[0,:]
             feed_dict = {
                 x: batch_x,
                 seq_length: np.round(seq_len/ratio).astype(np.int32),
                 training: True,
             }
             prob_val, logits_val,predict_val = sess.run([prorbs,logits,predict], feed_dict = feed_dict)
-    
-    INDEX=0
-    COLOR=['red','yellow','green','blue','--']
-    fig, ax1 = plt.subplots()
-    ax2=ax1.twinx()
-    x1=range(2000)
-    x2=range(400)
-    ax1.plot(x1,batch_x[INDEX,:],'black')
-    for i in range(5):
-        ax2.plot(x2,prob_val[INDEX,:,i],COLOR[i])        
+    predict_read, unique = sparse2dense(predict_val)
+    sig_index=0
+    print(predict_read[0][0])
+    def plot_signal(INDEX):
+        COLOR=['red','yellow','green','blue','--']
+        plt.rcParams["figure.figsize"] = [15,15]
+        plt1 = plt.subplot(211)
+        plt2 = plt.subplot(212)
+        x1=range(2000)
+        x2=range(0,2000,5)
+        plt1.plot(x1,batch_x[INDEX,:],'black')
+        for i in range(5):
+            plt2.plot(x2,prob_val[INDEX,:,i],COLOR[i])        
+    plot_signal(sig_index)

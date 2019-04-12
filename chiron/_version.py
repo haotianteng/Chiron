@@ -4,5 +4,5 @@
 #License, v. 2.0. If a copy of the MPL was not distributed with this
 #file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Initial file for the package"""
-from _version import __version__
+#Store the version here
+__version__ = '0.5'
