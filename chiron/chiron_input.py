@@ -488,7 +488,7 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, m
     return train
 
 
-def read_signal(file_path, normalize=MEAN):
+def read_signal(file_path, normalize=None):
     f_h = open(file_path, 'r')
     signal = list()
     for line in f_h:
@@ -503,7 +503,7 @@ def read_signal(file_path, normalize=MEAN):
         signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
     return signal.tolist()
 
-def read_signal_tfrecord(data_array, normalize=MEAN):
+def read_signal_tfrecord(data_array, normalize=None):
 
     signal = data_array
     uniq_arr=np.unique(signal)
