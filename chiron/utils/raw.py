@@ -124,7 +124,7 @@ if __name__ == "__main__":
                         help="tfrecord file")
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
-    parser.add_argument('--unit',dest='unit',action='store_true',help='Using the pA unit.')
+    parser.add_argument('--unit',dest='unit',action='store_false',help='Use the original digital signal instead of the pA unit.')
     parser.add_argument('--mode',default = 'dna',
                         help='Type of data to basecall, default is dna, can be chosen from dna, rna and methylation(under construction)')
     args = parser.parse_args(sys.argv[1:])

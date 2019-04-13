@@ -157,7 +157,7 @@ if __name__ == '__main__':
                         default = None,
                         type = int,
                         help="Extract test_number reads, default is None, extract all reads.")
-    parser.add_argument('--unit',dest='unit',action='store_true',help='Using the pA unit.')
+    parser.add_argument('--unit',dest='unit',action='store_false',help='Use the original digital signal instead of the pA unit.')
     parser.add_argument('--threads',
                         default = 1,
                         type = int,
