@@ -87,7 +87,7 @@ def extract_file_wrapper(args):
     file_n = os.path.basename(full_file_n)
     if full_file_n.endswith('fast5'):
         try:
-            raw_signal, reference = extract_file(full_file_n,FLAGS.mode)
+            raw_signal, reference = extract_file(full_file_n,FLAGS.mode,FLAGS.unit)
             if raw_signal is None:
                 raise ValueError("Fail in extracting raw signal.")
             if len(raw_signal) == 0:
@@ -103,7 +103,7 @@ def extract_file_wrapper(args):
                 ref_file.write(reference) 
     return
 
-def extract_file(input_file,mode = 'dna'):
+def extract_file(input_file,mode = 'dna',unit=False):
     global logger 
     try:
         input_data = h5py.File(input_file, 'r')
@@ -114,6 +114,13 @@ def extract_file(input_file,mode = 'dna'):
         logger.error(e)
         raise Exception(e)
     raw_signal = np.asarray(list(input_data['/Raw/Reads'].values())[0][('Signal')])
+    if unit:
+        with h5py.File(input_file) as root:
+            global_attrs=root['/UniqueGlobalKey/channel_id/'].attrs
+            offset = float(global_attrs['offset'])
+            digitisation=float(global_attrs['digitisation'])
+            range=float(global_attrs['range'])
+        raw_signal=(raw_signal+offset)*range/digitisation
     if mode == 'rna':
         raw_signal = raw_signal[::-1]
     try:
@@ -150,6 +157,7 @@ if __name__ == '__main__':
                         default = None,
                         type = int,
                         help="Extract test_number reads, default is None, extract all reads.")
+    parser.add_argument('--unit',dest='unit',action='store_true',help='Using the pA unit.')
     parser.add_argument('--threads',
                         default = 1,
                         type = int,

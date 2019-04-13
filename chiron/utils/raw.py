@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import argparse
 import os
 import sys
+import h5py
 
 from chiron.utils import labelop
 import tensorflow as tf
@@ -32,8 +33,10 @@ def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
         if file_n.endswith('fast5'):
 #            output_file = output_folder + os.path.splitext(file_n)[0]
             file_n = os.path.join(dir_n,file_n)
-            success, (raw_data, raw_data_array) = extract_file(file_n)
+            success, (raw_data, raw_data_array),(offset,digitisation,range) = extract_file(file_n)
             if success:
+                if FLAGS.unit:
+                    raw_data=reunit(raw_data,offset,digitisation,range)
                 count += 1
                 example = tf.train.Example(features=tf.train.Features(feature={
                     'raw_data': _bytes_feature(raw_data.tostring()),
@@ -43,7 +46,19 @@ def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
                 sys.stdout.write("%s file transfered.   \n" % (file_n))
             else:
                 sys.stdout.write("FAIL on %s file.   \n" % (file_n))
-
+def reunit(signal,offset,digitisation,range):
+    """
+    Rescale the signal to the pA unit. Signal is calculated by
+    tr_sig = (signal+offset)*range/digitisation
+    The offset, digitisation, range can be got from /UniqueGlobalKey/channel_id/ entry of the fast5 file.
+    Input Args:
+        signal: the array contain the digitalised signal.
+        offset: offset information read from fast5 file.
+        digitisation: channel used for digitalised the signal.
+        range: range entry from fast5 file.
+    """
+    signal=(signal+offset)*float(range)/float(digitisation)
+    return signal
 def run_list(dirs,output_folder):
     """
     Run extract() function on all directories if FLAGS.input is a list.
@@ -63,12 +78,17 @@ def run_list(dirs,output_folder):
     writer.close()
 def extract_file(input_file):
     try:
-    	(raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
+        (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
+        with h5py.File(input_file) as root:
+            global_attrs=root['/UniqueGlobalKey/channel_id/'].attrs
+            offset = float(global_attrs['offset'])
+            digitisation=float(global_attrs['digitisation'])
+            range=float(global_attrs['range'])
     except Exception as e:
         print(str(e))
-        return False, (None, None)
+        return False, (None, None) ,(None, None,None)
     raw_data_array = []
     for index, start in enumerate(raw_start):
 #        if raw_length[index]==0:
@@ -78,7 +98,7 @@ def extract_file(input_file):
             [start, start + raw_length[index], str(raw_label['base'][index])])
     if FLAGS.mode=='rna':
         raw_data = raw_data[::-1]
-    return True, (raw_data, np.array(raw_data_array, dtype='S8'))
+    return True, (raw_data, np.array(raw_data_array, dtype='S8')) , (offset,digitisation,range)
 
 
 def run(args):
@@ -104,6 +124,7 @@ if __name__ == "__main__":
                         help="tfrecord file")
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
+    parser.add_argument('--unit',dest='unit',action='store_true',help='Using the pA unit.')
     parser.add_argument('--mode',default = 'dna',
                         help='Type of data to basecall, default is dna, can be chosen from dna, rna and methylation(under construction)')
     args = parser.parse_args(sys.argv[1:])
