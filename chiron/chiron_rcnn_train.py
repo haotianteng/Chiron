@@ -19,9 +19,10 @@ import tensorflow as tf
 import chiron.chiron_model as model
 from chiron.chiron_input import read_tfrecord
 from chiron.chiron_input import read_cache_dataset
+from tensorflow.python.ops import variables
 from six.moves import range
 DEFAULT_OFFSET = 10
-
+tf.logging.set_verbosity(tf.logging.ERROR)
 def save_hyper_parameter():
     """
     TODO: Function to save the hyper parameter.
@@ -56,7 +57,8 @@ def compile_train_graph(config,hp):
         net.step = net.opt.apply_gradients(zip(net.gradients, net.variables),global_step = net.global_step)
     net.error,net.errors,net.y_ = model.prediction(net.logits, net.seq_length, net.y)
     net.init = tf.global_variables_initializer()
-    net.saver = tf.train.Saver(var_list=tf.trainable_variables()+tf.moving_average_variables(), 
+    net.variable_to_restore=set(variables._all_saveable_objects()+tf.moving_average_variables())
+    net.saver = tf.train.Saver(var_list=net.variable_to_restore, 
                                save_relative_paths=True)
     net.summary = tf.summary.merge_all()
     return net

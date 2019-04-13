@@ -32,7 +32,7 @@ from collections import defaultdict
 from collections import namedtuple
 
 SparseTensor = namedtuple("SparseTensor","indices values dense_shape")
-
+tf.logging.set_verbosity(tf.logging.ERROR)
 def sparse2dense(predict_val):
     """Transfer a sparse input in to dense representation
     Args:

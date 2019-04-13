@@ -14,7 +14,7 @@ import sys
 from chiron.utils import labelop
 import tensorflow as tf
 import numpy as np
-
+tf.logging.set_verbosity(tf.logging.ERROR)
 def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
