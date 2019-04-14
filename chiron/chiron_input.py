@@ -21,7 +21,12 @@ from six.moves import range
 from six.moves import zip
 import tensorflow as tf
 from chiron.utils import progress
-
+from chiron import __version__
+from packaging import version
+if version.parse(__version__ ) > version.parse('0.5.0'):
+    SIGNAL_DTYPE=np.float32
+else:
+    SIGNAL_DTYPE=np.int16
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 MIN_LABEL_LENGTH = 2
 MIN_SIGNAL_PRO = 0.3
@@ -364,7 +369,7 @@ def read_tfrecord(data_dir,
                                         .value[0])
             fn_string = (example.features.feature['fname'].bytes_list.value[0])
 
-            raw_data = np.fromstring(raw_data_string, dtype=np.int16)
+            raw_data = np.fromstring(raw_data_string, dtype=SIGNAL_DTYPE)
             
             features_data = np.fromstring(features_string, dtype='S8')
             # grouping the whole array into sub-array with size = 3
@@ -492,7 +497,7 @@ def read_signal(file_path, normalize=None):
     f_h = open(file_path, 'r')
     signal = list()
     for line in f_h:
-        signal += [float(x) for x in line.split()]
+        signal += [np.float32(x) for x in line.split()]
     signal = np.asarray(signal)
     uniq_arr=np.unique(signal)
     if len(signal) == 0:

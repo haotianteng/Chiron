@@ -58,7 +58,7 @@ def reunit(signal,offset,digitisation,range):
         range: range entry from fast5 file.
     """
     signal=(signal+offset)*float(range)/float(digitisation)
-    return signal
+    return np.asarray(signal,dtype=np.float32)
 def run_list(dirs,output_folder):
     """
     Run extract() function on all directories if FLAGS.input is a list.
