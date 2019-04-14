@@ -78,14 +78,11 @@ def run_list(dirs,output_folder):
     writer.close()
 def extract_file(input_file):
     try:
-        (raw_data, raw_label, raw_start, raw_length) = labelop.get_label_raw(
+        raw_info,channel_info = labelop.get_label_raw(
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
-        with h5py.File(input_file) as root:
-            global_attrs=root['/UniqueGlobalKey/channel_id/'].attrs
-            offset = float(global_attrs['offset'])
-            digitisation=float(global_attrs['digitisation'])
-            range=float(global_attrs['range'])
+        raw_data, raw_label, raw_start, raw_length = raw_info
+        offset,range,digitisation = channel_info
     except Exception as e:
         print(str(e))
         return False, (None, None) ,(None, None,None)

@@ -115,11 +115,10 @@ def extract_file(input_file,mode = 'dna',unit=False):
         raise Exception(e)
     raw_signal = np.asarray(list(input_data['/Raw/Reads'].values())[0][('Signal')])
     if unit:
-        with h5py.File(input_file) as root:
-            global_attrs=root['/UniqueGlobalKey/channel_id/'].attrs
-            offset = float(global_attrs['offset'])
-            digitisation=float(global_attrs['digitisation'])
-            range=float(global_attrs['range'])
+        global_attrs=input_data['/UniqueGlobalKey/channel_id/'].attrs
+        offset = float(global_attrs['offset'])
+        digitisation=float(global_attrs['digitisation'])
+        range=float(global_attrs['range'])
         raw_signal=(raw_signal+offset)*range/digitisation
     if mode == 'rna':
         raw_signal = raw_signal[::-1]
