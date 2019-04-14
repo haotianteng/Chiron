@@ -146,7 +146,15 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
         raise RuntimeError(
             'Raw data is not stored in Raw/Reads/Read_[read#] so ' +
             'new segments cannot be identified.')
-
+    try:
+        global_attrs = fast5_data['/UniqueGlobalKey/channel_id/'].attrs
+        offset = float(global_attrs['offset'])
+        digitisation=float(global_attrs['digitisation'])
+        range=float(global_attrs['range'])
+    except:
+        raise RuntimeError(
+            'Failed to extract channle information.'
+        )
     # Read corrected data
     try:
         corr_data = fast5_data[
@@ -176,7 +184,7 @@ def get_label_raw(fast5_fn, basecall_group, basecall_subgroup,reverse = False):
     label_data = np.array(
         list(zip(event_starts, event_lengths, event_bases)),
         dtype=[('start', '<u4'), ('length', '<u4'), ('base', 'S1')])
-    return (raw_dat, label_data, event_starts, event_lengths)
+    return (raw_dat, label_data, event_starts, event_lengths),(offset,range,digitisation)
 
 
 def write_label_segment(fast5_fn, raw_label, segment_label, first, last):
