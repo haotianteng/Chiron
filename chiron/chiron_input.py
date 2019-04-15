@@ -680,7 +680,7 @@ def test_chiron_input():
                             ('length','<i4'),
                             ('base','S1')]) 
     ### Generate dummy dataset and check input ###
-    dummy_dir = '/home/heavens/UQ/Chiron_project/Dummy_data/'
+    dummy_dir = './Dummy_data/'
     if not os.path.isdir(dummy_dir):
         os.makedirs(dummy_dir)
     dummy_fast5 = os.path.join(dummy_dir,'fast5s')
