@@ -363,15 +363,14 @@ def read_tfrecord(data_dir,
             raw_data_string = (example.features.feature['raw_data']
                                           .bytes_list
                                           .value[0])
-            
             features_string = (example.features.feature['features']
                                         .bytes_list
                                         .value[0])
             fn_string = (example.features.feature['fname'].bytes_list.value[0])
 
-            raw_data = np.fromstring(raw_data_string, dtype=SIGNAL_DTYPE)
+            raw_data = np.frombuffer(raw_data_string, dtype=SIGNAL_DTYPE)
             
-            features_data = np.fromstring(features_string, dtype='S8')
+            features_data = np.frombuffer(features_string, dtype='S8')
             # grouping the whole array into sub-array with size = 3
             group_size = 3
             features_data = [features_data[n:n+group_size] for n in range(0, len(features_data), group_size)]
@@ -713,6 +712,10 @@ def test_chiron_input():
             raw_h = root.create_dataset('/Raw/Reads/Read_'+ str(i)+'/Signal',
                                         shape = (len(raw_signal),),
                                         dtype = np.int16)
+            channel_h=root.create_dataset('/UniqueGlobalKey/channel_id/',shape=[],dtype=np.int16)
+            channel_h.attrs['offset']=0
+            channel_h.attrs['range']=1
+            channel_h.attrs['digitisation']=1
             raw_h[...] = raw_signal[::-1]
             if '/Analyses' in root:
                 del root['/Analyses']
@@ -731,13 +734,15 @@ def test_chiron_input():
             self.mode = 'rna'
             self.tffile = 'train.tfrecords'
             self.basecall_subgroup = 'BaseCalled_template'
+            self.unit=True
             
     from chiron.utils import raw
     args = Args()
     raw.run(args)
-    train = read_tfrecord(dummy_dir,"train.tfrecords",seq_length=1000)
+    train = read_tfrecord(dummy_dir,"train.tfrecords",seq_length=1000,h5py_file_path=os.path.join(dummy_dir,'cache.fast5'))
+    
     for i in range(100):
-        inputX, sequence_length, label = train.next_batch(10)
+        inputX, sequence_length, label = train.next_batch(10,shuffle=False)
         accum_len = 0
         for idx,x in enumerate(inputX):
             x = inputX[idx][:sequence_length[idx]]
@@ -746,17 +751,18 @@ def test_chiron_input():
                 if x_idx==0:
                     y.append(signal)
                 else:
-                    if (abs(signal - x[x_idx-1]) > 0.1) or (signal - x[x_idx-1] > 0.0001):
+                    if (abs(signal - x[x_idx-1]) >2) or (signal > x[x_idx-1]):
                         y.append(signal)
             corr = np.corrcoef(y, label[1][accum_len:accum_len + len(y)])[0, 1]
             for loc in label[0][accum_len:accum_len + len(y)]:
+                
                 assert(loc[0] == idx)
             accum_len += len(y)
             assert abs(corr - 1)< 1e-6
-    print("Input dummy data test passed!")
+    print("Input pipeline dummy data test passed!")
 
                     
-
+#
 if __name__ == '__main__':
     test_chiron_input()
 
