@@ -605,6 +605,11 @@ def read_raw(raw_signal,
     for indx, segment_length in enumerate(raw_label.length):
         current_start = raw_label.start[indx]
         current_base = raw_label.base[indx]
+        if current_start+segment_length > signal_len:
+            print(current_start)
+            print(segment_length)
+            print(signal_len)
+            print(current_base)
         assert(current_start+segment_length < signal_len)
         if current_length + segment_length < max_seq_length:
             current_event += raw_signal[current_start:current_start + segment_length]
