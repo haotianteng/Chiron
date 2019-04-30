@@ -33,10 +33,10 @@ def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
         if file_n.endswith('fast5'):
 #            output_file = output_folder + os.path.splitext(file_n)[0]
             file_n = os.path.join(dir_n,file_n)
-            success, (raw_data, raw_data_array),(offset,digitisation,range) = extract_file(file_n)
+            success, (raw_data, raw_data_array),(offset,digitisation,range_s) = extract_file(file_n)
             if success:
                 if FLAGS.unit:
-                    raw_data=reunit(raw_data,offset,digitisation,range)
+                    raw_data=reunit(raw_data,offset,digitisation,range_s)
                 count += 1
                 example = tf.train.Example(features=tf.train.Features(feature={
                     'raw_data': _bytes_feature(raw_data.tostring()),
@@ -46,18 +46,18 @@ def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
                 sys.stdout.write("%s file transfered.   \n" % (file_n))
             else:
                 sys.stdout.write("FAIL on %s file.   \n" % (file_n))
-def reunit(signal,offset,digitisation,range):
+def reunit(signal,offset,digitisation,range_s):
     """
     Rescale the signal to the pA unit. Signal is calculated by
-    tr_sig = (signal+offset)*range/digitisation
-    The offset, digitisation, range can be got from /UniqueGlobalKey/channel_id/ entry of the fast5 file.
+    tr_sig = (signal+offset)*range_s/digitisation
+    The offset, digitisation, range_s can be got from /UniqueGlobalKey/channel_id/ entry of the fast5 file.
     Input Args:
         signal: the array contain the digitalised signal.
         offset: offset information read from fast5 file.
         digitisation: channel used for digitalised the signal.
-        range: range entry from fast5 file.
+        range_s: range_s entry from fast5 file.
     """
-    signal=(signal+offset)*float(range)/float(digitisation)
+    signal=(signal+offset)*float(range_s)/float(digitisation)
     return np.asarray(signal,dtype=np.float32)
 def run_list(dirs,output_folder):
     """
@@ -82,7 +82,7 @@ def extract_file(input_file):
             input_file, FLAGS.basecall_group,
             FLAGS.basecall_subgroup)
         raw_data, raw_label, raw_start, raw_length = raw_info
-        offset,range,digitisation = channel_info
+        offset,range_s,digitisation = channel_info
     except Exception as e:
         print(str(e))
         return False, (None, None) ,(None, None,None)
@@ -95,7 +95,7 @@ def extract_file(input_file):
             [start, start + raw_length[index], str(raw_label['base'][index])])
     if FLAGS.mode=='rna':
         raw_data = raw_data[::-1]
-    return True, (raw_data, np.array(raw_data_array, dtype='S8')) , (offset,digitisation,range)
+    return True, (raw_data, np.array(raw_data_array, dtype='S8')) , (offset,digitisation,range_s)
 
 
 def run(args):

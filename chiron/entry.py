@@ -17,9 +17,23 @@ from chiron.utils.extract_sig_ref import extract
 
 
 def evaluation(args):
+    if args.preset is None:
+        default_p = {'start':0,'batch_size':400,'segment_len':500,'jump':490,'threads':0,'beam':30}
+    elif args.preset == 'dna-pre':
+        default_p = {'start':0,'batch_size':400,'segment_len':400,'jump':390,'threads':0,'beam':30}
+        if args.mode=='rna':
+            raise ValueError('Try to use the DNA preset parameter setting in RNA mode.')
+    elif args.preset == 'rna-pre':
+        default_p = {'start':0,'batch_size':300,'segment_len':2000,'jump':1900,'threads':0,'beam':30}
+        if args.mode=='dna':
+            raise ValueError('Attempt to use the RNA preset parameter setting in DNA mode, enable RNA basecalling by --mode rna')
+    else:
+        raise ValueError('Unknown presetting %s undifiend'%(args.preset))
+    args = set_paras(args,default_p)
     FLAGS = args
     FLAGS.input_dir = FLAGS.input
     FLAGS.output_dir = FLAGS.output
+    FLAGS.unit = False
     FLAGS.recursive = True
     extract(FLAGS)
     FLAGS.input = FLAGS.output + '/raw/'
@@ -29,6 +43,14 @@ def evaluation(args):
 def export(args):
     raw.run(args)
 
+def set_paras(args,p):
+    args.start = p['start'] if args.start is None else args.start
+    args.batch_size=p['batch_size'] if args.batch_size is None else args.batch_size
+    args.segment_len=p['segment_len'] if args.segment_len is None else args.segment_len
+    args.jump=p['jump'] if args.jump is None else args.jump
+    args.threads=p['threads'] if args.threads is None else args.threads
+    args.beam=p['beam'] if args.beam is None else args.beam
+    return args
 
 def main(arguments=sys.argv[1:]):
     parser = argparse.ArgumentParser(prog='chiron', description='A deep neural network basecaller.')
@@ -41,15 +63,15 @@ def main(arguments=sys.argv[1:]):
     parser_call.add_argument('-i', '--input', required=True, help="File path or Folder path to the fast5 file.")
     parser_call.add_argument('-o', '--output', required=True, help="Output folder path")
     parser_call.add_argument('-m', '--model',type = str, default=model_default_path, help="model folder path")
-    parser_call.add_argument('-s', '--start', type=int, default=0, help="Start index of the signal file.")
-    parser_call.add_argument('-b', '--batch_size', type=int, default=1100,
+    parser_call.add_argument('-s', '--start', type=int, default=None, help="Start index of the signal file.")
+    parser_call.add_argument('-b', '--batch_size', type=int, default=None,
                              help="Batch size for run, bigger batch_size will increase the processing speed but require larger RAM load")
-    parser_call.add_argument('-l', '--segment_len', type=int, default=300, help="Segment length to be divided into.")
-    parser_call.add_argument('-j', '--jump', type=int, default=30, help="Step size for segment")
-    parser_call.add_argument('-t', '--threads', type=int, default=0,
+    parser_call.add_argument('-l', '--segment_len', type=int, default=None, help="Segment length to be divided into.")
+    parser_call.add_argument('-j', '--jump', type=int, default=None, help="Step size for segment")
+    parser_call.add_argument('-t', '--threads', type=int, default=None,
                              help="Threads number, default is 0, which use all the available threads.")
     parser_call.add_argument('-e', '--extension', default='fastq', help="Output file type.")
-    parser_call.add_argument('--beam', type=int, default=50,
+    parser_call.add_argument('--beam', type=int, default=None,
                              help="Beam width used in beam search decoder, default is 50, set to 0 to use a greedy decoder. Large beam width give better decoding result but require longer decoding time.")
     parser_call.add_argument('--concise', action='store_true',
                              help="Concisely output the result, the meta and segments files will not be output.")
@@ -59,8 +81,9 @@ def main(arguments=sys.argv[1:]):
                         default = None,
                         type = int,
                         help="Extract test_number reads, default is None, extract all reads.")
+    parser_call.add_argument('-p', '--preset',default=None,help="Preset evaluation parameters. Can be one of the following: dna-pre, rna-pre")
     parser_call.set_defaults(func=evaluation)
-
+    
     # parser for 'extract' command
     parser_export = subparsers.add_parser('export', description='Export signal and label from the fast5 file.',
                                           help='Extract signal and label in the fast5 file.')

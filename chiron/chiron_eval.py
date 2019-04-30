@@ -526,7 +526,6 @@ def run(args):
         out_meta.write("%5.3f %5.3f %5.3f %5.3f\n" % (
             time_dict['real'], time_dict['sys'], time_dict['user'], time_dict['sys'] + time_dict['user']))
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='chiron',
                                      description='A deep neural network basecaller.')
@@ -536,23 +535,44 @@ if __name__ == "__main__":
                         help="Output Folder name")
     parser.add_argument('-m', '--model', required = True,
                         help="model folder path")
-    parser.add_argument('-s', '--start', type=int, default=0,
+    parser.add_argument('-s', '--start', type=int, default=None,
                         help="Start index of the signal file.")
-    parser.add_argument('-b', '--batch_size', type=int, default=400,
+    parser.add_argument('-b', '--batch_size', type=int, default=None,
                         help="Batch size for run, bigger batch_size will increase the processing speed and give a slightly better accuracy but require larger RAM load")
-    parser.add_argument('-l', '--segment_len', type=int, default=400,
+    parser.add_argument('-l', '--segment_len', type=int, default=None,
                         help="Segment length to be divided into.")
-    parser.add_argument('-j', '--jump', type=int, default=30,
+    parser.add_argument('-j', '--jump', type=int, default=None,
                         help="Step size for segment")
-    parser.add_argument('-t', '--threads', type=int, default=0,
+    parser.add_argument('-t', '--threads', type=int, default=None,
                         help="Threads number")
+    parser.add_argument('--beam', type=int, default=None,
+                        help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     parser.add_argument('-e', '--extension', default='fastq',
                         help="Output file extension.")
-    parser.add_argument('--beam', type=int, default=30,
-                        help="Beam width used in beam search decoder, default is 0, in which a greedy decoder is used. Recommend width:100, Large beam width give better decoding result but require longer decoding time.")
     parser.add_argument('--concise', action='store_true',
                         help="Concisely output the result, the meta and segments files will not be output.")
     parser.add_argument('--mode', default = 'dna',
                         help="Output mode, can be chosen from dna or rna.")
+    parser.add_argument('-p', '--preset',default=None,help="Preset evaluation parameters. Can be one of the following:\ndna-pre\nrna-pre")
     args = parser.parse_args(sys.argv[1:])
+    def set_paras(p):
+        args.start = p['start'] if args.start is None else args.start
+        args.batch_size=p['batch_size'] if args.batch_size is None else args.batch_size
+        args.segment_len=p['segment_len'] if args.segment_len is None else args.segment_len
+        args.jump=p['jump'] if args.jump is None else args.jump
+        args.threads=p['threads'] if args.threads is None else args.threads
+        args.beam=p['beam'] if args.beam is None else args.beam
+    if args.preset is None:
+        default_p = {'start':0,'batch_size':400,'segment_len':500,'jump':490,'threads':0,'beam':30}
+    elif args.preset == 'dna-pre':
+        default_p = {'start':0,'batch_size':400,'segment_len':400,'jump':390,'threads':0,'beam':30}
+        if args.mode=='rna':
+            raise ValueError('Try to use the DNA preset parameter setting in RNA mode.')
+    elif args.preset == 'rna-pre':
+        default_p = {'start':0,'batch_size':300,'segment_len':2000,'jump':1900,'threads':0,'beam':30}
+        if args.mode=='dna':
+            raise ValueError('Attempt to use the RNA preset parameter setting in DNA mode, enable rna mode by --mode.')
+    else:
+        raise ValueError('Unknown presetting %s undifiend'%(args.preset))
+    set_paras(default_p)
     run(args)

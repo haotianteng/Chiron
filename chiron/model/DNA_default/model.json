@@ -1,11 +1,1 @@
-{
-	"cnn":{
-		"model":"dna_model1"
-		},
-	"rnn":{
-		"layer_num":3,
-		"cell_type":"LSTM",
-		"hidden_num":100
-		},
-	"opt_method": "Adam"
-}
+{"cnn": {"model": "dna_model1"}, "rnn": {"layer_num": 3, "hidden_num": 100, "cell_type": "LSTM"}, "opt_method": "Adam", "fl_gamma": 2}
