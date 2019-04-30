@@ -8,15 +8,11 @@ If you found Chiron useful, please consider to cite:
 
 DNA basecall:
 ```
-python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/DNA_default -b 1100 -l 400 -j 40 --beam 30 --mode dna
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/DNA_default -p dna-pre
 ```
 RNA basecall:
 ```
-python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 200 -l 2000 -j 200 --beam 30 --mode rna
-```
-RNA fast basecall:
-```
-python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 500 -l 2000 -j 1900 --beam 30 --mode rna
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -p rna-pre --mode rna
 ```
 
 ---
