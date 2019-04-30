@@ -383,7 +383,11 @@ def read_tfrecord(data_dir,
             #except:
             #    sys.stdout.write("Read the label fail.Skipped.")
             #    continue
-            tmp_event, tmp_event_length, tmp_label, tmp_label_length = read_raw(f_signal, f_label, seq_length)
+            try:
+                tmp_event, tmp_event_length, tmp_label, tmp_label_length = read_raw(f_signal, f_label, seq_length)
+            except Exception as e:
+                print("Extract label from %s fail, label position exceed max signal length."%(fn_string))
+                raise e
             event += tmp_event
             event_length += tmp_event_length
             label += tmp_label
