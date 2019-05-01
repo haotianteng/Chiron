@@ -610,6 +610,8 @@ def read_raw(raw_signal,
             print(segment_length)
             print(signal_len)
             print(current_base)
+            print(raw_signal[:200])
+            print(raw_signal[-200:])
         assert(current_start+segment_length < signal_len)
         if current_length + segment_length < max_seq_length:
             current_event += raw_signal[current_start:current_start + segment_length]
@@ -684,7 +686,7 @@ def base2ind(base, alphabet_n=4, base_n=1):
         return alphabeta.index(base)
     #
 
-def test_chiron_input():
+def test_chiron_dummy_input():
     DATA_FORMAT = np.dtype([('start','<i4'),
                             ('length','<i4'),
                             ('base','S1')]) 
@@ -769,9 +771,9 @@ def test_chiron_input():
             accum_len += len(y)
             assert abs(corr - 1)< 1e-6
     print("Input pipeline dummy data test passed!")
-
                     
 #
 if __name__ == '__main__':
-    test_chiron_input()
-
+    test_chiron_dummy_input()
+#    TEST_DIR='/home/heavens/Documents/test/'
+#    train = read_tfrecord(TEST_DIR,"train.tfrecords",seq_length=1000,h5py_file_path=os.path.join(TEST_DIR,'cache.fast5'))
