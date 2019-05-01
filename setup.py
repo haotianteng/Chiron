@@ -17,7 +17,8 @@ install_requires=[
   'statsmodels>=0.8.0',
   'tqdm>=4.23.0',
   'scipy>=1.2.1',
-  'biopython>=1.73'
+  'biopython>=1.73',
+  'packaging>=18.0'
 ]
 extras_require={
   "tf": ["tensorflow>=1.13.1"],
