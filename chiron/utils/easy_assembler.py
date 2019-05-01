@@ -14,7 +14,10 @@ import operator
 import time
 from collections import Counter
 from itertools import groupby
-from itertools import zip_longest
+try:
+    from itertools import zip_longest as zip_longest
+except:
+    from itertools import izip_longest as zip_longest
 import numpy as np
 import six
 from six.moves import range

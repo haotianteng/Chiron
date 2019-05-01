@@ -5,4 +5,4 @@
 #file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Initial file for the package"""
-from _version import __version__
+from chiron._version import __version__

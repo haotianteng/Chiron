@@ -240,72 +240,74 @@ def write_output(segments,
                                       global_setting.start))
             out_meta.write("# input_name model_name\n")
             out_meta.write("%s %s\n" % (global_setting.input, global_setting.model))
+            
+def compile_eval_graph(model_configure):
+    class net:
+        def __init__(self,configure):
+            self.pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])
+            self.x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
+            self.seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
+            self.training = tf.placeholder(tf.bool)
+            self.logits, self.ratio = chiron_model.inference(
+                                            self.x, 
+                                            self.seq_length, 
+                                            training=self.training,
+                                            full_sequence_len = FLAGS.segment_len,
+                                            configure = configure)
+            self.config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
+                                    inter_op_parallelism_threads=FLAGS.threads)
+            self.config.gpu_options.allow_growth = True
+            self.logits_index = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
+            self.logits_fname = tf.placeholder(tf.string, shape=[FLAGS.batch_size])
+            self.logits_queue = tf.FIFOQueue(
+                capacity=1000,
+                dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
+                shapes=[self.logits.shape,self.logits_fname.shape,self.logits_index.shape, self.seq_length.shape]
+            )
+            self.logits_queue_size = self.logits_queue.size()
+            self.logits_enqueue = self.logits_queue.enqueue((self.logits, self.logits_fname, self.logits_index, self.seq_length))
+            self.logits_queue_close = self.logits_queue.close()
+            ### Decoding logits into bases
+            self.decode_predict_op, self.decode_prob_op, self.decoded_fname_op, self.decode_idx_op, self.decode_queue_size = decoding_queue(self.logits_queue)
+            self.saver = tf.train.Saver(var_list=tf.trainable_variables()+tf.moving_average_variables())
+        
+        def init_session(self):
+            self.sess = tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=self.config))
+            self.saver.restore(self.sess, tf.train.latest_checkpoint(FLAGS.model))
+            if os.path.isdir(FLAGS.input):
+                self.file_list = os.listdir(FLAGS.input)
+                self.file_dir = FLAGS.input
+            else:
+                self.file_list = [os.path.basename(FLAGS.input)]
+                self.file_dir = os.path.abspath(
+                    os.path.join(FLAGS.input, os.path.pardir))
+            file_n = len(self.file_list)
+            self.pbars.update(2,total = file_n)
+            self.pbars.update(3,total = file_n)
+            if not os.path.exists(FLAGS.output):
+                os.makedirs(FLAGS.output)
+            if not os.path.exists(os.path.join(FLAGS.output, 'segments')):
+                os.makedirs(os.path.join(FLAGS.output, 'segments'))
+            if not os.path.exists(os.path.join(FLAGS.output, 'result')):
+                os.makedirs(os.path.join(FLAGS.output, 'result'))
+            if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
+                os.makedirs(os.path.join(FLAGS.output, 'meta'))
 
-def evaluation():
-    pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])
-    x = tf.placeholder(tf.float32, shape=[FLAGS.batch_size, FLAGS.segment_len])
-    seq_length = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
-    training = tf.placeholder(tf.bool)
-    config_path = os.path.join(FLAGS.model,'model.json')
-    model_configure = chiron_model.read_config(config_path)
-
-    logits, ratio = chiron_model.inference(
-                                    x, 
-                                    seq_length, 
-                                    training=training,
-                                    full_sequence_len = FLAGS.segment_len,
-                                    configure = model_configure)
-    config = tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=FLAGS.threads,
-                            inter_op_parallelism_threads=FLAGS.threads)
-    config.gpu_options.allow_growth = True
-    logits_index = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
-    logits_fname = tf.placeholder(tf.string, shape=[FLAGS.batch_size])
-    logits_queue = tf.FIFOQueue(
-        capacity=1000,
-        dtypes=[tf.float32, tf.string, tf.int32, tf.int32],
-        shapes=[logits.shape,logits_fname.shape,logits_index.shape, seq_length.shape]
-    )
-    logits_queue_size = logits_queue.size()
-    logits_enqueue = logits_queue.enqueue((logits, logits_fname, logits_index, seq_length))
-    logits_queue_close = logits_queue.close()
-    ### Decoding logits into bases
-    decode_predict_op, decode_prob_op, decoded_fname_op, decode_idx_op, decode_queue_size = decoding_queue(logits_queue)
-    saver = tf.train.Saver(var_list=tf.trainable_variables()+tf.moving_average_variables())
-    with tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=config)) as sess:
-        saver.restore(sess, tf.train.latest_checkpoint(FLAGS.model))
-        if os.path.isdir(FLAGS.input):
-            file_list = os.listdir(FLAGS.input)
-            file_dir = FLAGS.input
-        else:
-            file_list = [os.path.basename(FLAGS.input)]
-            file_dir = os.path.abspath(
-                os.path.join(FLAGS.input, os.path.pardir))
-        file_n = len(file_list)
-        pbars.update(2,total = file_n)
-        pbars.update(3,total = file_n)
-        if not os.path.exists(FLAGS.output):
-            os.makedirs(FLAGS.output)
-        if not os.path.exists(os.path.join(FLAGS.output, 'segments')):
-            os.makedirs(os.path.join(FLAGS.output, 'segments'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'result')):
-            os.makedirs(os.path.join(FLAGS.output, 'result'))
-        if not os.path.exists(os.path.join(FLAGS.output, 'meta')):
-            os.makedirs(os.path.join(FLAGS.output, 'meta'))
-        def worker_fn():
+        def _worker_fn(self):
             batch_x = np.asarray([[]]).reshape(0,FLAGS.segment_len)
             seq_len = np.asarray([])
             logits_idx = np.asarray([])
             logits_fn = np.asarray([])
-            for f_i, name in enumerate(file_list):
+            for f_i, name in enumerate(self.file_list):
                 if not name.endswith('.signal'):
                     continue
-                input_path = os.path.join(file_dir, name)
+                input_path = os.path.join(self.file_dir, name)
                 eval_data = read_data_for_eval(input_path, FLAGS.start,
                                                seg_length=FLAGS.segment_len,
                                                step=FLAGS.jump)
                 reads_n = eval_data.reads_n
-                pbars.update(0,total = reads_n,progress = 0)
-                pbars.update_bar()
+                self.pbars.update(0,total = reads_n,progress = 0)
+                self.pbars.update_bar()
                 i=0
                 while(eval_data.epochs_completed == 0):
                     current_batch, current_seq_len, _ = eval_data.next_batch(
@@ -317,27 +319,27 @@ def evaluation():
                     logits_fn = np.concatenate((logits_fn,[name]*current_n),axis = 0)
                     i+=current_n
                     if len(batch_x) < FLAGS.batch_size:
-                        pbars.update(0,progress=i)
-                        pbars.update_bar()
+                        self.pbars.update(0,progress=i)
+                        self.pbars.update_bar()
                         continue
                     feed_dict = {
-                        x: batch_x,
-                        seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: False,
-                        logits_index:logits_idx,
-                        logits_fname:logits_fn,
+                        self.x.name: batch_x,
+                        self.seq_length.name: np.round(seq_len/self.ratio).astype(np.int32),
+                        self.training.name: False,
+                        self.logits_index.name:logits_idx,
+                        self.logits_fname.name:logits_fn,
                     }
                     #Training: Set it to  True for a temporary fix of the batch normalization problem: https://github.com/haotianteng/Chiron/commit/8fce3a3b4dac8e9027396bb8c9152b7b5af953ce
                     #TODO: change the training FLAG back to False after the new model has been trained.
-                    sess.run(logits_enqueue,feed_dict=feed_dict)
+                    self.sess.run(self.logits_enqueue,feed_dict=feed_dict)
                     batch_x = np.asarray([[]]).reshape(0,FLAGS.segment_len)
                     seq_len = np.asarray([])
                     logits_idx = np.asarray([])
                     logits_fn = np.asarray([])
-                    pbars.update(0,progress=i)
-                    pbars.update_bar()
-                pbars.update(2,progress = f_i+1)
-                pbars.update_bar()
+                    self.pbars.update(0,progress=i)
+                    self.pbars.update_bar()
+                self.pbars.update(2,progress = f_i+1)
+                self.pbars.update_bar()
             ### All files has been processed.
             batch_n = len(batch_x)
             if batch_n >0:
@@ -348,104 +350,113 @@ def evaluation():
                         seq_len, ((0, pad_width)), mode='wrap')
                 logits_idx = np.pad(logits_idx,(0,pad_width),mode = 'constant',constant_values=-1)
                 logits_fn = np.pad(logits_fn,(0,pad_width),mode = 'constant',constant_values='')
-                sess.run(logits_enqueue,feed_dict = {
-                        x: batch_x,
-                        seq_length: np.round(seq_len/ratio).astype(np.int32),
-                        training: False,
-                        logits_index:logits_idx,
-                        logits_fname:logits_fn,
+                self.sess.run(self.logits_enqueue,feed_dict = {
+                        self.x.name: batch_x,
+                        self.seq_length.name: np.round(seq_len/self.ratio).astype(np.int32),
+                        self.training.name: False,
+                        self.logits_index.name:logits_idx,
+                        self.logits_fname.name:logits_fn,
                     })
-            sess.run(logits_queue_close)
-#
-        worker = threading.Thread(target=worker_fn,args=() )
-        worker.setDaemon(True)
-        worker.start()
+            self.sess.run(self.logits_queue_close)
+        def run_worker(self):
+            worker = threading.Thread(target=self._worker_fn)
+            worker.setDaemon(True)
+            worker.start()
+    eval_net = net(model_configure)
+    eval_net.init_session()
+    eval_net.run_worker()
+    return eval_net
+    
 
-        val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
-        for f_i, name in enumerate(file_list):
-            start_time = time.time()
-            if not name.endswith('.signal'):
-                continue
-            file_pre = os.path.splitext(name)[0]
-            input_path = os.path.join(file_dir, name)
-            if FLAGS.mode == 'rna':
-                eval_data = read_data_for_eval(input_path, FLAGS.start,
-                                           seg_length=FLAGS.segment_len,
-                                           step=FLAGS.jump)
-            else:
-                eval_data = read_data_for_eval(input_path, FLAGS.start,
-                                           seg_length=FLAGS.segment_len,
-                                           step=FLAGS.jump)
-            reads_n = eval_data.reads_n
-            pbars.update(1,total = reads_n,progress = 0)
-            pbars.update_bar()
-            reading_time = time.time() - start_time
-            reads = list()
-            if 'total_count' not in val[name].keys():
-                val[name]['total_count'] = 0
-            if 'index_list' not in val[name].keys():
-                val[name]['index_list'] = []
-            while True:
-                l_sz, d_sz = sess.run([logits_queue_size, decode_queue_size])   
-                if val[name]['total_count'] == reads_n:
-                    pbars.update(1,progress = val[name]['total_count'])
-                    break
-                decode_ops = [decoded_fname_op, decode_idx_op, decode_predict_op, decode_prob_op]
-                decoded_fname, i, predict_val, logits_prob = sess.run(decode_ops, feed_dict={training: False})
-                decoded_fname = np.asarray([x.decode("UTF-8") for x in decoded_fname])
-                ##Have difficulties integrate it into the tensorflow graph, as the number of file names in a batch is variable.
-                ##And for loop can't be implemented as the eager execution is disabled due to the use of queue.
-                uniq_fname,uniq_fn_idx = np.unique(decoded_fname,return_index = True)
-                for fn_idx,fn in enumerate(uniq_fname):
-                    i = uniq_fn_idx[fn_idx]
-                    if fn != '':
-                        occurance = np.where(decoded_fname==fn)[0]
-                        start = occurance[0]
-                        end = occurance[-1]+1
-                        assert(len(occurance)==end-start)
-                        if 'total_count' not in val[fn].keys():
-                            val[fn]['total_count'] = 0
-                        if 'index_list' not in val[fn].keys():
-                            val[fn]['index_list'] = []
-                        val[fn]['total_count'] += (end-start)
-                        val[fn]['index_list'].append(i)
-                        sliced_sparse = slice_ctc_decoding_result(predict_val,start,end)                
-                        val[fn][i] = (sliced_sparse, logits_prob[decoded_fname==fn])               
-                pbars.update(1,progress = val[name]['total_count'])
-                pbars.update_bar()
+def evaluation():
+    config_path = os.path.join(FLAGS.model,'model.json')
+    model_configure = chiron_model.read_config(config_path)
+    net = compile_eval_graph(model_configure)
+    val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
+    for f_i, name in enumerate(net.file_list):
+        start_time = time.time()
+        if not name.endswith('.signal'):
+            continue
+        file_pre = os.path.splitext(name)[0]
+        input_path = os.path.join(net.file_dir, name)
+        if FLAGS.mode == 'rna':
+            eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                       seg_length=FLAGS.segment_len,
+                                       step=FLAGS.jump)
+        else:
+            eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                       seg_length=FLAGS.segment_len,
+                                       step=FLAGS.jump)
+        reads_n = eval_data.reads_n
+        net.pbars.update(1,total = reads_n,progress = 0)
+        net.pbars.update_bar()
+        reading_time = time.time() - start_time
+        reads = list()
+        if 'total_count' not in val[name].keys():
+            val[name]['total_count'] = 0
+        if 'index_list' not in val[name].keys():
+            val[name]['index_list'] = []
+        while True:
+            l_sz, d_sz = net.sess.run([net.logits_queue_size, net.decode_queue_size])   
+            if val[name]['total_count'] == reads_n:
+                net.pbars.update(1,progress = val[name]['total_count'])
+                break
+            decode_ops = [net.decoded_fname_op, net.decode_idx_op, net.decode_predict_op, net.decode_prob_op]
+            decoded_fname, i, predict_val, logits_prob = net.sess.run(decode_ops, feed_dict={net.training: False})
+            decoded_fname = np.asarray([x.decode("UTF-8") for x in decoded_fname])
+            ##Have difficulties integrate it into the tensorflow graph, as the number of file names in a batch is variable.
+            ##And for loop can't be implemented as the eager execution is disabled due to the use of queue.
+            uniq_fname,uniq_fn_idx = np.unique(decoded_fname,return_index = True)
+            for fn_idx,fn in enumerate(uniq_fname):
+                i = uniq_fn_idx[fn_idx]
+                if fn != '':
+                    occurance = np.where(decoded_fname==fn)[0]
+                    start = occurance[0]
+                    end = occurance[-1]+1
+                    assert(len(occurance)==end-start)
+                    if 'total_count' not in val[fn].keys():
+                        val[fn]['total_count'] = 0
+                    if 'index_list' not in val[fn].keys():
+                        val[fn]['index_list'] = []
+                    val[fn]['total_count'] += (end-start)
+                    val[fn]['index_list'].append(i)
+                    sliced_sparse = slice_ctc_decoding_result(predict_val,start,end)                
+                    val[fn][i] = (sliced_sparse, logits_prob[decoded_fname==fn])               
+            net.pbars.update(1,progress = val[name]['total_count'])
+            net.pbars.update_bar()
 
-            pbars.update(3,progress = f_i+1)
-            pbars.update_bar()
-            qs_list = np.empty((0, 1), dtype=np.float)
-            qs_string = None
-            for i in np.sort(val[name]['index_list']):
-                predict_val, logits_prob = val[name][i]
-                predict_read, unique = sparse2dense(predict_val)
-                predict_read = predict_read[0]
-                unique = unique[0]
+        net.pbars.update(3,progress = f_i+1)
+        net.pbars.update_bar()
+        qs_list = np.empty((0, 1), dtype=np.float)
+        qs_string = None
+        for i in np.sort(val[name]['index_list']):
+            predict_val, logits_prob = val[name][i]
+            predict_read, unique = sparse2dense(predict_val)
+            predict_read = predict_read[0]
+            unique = unique[0]
 
-                if FLAGS.extension == 'fastq':
-                    logits_prob = logits_prob[unique]
-                if FLAGS.extension == 'fastq':
-                    qs_list = np.concatenate((qs_list, logits_prob))
-                reads += predict_read
-            val.pop(name)  # Release the memory
-            basecall_time = time.time() - start_time
-            bpreads = [index2base(read) for read in reads]
-            js_ratio = FLAGS.jump/FLAGS.segment_len
-            kernal = get_assembler_kernal(FLAGS.jump,FLAGS.segment_len)
             if FLAGS.extension == 'fastq':
-                consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list,js_ratio,kernal=kernal)
-                qs_string = qs(consensus, qs_consensus)
-            else:
-                consensus = simple_assembly(bpreads,js_ratio,kernal=kernal)
-            c_bpread = index2base(np.argmax(consensus, axis=0))
-            assembly_time = time.time() - start_time
-            list_of_time = [start_time, reading_time,
-                            basecall_time, assembly_time]
-            write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
-                         q_score=qs_string,global_setting=FLAGS)
-    pbars.end()
+                logits_prob = logits_prob[unique]
+            if FLAGS.extension == 'fastq':
+                qs_list = np.concatenate((qs_list, logits_prob))
+            reads += predict_read
+        val.pop(name)  # Release the memory
+        basecall_time = time.time() - start_time
+        bpreads = [index2base(read) for read in reads]
+        js_ratio = FLAGS.jump/FLAGS.segment_len
+        kernal = get_assembler_kernal(FLAGS.jump,FLAGS.segment_len)
+        if FLAGS.extension == 'fastq':
+            consensus, qs_consensus = simple_assembly_qs(bpreads, qs_list,js_ratio,kernal=kernal)
+            qs_string = qs(consensus, qs_consensus)
+        else:
+            consensus = simple_assembly(bpreads,js_ratio,kernal=kernal)
+        c_bpread = index2base(np.argmax(consensus, axis=0))
+        assembly_time = time.time() - start_time
+        list_of_time = [start_time, reading_time,
+                        basecall_time, assembly_time]
+        write_output(bpreads, c_bpread, list_of_time, file_pre, concise=FLAGS.concise, suffix=FLAGS.extension,
+                     q_score=qs_string,global_setting=FLAGS)
+    net.pbars.end()
 
 def decoding_queue(logits_queue, num_threads=6):
     """
