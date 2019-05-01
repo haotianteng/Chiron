@@ -20,8 +20,8 @@ install_requires=[
   'biopython>=1.73'
 ]
 extras_require={
-  "tf": ["tensorflow>=1.3.0"],
-  "tf_gpu": ["tensorflow-gpu>=1.3.0"],
+  "tf": ["tensorflow>=1.13.1"],
+  "tf_gpu": ["tensorflow-gpu>=1.13.1"],
 }
 exec(open('chiron/_version.py').read())
 setup(
