@@ -66,13 +66,11 @@ pip install tensorflow-gpu
 ### Install from Source
 ```
 git clone https://github.com/haotianteng/chiron.git
-cd chiron
+cd Chiron
 ```
 You will also need to install dependencies.
 ```
-pip install h5py
-pip install tqdm
-pip install statsmodels
+python setup.py install
 ```
 For CPU-version:
 ```
