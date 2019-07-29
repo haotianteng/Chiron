@@ -61,10 +61,6 @@ def LIS(sequence):
 def get_squiggle_pos(bound):
     """
     Get the position of the persudo squiggles by interpolating the bounds.
-    Input Args:
-        bound: A array with shape [N,2], the first occurance and last occurance position of the base.
-    Return:
-        A array with shape [N,2], the interpolated location of the LIS sequence of the positions of each base.
     """
     bot_val, bot_idx = LIS(bound[:,0])
     up_val, up_idx = LIS(bound[:,1])

@@ -111,7 +111,6 @@ def _decap(fast5_root, trans_start,raw_signal,raw_seq):
     if len(raw_seq) > 3:
         raw_seq[3] = raw_seq[3][:-skip_n]
     return raw_signal[int(trans_start):],b'\n'.join(raw_seq),event_entry
-
 def extract_fastq(input_f,ref_f,mode = 0,trans_start = None,alignment = True):
     """
     Args:
@@ -185,7 +184,6 @@ def parse_cwDTW(f_path):
         current.append(seg[7][2])
         output.append(tuple(current))
     return np.array(output,dtype = DATA_FORMAT)
-
 def write_back(fast5_f,aln_matrix,raw,ref,resquiggle_method):
     """
     Args:
@@ -211,7 +209,6 @@ def write_back(fast5_f,aln_matrix,raw,ref,resquiggle_method):
         event_h.attrs['read_start_rel_to_raw'] = 0
         fastq_h[...] = raw
         ref_h[...] = ref
-        
 def copy_raw(src_fast5,dest_fast5,raw):
     """
     Write the clipped raw signal into fast5 file.
@@ -287,7 +284,6 @@ def run():
         pass
     pool.close()
     pool.join()        
-    
 def run_rna():
     pool = Pool(args.thread)
     dest_link = read_link(args.readdb)

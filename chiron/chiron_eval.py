@@ -241,7 +241,7 @@ def write_output(segments,
             out_meta.write("# input_name model_name\n")
             out_meta.write("%s %s\n" % (global_setting.input, global_setting.model))
             
-def build_eval_graph(model_configure):
+def compile_eval_graph(model_configure):
     class net:
         def __init__(self,configure):
             self.pbars = multi_pbars(["Logits(batches)","ctc(batches)","logits(files)","ctc(files)"])
@@ -275,14 +275,7 @@ def build_eval_graph(model_configure):
             self.sess = tf.train.MonitoredSession(session_creator=tf.train.ChiefSessionCreator(config=self.config))
             self.saver.restore(self.sess, tf.train.latest_checkpoint(FLAGS.model))
             if os.path.isdir(FLAGS.input):
-                if FLAGS.recursive:
-                    self.file_list =[]
-                    dir_len = len(FLAGS.input)+1
-                    for (dirpath, dirnames, filenames) in os.walk(FLAGS.input+'/'):
-                        for filename in filenames:
-                            self.file_list.append(dirpath[dir_len:]+filename)
-                else:
-                    self.file_list = os.listdir(FLAGS.input)
+                self.file_list = os.listdir(FLAGS.input)
                 self.file_dir = FLAGS.input
             else:
                 self.file_list = [os.path.basename(FLAGS.input)]
@@ -336,6 +329,8 @@ def build_eval_graph(model_configure):
                         self.logits_index.name:logits_idx,
                         self.logits_fname.name:logits_fn,
                     }
+                    #Training: Set it to  True for a temporary fix of the batch normalization problem: https://github.com/haotianteng/Chiron/commit/8fce3a3b4dac8e9027396bb8c9152b7b5af953ce
+                    #TODO: change the training FLAG back to False after the new model has been trained.
                     self.sess.run(self.logits_enqueue,feed_dict=feed_dict)
                     batch_x = np.asarray([[]]).reshape(0,FLAGS.segment_len)
                     seq_len = np.asarray([])
@@ -371,11 +366,12 @@ def build_eval_graph(model_configure):
     eval_net.init_session()
     eval_net.run_worker()
     return eval_net
+    
 
 def evaluation():
     config_path = os.path.join(FLAGS.model,'model.json')
     model_configure = chiron_model.read_config(config_path)
-    net = build_eval_graph(model_configure)
+    net = compile_eval_graph(model_configure)
     val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
     for f_i, name in enumerate(net.file_list):
         start_time = time.time()
@@ -408,7 +404,7 @@ def evaluation():
             decode_ops = [net.decoded_fname_op, net.decode_idx_op, net.decode_predict_op, net.decode_prob_op]
             decoded_fname, i, predict_val, logits_prob = net.sess.run(decode_ops, feed_dict={net.training: False})
             decoded_fname = np.asarray([x.decode("UTF-8") for x in decoded_fname])
-            ##Have difficulties integrate it into the tensorflow graph, as the number of file names in a batch is uncertain.
+            ##Have difficulties integrate it into the tensorflow graph, as the number of file names in a batch is variable.
             ##And for loop can't be implemented as the eager execution is disabled due to the use of queue.
             uniq_fname,uniq_fn_idx = np.unique(decoded_fname,return_index = True)
             for fn_idx,fn in enumerate(uniq_fname):
@@ -545,7 +541,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='chiron',
                                      description='A deep neural network basecaller.')
     parser.add_argument('-i', '--input', required = True,
-                        help="File path or Folder path to the fast5 files.")
+                        help="File path or Folder path to the fast5 file.")
     parser.add_argument('-o', '--output', required = True,
                         help="Output Folder name")
     parser.add_argument('-m', '--model', required = True,
@@ -566,8 +562,6 @@ if __name__ == "__main__":
                         help="Output file extension.")
     parser.add_argument('--concise', action='store_true',
                         help="Concisely output the result, the meta and segments files will not be output.")
-    parser.add_argument('-r','--recursive', action='store_true',
-                        help="If read the files recursively.")
     parser.add_argument('--mode', default = 'dna',
                         help="Output mode, can be chosen from dna or rna.")
     parser.add_argument('-p', '--preset',default=None,help="Preset evaluation parameters. Can be one of the following:\ndna-pre\nrna-pre")
