@@ -23,10 +23,7 @@ import tensorflow as tf
 from chiron.utils import progress
 from chiron import __version__
 from packaging import version
-if version.parse(__version__ ) > version.parse('0.5.0'):
-    SIGNAL_DTYPE=np.int16
-else:
-    SIGNAL_DTYPE=np.int16
+SIGNAL_DTYPE=np.int16
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
 MIN_LABEL_LENGTH = 2
 MIN_SIGNAL_PRO = 0.3
@@ -261,21 +258,23 @@ def read_data_for_eval(file_path,
                        reverse = False):
     """
     Input Args:
-        file_path: file path to a signal file.
+        file_path: file path to a signal/fast5 file.
         start_index: the index of the signal start to read.
         step: sliding step size.
         seg_length: length of segments.
         sig_norm: The way signal being normalized, keep it the same as it during training.
         reverse: if the signal need to be reversed.
     """
-    if not file_path.endswith('.signal'):
-        raise ValueError('A .signal file is required.')
-    else:
+    if file_path.endswith('.signal'):
+        f_signal = read_signal(file_path, normalize=sig_norm)
+    elif file_path.endswith('.fast5'):
+        f_signal = read_fast5_sig(file_path, normalize=sig_norm)
+    
         event = list()
         event_len = list()
         label = list()
         label_len = list()
-        f_signal = read_signal(file_path, normalize=sig_norm)
+        
         if reverse:
             f_signal = f_signal[::-1]
         f_signal = f_signal[start_index:]
@@ -511,6 +510,22 @@ def read_signal(file_path, normalize=None):
         signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
     return signal.tolist()
 
+def read_signal_fast5(fast5_path, normalize=None):
+    """
+    Read signal from the fast5 file.
+    TODO: To make it compatible with PromethION platform.
+    """
+    root = h5py.File(fast5_path, 'r')
+    signal = np.asarray(list(root['/Raw/Reads'].values())[0][('Signal')])
+    uniq_arr=np.unique(signal)
+    if len(signal) == 0:
+        return signal.tolist()
+    if normalize == MEAN:
+        signal = (signal - np.mean(uniq_arr)) / np.float(np.std(uniq_arr))
+    elif normalize == MEDIAN:
+        signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
+    return signal.tolist()
+    
 def read_signal_tfrecord(data_array, normalize=None):
 
     signal = data_array
