@@ -24,7 +24,7 @@ from chiron.utils import progress
 from chiron import __version__
 from packaging import version
 if version.parse(__version__ ) > version.parse('0.5.0'):
-    SIGNAL_DTYPE=np.float32
+    SIGNAL_DTYPE=np.int16
 else:
     SIGNAL_DTYPE=np.int16
 raw_labels = collections.namedtuple('raw_labels', ['start', 'length', 'base'])
