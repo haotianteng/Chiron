@@ -15,6 +15,7 @@ import os
 from chiron.cnn import getcnnfeature
 from chiron.cnn import getcnnlogit
 from chiron.rnn import rnn_layers
+from chiron.rnn import rnn_layers_rna
 
 MOVING_AVERAGE_DECAY = 0.9999
 LR_BOUNDARY = [0.66,0.83]
@@ -40,7 +41,8 @@ def read_config(config_file):
         config = {'cnn':{'model':'dna_model1'},
                   'rnn':{'layer_num':3,
                          'hidden_num':100,
-                         'cell_type':'LSTM'},
+                         'cell_type':'LSTM',
+                         'layer_type':'normal'},
                   'opt_method':'Adam',
                   'fl_gamma': 2}
     return config
@@ -150,6 +152,13 @@ def inference(x,sequence_len,training,full_sequence_len,configure, apply_ratio =
         sequence_len =  tf.cast(tf.ceil(tf.cast(sequence_len,tf.float32)/ratio),tf.int32)
     if configure['rnn']['layer_num'] == 0:
         logits = getcnnlogit(cnn_feature)
+    elif configure['rnn']['layer_type'] == 'rna':
+        logits = rnn_layers_rna(cnn_feature,
+                            sequence_len,
+                            training,
+                            layer_num = configure['rnn']['layer_num'],
+                            hidden_num = configure['rnn']['hidden_num'],
+                            cell=configure['rnn']['cell_type'])
     else:
         logits = rnn_layers(cnn_feature,
                             sequence_len,
