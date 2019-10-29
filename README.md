@@ -25,7 +25,7 @@ python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron
     - [If installed from `pip`](#if-installed-from-pip)
     - [If installed from GitHub](#if-installed-from-github)
     - [Test run](#test-run)
-    - [Preprocessing using BoostNano](#Preprocessing)
+    - [Preprocessing using BoostNano](#Preprocess)
     - [Decoder choice](#decoder-choice)
     - [Output](#output)
     - [Output format](#output-format)
