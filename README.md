@@ -108,15 +108,24 @@ python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m <model
 
 ### Test run
 
-We provide 5 sample fast5 files (courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) in the GitHub repository and two models (DNA_default and RNA_default) which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
+We provide 5 sample fast5 files for DNA(courtesy of [nanonet](https://github.com/nanoporetech/nanonet)) and 5 sample files for RNA in the GitHub repository and two models (DNA_default and RNA_default) which you can run a test on. These are located in `chiron/example_data/`. From inside the Chiron repository:
 ```
-python chiron/entry.py call -i chiron/example_folder/ -o <output_folder> -m chiron/model/DNA_default -b 1100 -l 400 -j 40 --beam 30 --mode dna
+python chiron/entry.py call -i chiron/example_folder/ -o <output_folder> -m chiron/model/DNA_default --preset dna-pre
 ```
 And from v0.5 we have provide a good RNA model for the direct-RNA basecall.  
 ```
-python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default -b 200 -l 2000 -j 200 --beam 30 --mode rna
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default --mode rna --preset rna-pre
 ```
-You can change the batch size to smaller one if you have limited RAM/GPU-RAM, bigger batch size has (very)slightly better result.  
+You can reduce the batch size(defualt is 400) if you have limited RAM/GPU-RAM or extend it, bigger batch size has (very)slightly better result and faster inference speed.  
+```
+python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron/model/RNA_default --mode rna --preset rna-pre -b 200
+```
+Any arguments provided afterward will override the argument in the preset, preset arguments values are:  
+**DNA preset arguments value(dna-pre):**
+'start':0,'batch_size':400,'segment_len':400,'jump':390,'threads':0,'beam':30    
+**RNA preset arguments value(rna-pre):**
+'start':0,'batch_size':300,'segment_len':2000,'jump':1900,'threads':0,'beam':30  
+
 
 ### Decoder choice
 (From v0.3)  
