@@ -25,6 +25,7 @@ python chiron/entry.py call -i <input_fast5_folder> -o <output_folder> -m chiron
     - [If installed from `pip`](#if-installed-from-pip)
     - [If installed from GitHub](#if-installed-from-github)
     - [Test run](#test-run)
+    - [Preprocessing using BoostNano](#Preprocessing)
     - [Decoder choice](#decoder-choice)
     - [Output](#output)
     - [Output format](#output-format)
@@ -126,6 +127,8 @@ Any arguments provided afterward will override the argument in the preset, prese
 **RNA preset arguments value(rna-pre):**
 'start':0,'batch_size':300,'segment_len':2000,'jump':1900,'threads':0,'beam':30  
 
+### Preprocess
+For better RNA basecalling result, the fast5 files can be preproceesd using [BoostNano](https://github.com/haotianteng/BoostNano), which is a tool developed by me to segment and remove the polyA and adapter tail.
 
 ### Decoder choice
 (From v0.3)  
