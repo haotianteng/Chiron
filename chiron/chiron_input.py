@@ -268,28 +268,29 @@ def read_data_for_eval(file_path,
     if file_path.endswith('.signal'):
         f_signal = read_signal(file_path, normalize=sig_norm)
     elif file_path.endswith('.fast5'):
-        f_signal = read_fast5_sig(file_path, normalize=sig_norm)
+        f_signal = read_signal_fast5(file_path, normalize=sig_norm)
+    else:
+        raise TypeError("Input file should be a signal file or fsat5 file.")
+    event = list()
+    event_len = list()
+    label = list()
+    label_len = list()
     
-        event = list()
-        event_len = list()
-        label = list()
-        label_len = list()
-        
-        if reverse:
-            f_signal = f_signal[::-1]
-        f_signal = f_signal[start_index:]
-        sig_len = len(f_signal)
-        for indx in range(0, sig_len, step):
-            segment_sig = f_signal[indx:indx + seg_length]
-            segment_len = len(segment_sig)
-            padding(segment_sig, seg_length)
-            event.append(segment_sig)
-            event_len.append(segment_len)
-        evaluation = DataSet(event=event, 
-							 event_length=event_len, 
-							 label=label,
-                             label_length=label_len, 
-							 for_eval=True)
+    if reverse:
+        f_signal = f_signal[::-1]
+    f_signal = f_signal[start_index:]
+    sig_len = len(f_signal)
+    for indx in range(0, sig_len, step):
+        segment_sig = f_signal[indx:indx + seg_length]
+        segment_len = len(segment_sig)
+        padding(segment_sig, seg_length)
+        event.append(segment_sig)
+        event_len.append(segment_len)
+    evaluation = DataSet(event=event,
+                         event_length=event_len,
+                         label=label,
+                         label_length=label_len,
+                         for_eval=True)
     return evaluation
 
 

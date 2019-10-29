@@ -35,6 +35,7 @@ def evaluation(args):
     FLAGS.output_dir = FLAGS.output
     FLAGS.unit = False
     FLAGS.recursive = True
+    FLAGS.polya = None
     extract(FLAGS)
     FLAGS.input = FLAGS.output + '/raw/'
     chiron_eval.run(args)
