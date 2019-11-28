@@ -5,4 +5,4 @@
 #file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #Store the version here
-__version__ = '0.5.1'
+__version__ = '0.6.0'
