@@ -21,8 +21,8 @@ install_requires=[
   'packaging>=18.0'
 ]
 extras_require={
-  "tf": ["tensorflow>=1.13.1"],
-  "tf_gpu": ["tensorflow-gpu>=1.13.1"],
+  "tf": ["tensorflow==1.15.0"],
+  "tf_gpu": ["tensorflow-gpu==1.15.0"],
 }
 exec(open('chiron/_version.py').read())
 setup(
