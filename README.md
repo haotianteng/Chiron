@@ -57,11 +57,11 @@ pip install chiron
 This will install Chiron, and [`h5py`](https://github.com/h5py/h5py) (required for reading in `.fast5` files).
 Tensorflow need to be install in addition by:
 ```  
-pip install tensorflow  
+pip install tensorflow==1.15
 ```  
 or GPU version:  
 ```  
-pip install tensorflow-gpu  
+pip install tensorflow-gpu==1.15
 ```  
 
 ### Install from Source
@@ -75,14 +75,14 @@ python setup.py install
 ```
 For CPU-version:
 ```
-pip install tensorflow  
+pip install tensorflow==1.15
 ```
 For GPU-version(Nvidia GPU required):  
 Install [CUDA](https://developer.nvidia.com/cuda-toolkit)  
 Install [cuDNN](https://developer.nvidia.com/cudnn)  
 Install tensorflow gpu version  
 ```
-pip install tensorflow-gpu  
+pip install tensorflow-gpu==1.15
 ```
 And then add the Chiron into PYTHONPATH,for convinience you can add it to the .bashrc
 ```
