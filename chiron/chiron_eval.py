@@ -289,6 +289,7 @@ def build_eval_graph(model_configure):
                 self.file_dir = os.path.abspath(
                     os.path.join(FLAGS.input, os.path.pardir))
             file_n = len(self.file_list)
+            print("Found %d files."%(file_n))
             self.pbars.update(2,total = file_n)
             self.pbars.update(3,total = file_n)
             if not os.path.exists(FLAGS.output):
@@ -306,12 +307,13 @@ def build_eval_graph(model_configure):
             logits_idx = np.asarray([])
             logits_fn = np.asarray([])
             for f_i, name in enumerate(self.file_list):
-                if not name.endswith('.signal'):
+                if (not name.endswith('.signal')) and (not name.endswith('.fast5')):
                     continue
                 input_path = os.path.join(self.file_dir, name)
                 eval_data = read_data_for_eval(input_path, FLAGS.start,
                                                seg_length=FLAGS.segment_len,
-                                               step=FLAGS.jump)
+                                               step=FLAGS.jump,
+                                               reverse_fast5 = FLAGS.reverse_fast5)
                 reads_n = eval_data.reads_n
                 self.pbars.update(0,total = reads_n,progress = 0)
                 self.pbars.update_bar()
@@ -379,18 +381,15 @@ def evaluation():
     val = defaultdict(dict)  # We could read vals out of order, that's why it's a dict
     for f_i, name in enumerate(net.file_list):
         start_time = time.time()
-        if not name.endswith('.signal'):
+        if (not name.endswith('.signal')) and (not name.endswith('.fast5')):
             continue
         file_pre = os.path.splitext(name)[0]
         input_path = os.path.join(net.file_dir, name)
-        if FLAGS.mode == 'rna':
-            eval_data = read_data_for_eval(input_path, FLAGS.start,
-                                       seg_length=FLAGS.segment_len,
-                                       step=FLAGS.jump)
-        else:
-            eval_data = read_data_for_eval(input_path, FLAGS.start,
-                                       seg_length=FLAGS.segment_len,
-                                       step=FLAGS.jump)
+            ###Other mode (like methylation) may use different read method.
+        eval_data = read_data_for_eval(input_path, FLAGS.start,
+                                   seg_length=FLAGS.segment_len,
+                                   step=FLAGS.jump,
+                                   reverse_fast5 = FLAGS.reverse_fast5)
         reads_n = eval_data.reads_n
         net.pbars.update(1,total = reads_n,progress = 0)
         net.pbars.update_bar()
@@ -525,9 +524,11 @@ def decoding_queue(logits_queue, num_threads=6):
 def run(args):
     global FLAGS
     FLAGS = args
+    print("The result will be written to %s"%(FLAGS.output))
+    if not os.path.isdir(FLAGS.output):
+        os.mkdir(FLAGS.output)
     # logging.debug("Flags:\n%s", pformat(vars(args)))
     time_dict = unix_time(evaluation)
-    print(FLAGS.output)
     print('Real time:%5.3f Systime:%5.3f Usertime:%5.3f' %
           (time_dict['real'], time_dict['sys'], time_dict['user']))
     meta_folder = os.path.join(FLAGS.output, 'meta')
@@ -591,5 +592,9 @@ if __name__ == "__main__":
             raise ValueError('Attempt to use the RNA preset parameter setting in DNA mode, enable rna mode by --mode.')
     else:
         raise ValueError('Unknown presetting %s undifiend'%(args.preset))
+    if args.mode=='rna':
+        args.reverse_fast5 = True
+    else:
+        args.reverse_fast5 = False
     set_paras(default_p)
     run(args)

@@ -255,7 +255,7 @@ def read_data_for_eval(file_path,
                        step=20, 
 	                   seg_length=200, 
                        sig_norm=MEAN,
-                       reverse = False):
+                       reverse_fast5 = False):
     """
     Input Args:
         file_path: file path to a signal/fast5 file.
@@ -263,21 +263,20 @@ def read_data_for_eval(file_path,
         step: sliding step size.
         seg_length: length of segments.
         sig_norm: The way signal being normalized, keep it the same as it during training.
-        reverse: if the signal need to be reversed.
+        reverse_fast5: if the signal need to be reversed from a fast5 file.
     """
     if file_path.endswith('.signal'):
         f_signal = read_signal(file_path, normalize=sig_norm)
     elif file_path.endswith('.fast5'):
         f_signal = read_signal_fast5(file_path, normalize=sig_norm)
+        if reverse_fast5:
+            f_signal = f_signal[::-1]
     else:
-        raise TypeError("Input file should be a signal file or fsat5 file.")
+        raise TypeError("Input file should be a signal file or fsat5 file, but a %s file is given."%(file_path))
     event = list()
     event_len = list()
     label = list()
     label_len = list()
-    
-    if reverse:
-        f_signal = f_signal[::-1]
     f_signal = f_signal[start_index:]
     sig_len = len(f_signal)
     for indx in range(0, sig_len, step):
@@ -507,6 +506,7 @@ def read_signal(file_path, normalize=None):
         return signal.tolist()
     if normalize == MEAN:
         signal = (signal - np.mean(uniq_arr)) / np.float(np.std(uniq_arr))
+        print(np.float(np.std(uniq_arr)))
     elif normalize == MEDIAN:
         signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
     return signal.tolist()
