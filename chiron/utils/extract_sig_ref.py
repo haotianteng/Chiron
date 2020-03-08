@@ -102,8 +102,9 @@ def extract_file_wrapper(args):
         except Exception as e:
             logger.error(e)
             raise Exception(e)
-        file_version = float(input_data.attrs['file_version'])
-        if file_version <2:
+#        file_version = float(input_data.attrs['file_version'])
+        entries = list(input_data)
+        if 'Raw' in entries:
             try:
                 raw_signal, reference = extract_file(input_data,full_file_n,FLAGS.mode,FLAGS.unit,FLAGS.polya_pair)
                 if raw_signal is None:
