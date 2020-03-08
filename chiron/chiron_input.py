@@ -506,7 +506,6 @@ def read_signal(file_path, normalize=None):
         return signal.tolist()
     if normalize == MEAN:
         signal = (signal - np.mean(uniq_arr)) / np.float(np.std(uniq_arr))
-        print(np.float(np.std(uniq_arr)))
     elif normalize == MEDIAN:
         signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
     return signal.tolist()
