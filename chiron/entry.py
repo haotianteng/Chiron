@@ -36,6 +36,10 @@ def evaluation(args):
     FLAGS.unit = False
     FLAGS.recursive = True
     FLAGS.polya = None
+    if args.mode=='rna':
+        args.reverse_fast5 = True
+    else:
+        args.reverse_fast5 = False
     extract(FLAGS)
     FLAGS.input = FLAGS.output + '/raw/'
     chiron_eval.run(args)
