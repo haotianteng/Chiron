@@ -16,12 +16,14 @@ class multi_pbars:
         self.total = [-1]*self.bar_n
         self.max_line = 0
         self.bar_l = l
-    def update(self,i,progress=None,total=None):
+    def update(self,i,progress=None,total=None,title = None):
         if progress is not None:
             self.progress[i] = progress
         if total is not None:
             self.total[i] = total
-    def update_bar(self):
+        if title is not None:
+            self.bar_string[i] = title
+    def refresh(self):
         text = '\r'
         for i in range(self.bar_n):
             p = float(self.progress[i])/(self.total[i]+1e-6)
@@ -48,7 +50,7 @@ if __name__== "__main__":
         time.sleep(0.1)
         for j in range(2):
             test_bars.update(j,100-i,100)
-        test_bars.update_bar()
+        test_bars.refresh()
     e_time = time.time()
     sys.stdout.write("\n\n\nTime consumed:%f\n"%(e_time-s_time))
     sys.stdout.flush()
