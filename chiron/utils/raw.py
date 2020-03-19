@@ -57,7 +57,7 @@ def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
                                   title = common_errors[i][0],
                                   progress = common_errors[i][1],
                                   total = total_errors)
-            error_bars.refresh
+            error_bars.refresh()
             if state == SUCCEED_TAG:
                 if FLAGS.unit:
                     raw_data=reunit(raw_data,offset,digitisation,range_s)
