@@ -153,8 +153,8 @@ if __name__ == "__main__":
     parser.add_argument('--unit',dest='unit',action='store_true',help='Use the pA unit instead of the original digital signal.')
     parser.add_argument('--mode',default = 'dna',
                         help='Type of data to basecall, default is dna, can be chosen from dna, rna and methylation(under construction)')
-    parser.add_argument('--min_bps',default = 0,help="The minimum number of labels that has to be in each read.")
-    parser.add_argument('--n_errors',default = 5,help="The number of errors that are going to be recorded.")
+    parser.add_argument('--min_bps',default = 0, type =int, help="The minimum number of labels that has to be in each read.")
+    parser.add_argument('--n_errors',default = 5, type = int, help="The number of errors that are going to be recorded.")
     args = parser.parse_args(sys.argv[1:])
     run(args)
 
