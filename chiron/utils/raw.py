@@ -118,7 +118,10 @@ def extract_file(input_file):
             [start, start + raw_length[index], str(raw_label['base'][index])])
     if FLAGS.mode=='rna':
         raw_data = raw_data[::-1]
-    return SUCCEED_TAG, (raw_data, np.array(raw_data_array, dtype='S8')) , (offset,digitisation,range_s)
+    if len(raw_data_array)>FLAGS.min_bps:
+        return SUCCEED_TAG, (raw_data, np.array(raw_data_array, dtype='S8')) , (offset,digitisation,range_s)
+    else:
+        return "Read has too few nucleotides output", (None, None) ,(None, None,None)
 
 
 def run(args):
@@ -150,6 +153,7 @@ if __name__ == "__main__":
     parser.add_argument('--unit',dest='unit',action='store_true',help='Use the pA unit instead of the original digital signal.')
     parser.add_argument('--mode',default = 'dna',
                         help='Type of data to basecall, default is dna, can be chosen from dna, rna and methylation(under construction)')
+    parser.add_argument('--min_bps',default = 0,help="The minimum number of labels that has to be in each read.")
     parser.add_argument('--n_errors',default = 5,help="The number of errors that are going to be recorded.")
     args = parser.parse_args(sys.argv[1:])
     run(args)
