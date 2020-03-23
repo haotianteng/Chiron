@@ -23,6 +23,8 @@ class multi_pbars:
             self.total[i] = total
         if title is not None:
             self.bar_string[i] = title
+    def update_bar(self):
+        self.refresh()
     def refresh(self):
         text = '\r'
         for i in range(self.bar_n):
