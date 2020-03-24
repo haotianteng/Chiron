@@ -168,9 +168,9 @@ def run(args):
     global FLAGS
     FLAGS = args
     if FLAGS.train_cache is None:
-        FLAGS.train_cache = FLAGS.data_dir + '/train_cache.hdf5'
+        FLAGS.train_cache = FLAGS.log_dir + '/train_cache.hdf5'
     if (FLAGS.valid_cache is None) and (FLAGS.validation is not None):
-        FLAGS.valid_cache = FLAGS.data_dir + '/valid_cache.hdf5'
+        FLAGS.valid_cache = FLAGS.log_dir + '/valid_cache.hdf5'
     FLAGS.data_dir = FLAGS.data_dir + os.path.sep
     FLAGS.log_dir = FLAGS.log_dir + os.path.sep
     train()
