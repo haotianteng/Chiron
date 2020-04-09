@@ -106,7 +106,7 @@ def extract_file_wrapper(args):
         entries = list(input_data)
         if 'Raw' in entries:
             try:
-                raw_signal, reference = extract_file(input_data,full_file_n,FLAGS.mode,FLAGS.unit,FLAGS.polya_pair)
+                raw_signal, reference,readid = extract_file(input_data,full_file_n,FLAGS.mode,FLAGS.unit,FLAGS.polya_pair)
                 if raw_signal is None:
                     raise ValueError("Fail in extracting raw signal.")
                 if len(raw_signal) == 0:
@@ -115,7 +115,11 @@ def extract_file_wrapper(args):
             except Exception as e:
                 logger.error("Cannot extract file %s. %s"%(full_file_n,e))
                 return
-            with open(os.path.join(FLAGS.raw_folder, os.path.splitext(file_n)[0] + '.signal'), 'w+') as signal_file:
+            if FLAGS.idname:
+                sig_file_name = os.path.join(FLAGS.raw_folder, readid + '.signal')
+            else:
+                sig_file_name = os.path.join(FLAGS.raw_folder, os.path.splitext(file_n)[0] + '.signal')
+            with open(sig_file_name, 'w+') as signal_file:
                 signal_file.write(" ".join([str(val) for val in raw_signal]))
             if len(reference) > 0:
                 with open(os.path.join(FLAGS.ref_folder, os.path.splitext(file_n)[0] + '_ref.fastq'), 'w+') as ref_file:
@@ -124,7 +128,7 @@ def extract_file_wrapper(args):
          for read_id in tqdm(input_data):
             read_h = input_data[read_id]
             try:
-                raw_signal, reference = extract_file_v2(read_h,FLAGS.mode)
+                raw_signal, reference,readid = extract_file_v2(read_h,FLAGS.mode)
                 if raw_signal is None:
                     raise ValueError("Fail in extracting raw signal.")
                 if len(raw_signal) == 0:
@@ -168,7 +172,7 @@ def extract_file(input_data,input_file,mode = 'dna',unit=False,polya = None):
         except Exception as e:
             logger.info('%s has no reference, error: %s.'%(input_file,e))
             reference = ''
-    return raw_signal, reference
+    return raw_signal, reference, read_id
 
 
 def extract_file_v2(root_h,mode = 'dna'):
@@ -186,7 +190,7 @@ def extract_file_v2(root_h,mode = 'dna'):
         except Exception as e:
             logger.info('%s has no reference.'%(read_id))
             reference = ''
-    return raw_signal, reference
+    return raw_signal, reference,read_id
     
 
 if __name__ == '__main__':
@@ -222,5 +226,8 @@ if __name__ == '__main__':
                         default = 1,
                         type = int,
                         help = "Number of threads.")
+    parser.add_argument('--idname',
+                        action="store_true",
+                        help = "Name the signal with read id.")
     FLAGS = parser.parse_args(sys.argv[1:])
     extract(FLAGS)
