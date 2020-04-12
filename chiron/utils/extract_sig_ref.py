@@ -120,7 +120,7 @@ def extract_file_wrapper(args):
             else:
                 sig_file_name = os.path.join(FLAGS.raw_folder, os.path.splitext(file_n)[0] + '.signal')
             with open(sig_file_name, 'w+') as signal_file:
-                signal_file.write(" ".join([str(val) for val in raw_signal]))
+                signal_file.write(FLAGS.delimiter.join([str(val) for val in raw_signal]))
             if len(reference) > 0:
                 with open(os.path.join(FLAGS.ref_folder, os.path.splitext(file_n)[0] + '_ref.fastq'), 'w+') as ref_file:
                     ref_file.write(reference)
@@ -229,5 +229,9 @@ if __name__ == '__main__':
     parser.add_argument('--idname',
                         action="store_true",
                         help = "Name the signal with read id.")
+    parser.add_argument('-d',
+                        '--delimiter',
+                        default="\n",
+                        help = "The delimiter used to separate signal point.")
     FLAGS = parser.parse_args(sys.argv[1:])
     extract(FLAGS)
