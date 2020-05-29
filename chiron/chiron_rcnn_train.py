@@ -74,9 +74,11 @@ def train():
         config_file = FLAGS.configure   
     config = model.read_config(config_file)
     print("Begin training using following setting:")
-    for pro in dir(FLAGS):
-        if not pro.startswith('_'):
-            print("%s:%s"%(pro,getattr(FLAGS,pro)))
+    with open(os.path.join(FLAGS.log_dir,FLAGS.model_name,'train_config'),'w+') as log_f:
+        for pro in dir(FLAGS):
+            if not pro.startswith('_'):
+                print("%s:%s"%(pro,getattr(FLAGS,pro)))
+                log_f.write("%s:%s\n"%(pro,getattr(FLAGS,pro)))
     net = compile_train_graph(config,FLAGS)
     sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=FLAGS.threads,
                                             intra_op_parallelism_threads=FLAGS.threads,

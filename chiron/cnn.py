@@ -64,8 +64,8 @@ def conv_layer(indata, ksize, padding, training, name, dilate=1, strides=None, b
                     indata, W, strides=strides, padding=padding, name=name)
     if BN:
         with tf.variable_scope(name + '_bn') as scope:
-            conv_out = batchnorm(conv_out,scope=scope,training = training)
-#            conv_out = simple_global_bn(conv_out, name=name + '_bn')
+#            conv_out = batchnorm(conv_out,scope=scope,training = training)
+            conv_out = simple_global_bn(conv_out, name=name + '_bn')
             #conv_out = tf.layers.batch_normalization(conv_out,axis = -1,training = training,name = 'bn')
     if active:
         if active_function == 'relu':
@@ -246,6 +246,7 @@ def residual_layer(indata, out_channel, training, i_bn=False,k = 3, strides = No
 
     fea_shape = indata.get_shape().as_list()
     in_channel = fea_shape[-1]
+    print("In channel %d"%(in_channel))
     with tf.variable_scope('branch1'):
         indata_cp = conv_layer(indata, ksize=[1, 1, in_channel, out_channel], padding='SAME', training=training,
                                name='conv1', BN=i_bn, active=False,strides = strides)
@@ -461,9 +462,11 @@ def RNA_model2(net,training):
     return net
 
 def RNA_model3(net,training):
+    with tf.variable_scope('conv_layer'):
+        net = conv_layer(net, [1,14,1,256], padding = 'SAME', training = training, name = 'conv1', dilate=1, strides= 7)
     with tf.variable_scope('res_layer1'):
         net = residual_layer(net, out_channel=256,
-                              training=training, k=13,i_bn=True,strides = 5)
+                              training=training, i_bn=True)
     with tf.variable_scope('res_layer2'):
         net = residual_layer(net, out_channel=256, training=training)
     with tf.variable_scope('res_layer3'):

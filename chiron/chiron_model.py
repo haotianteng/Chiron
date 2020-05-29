@@ -145,6 +145,8 @@ def inference(x,sequence_len,training,full_sequence_len,configure, apply_ratio =
         logits: Tensor of shape [batch_size, max_time, class_num]
         ratio: Scalar float, the scale factor between the output logits and the input maximum length.
     """
+    print("DEBUG MODEL X Shape")
+    print(x.shape)
     cnn_feature = getcnnfeature(x,training = training,cnn_config = configure['cnn'])
     feashape = cnn_feature.get_shape().as_list()
     ratio = full_sequence_len/feashape[1]
