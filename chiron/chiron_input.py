@@ -254,7 +254,7 @@ def read_data_for_eval(file_path,
 					   start_index=0,
                        step=20, 
 	                   seg_length=200, 
-                       sig_norm=MEAN,
+                       sig_norm=None,
                        reverse_fast5 = False):
     """
     Input Args:
@@ -411,13 +411,20 @@ def read_tfrecord(data_dir,
                     count_bar.update(0,progress = count,total = count)
                     count_bar.update_bar()
             file_count += 1
-
         if event.cache:
+            event.save_rest()
+            event_length.save_rest()
+            label.save_rest()
+            label_length.save_rest()
             train = read_cache_dataset(h5py_file_path)
         else:
-            train = DataSet(event=event, event_length=event_length, label=label, label_length=label_length)
+            event.save()
+            event_length.save()
+            label.save()
+            label_length.save()
+            train = read_cache_dataset(h5py_file_path)
         count_bar.end()
-        return train
+    return train
             
 def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_segments_num=FLAGS.max_segments_number):
     ###Read from raw data
@@ -487,11 +494,12 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, m
                     else:
                         sys.stdout.write("%d lines read.   \n" % (count))
                 file_count += 1
-    if event.cache:
-        train = read_cache_dataset(h5py_file_path)
-    else:
-        train = DataSet(event=event, event_length=event_length, label=label,
-                        label_length=label_length)
+        
+        if event.cache:
+            train = read_cache_dataset(h5py_file_path)
+        else:
+            train = DataSet(event=event, event_length=event_length, label=label,
+                            label_length=label_length)
     return train
 
 
