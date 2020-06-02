@@ -33,7 +33,7 @@ class Flags(object):
     def __init__(self):
         self.max_segments_number = None
         self.MAXLEN = 1e5  # Maximum Length of the holder in biglist. 1e5 by default
-
+        self.sig_norm = MEAN
 
 #        self.max_segment_len = 200
 FLAGS = Flags()
@@ -254,7 +254,6 @@ def read_data_for_eval(file_path,
 					   start_index=0,
                        step=20, 
 	                   seg_length=200, 
-                       sig_norm=None,
                        reverse_fast5 = False):
     """
     Input Args:
@@ -266,9 +265,9 @@ def read_data_for_eval(file_path,
         reverse_fast5: if the signal need to be reversed from a fast5 file.
     """
     if file_path.endswith('.signal'):
-        f_signal = read_signal(file_path, normalize=sig_norm)
+        f_signal = read_signal(file_path, normalize=FLAGS.sig_norm)
     elif file_path.endswith('.fast5'):
-        f_signal = read_signal_fast5(file_path, normalize=sig_norm)
+        f_signal = read_signal_fast5(file_path, normalize=FLAGS.sig_norm)
         if reverse_fast5:
             f_signal = f_signal[::-1]
     else:
@@ -373,7 +372,7 @@ def read_tfrecord(data_dir,
             # grouping the whole array into sub-array with size = 3
             group_size = 3
             features_data = [features_data[n:n+group_size] for n in range(0, len(features_data), group_size)]
-            f_signal = read_signal_tfrecord(raw_data)
+            f_signal = read_signal_tfrecord(raw_data,normalize = FLAGS.sig_norm)
 
             if len(f_signal) == 0:
                 continue
@@ -426,7 +425,11 @@ def read_tfrecord(data_dir,
         count_bar.end()
     return train
             
-def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, max_segments_num=FLAGS.max_segments_number):
+def read_raw_data_sets(data_dir, 
+                       h5py_file_path=None, 
+                       seq_length=300, 
+                       k_mer=1, 
+                       max_segments_num=FLAGS.max_segments_number):
     ###Read from raw data
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
@@ -457,7 +460,7 @@ def read_raw_data_sets(data_dir, h5py_file_path=None, seq_length=300, k_mer=1, m
         for name in os.listdir(data_dir):
             if name.endswith(".signal"):
                 file_pre = os.path.splitext(name)[0]
-                f_signal = read_signal(data_dir + name)
+                f_signal = read_signal(data_dir + name,normalize = FLAGS.sig_norm)
 
                 if len(f_signal) == 0:
                     continue
