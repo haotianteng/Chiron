@@ -452,13 +452,15 @@ def dynamic_net(net, training, hp):
     return net
 
 def RNA_model2(net,training):
+    with tf.variable_scope('conv_layer'):
+        net = conv_layer(net, [1,9,1,256], padding = 'SAME', training = training, name = 'conv1', dilate=1, strides= 5)
     with tf.variable_scope('res_layer1'):
         net = residual_layer(net, out_channel=256,
-                              training=training,k=3, i_bn=True,strides = 2)
+                              training=training, i_bn=True)
     with tf.variable_scope('res_layer2'):
-        net = residual_layer(net, out_channel=256,k=3, training=training,strides = 2)
+        net = residual_layer(net, out_channel=256, training=training)
     with tf.variable_scope('res_layer3'):
-        net = residual_layer(net, out_channel=256,k=3, training=training,strides = 2)
+        net = residual_layer(net, out_channel=256, training=training)
     return net
 
 def RNA_model3(net,training):
