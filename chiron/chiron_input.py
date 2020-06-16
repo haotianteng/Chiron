@@ -430,7 +430,8 @@ def read_raw_data_sets(data_dir,
                        h5py_file_path=None, 
                        seq_length=300, 
                        k_mer=1, 
-                       max_segments_num=FLAGS.max_segments_number):
+                       max_segments_num=FLAGS.max_segments_number,
+                       skip_start = 10):
     ###Read from raw data
     count_bar = progress.multi_pbars("Extract tfrecords")
     if max_segments_num is None:
@@ -473,7 +474,7 @@ def read_raw_data_sets(data_dir,
                     continue
                 try:
                     f_label = read_label(label_f,
-                                         skip_start=10,
+                                         skip_start=skip_start,
                                          window_n=int((k_mer - 1) / 2))
                 except:
                     sys.stdout.write("Read the label %s fail.Skipped." % (name))
