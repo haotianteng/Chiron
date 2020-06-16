@@ -17,7 +17,7 @@ import argparse
 
 import tensorflow as tf
 import chiron.chiron_model as model
-from chiron.chiron_input import read_tfrecord
+from chiron.chiron_input import read_raw_data_sets
 from chiron.chiron_input import read_cache_dataset
 from tensorflow.python.ops import variables
 from six.moves import range
@@ -148,21 +148,19 @@ def generate_train_valid_datasets(initial_offset = 10):
             raise ValueError("The event length of training cached dataset %d is inconsistent with given sequene_len %d"%(valid_ds.event.shape()[1],FLAGS.sequence_len))
         return train_ds,valid_ds
     sys.stdout.write("Begin reading training dataset.\n")
-    train_ds = read_tfrecord(FLAGS.data_dir, 
-                             FLAGS.tfrecord, 
-                             FLAGS.train_cache,
-                             FLAGS.sequence_len, 
-                             k_mer=FLAGS.k_mer,
-                             max_segments_num=FLAGS.segments_num,
-                             skip_start = initial_offset)
+    train_ds = read_raw_data_sets(FLAGS.data_dir,
+                                  FLAGS.train_cache,
+                                  FLAGS.sequence_len, 
+                                  k_mer=FLAGS.k_mer,
+                                  max_segments_num=FLAGS.segments_num,
+                                  skip_start = initial_offset)
     sys.stdout.write("Begin reading validation dataset.\n")
     if FLAGS.validation is not None:
-        valid_ds = read_tfrecord(FLAGS.data_dir, 
-                                 FLAGS.validation,
-                                 FLAGS.valid_cache,
-                                 FLAGS.sequence_len, 
-                                 k_mer=FLAGS.k_mer,
-                                 max_segments_num=FLAGS.segments_num)
+        valid_ds = read_raw_data_sets(FLAGS.validation,
+                                      FLAGS.valid_cache,
+                                      FLAGS.sequence_len, 
+                                      k_mer=FLAGS.k_mer,
+                                      max_segments_num=FLAGS.segments_num)
     else:
         valid_ds = train_ds
     return train_ds,valid_ds
@@ -188,9 +186,7 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--model_name', required = True,
                         help='model_name')
     parser.add_argument('-v', '--validation', default = None, 
-                        help="validation tfrecord file, default is None, which conduct no validation")
-    parser.add_argument('-f', '--tfrecord', default="train.tfrecords",
-                        help='tfrecord file')
+                        help="validation data folder, default is None, which use the train dataset.")
     parser.add_argument('--train_cache', default=None, help="Cache file for training dataset.")
     parser.add_argument('--valid_cache', default=None, help="Cache file for validation dataset.")
     parser.add_argument('-s', '--sequence_len', type=int, default=400,

@@ -321,6 +321,7 @@ def build_eval_graph(model_configure):
                 while(eval_data.epochs_completed == 0):
                     current_batch, current_seq_len, _ = eval_data.next_batch(
                         FLAGS.batch_size-len(batch_x), shuffle=False)
+                    print(current_batch)
                     current_n = len(current_batch)
                     batch_x = np.concatenate((batch_x,current_batch),axis = 0)
                     seq_len = np.concatenate((seq_len,current_seq_len),axis = 0)
