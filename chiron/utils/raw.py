@@ -37,19 +37,30 @@ def _int64_feature(value):
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
+def make_batch_folder(root_f,batch_i):
+    batch_folder = os.path.join(root_f,str(batch_i))
+    if not os.path.isdir(batch_folder):
+        os.mkdir(batch_folder)
+    return batch_folder
+def extract(root_folder,output_folder,raw_folder=None):
     global logger
     error_bars = multi_pbars([""]*5)
     run_record = Counter()
+    batch_i = 1
     if not os.path.isdir(root_folder):
         raise IOError('Input directory does not found.')
+    batch_folder = make_batch_folder(output_folder,batch_i)
     for dir_n,_,file_list in tf.gfile.Walk(root_folder):
      for file_n in file_list:
         if file_n.endswith('fast5'):
+            file_prefix = file_n.split('.')[0]
 #            output_file = output_folder + os.path.splitext(file_n)[0]
             file_n = os.path.join(dir_n,file_n)
             state, (raw_data, raw_data_array),(offset,digitisation,range_s) = extract_file(file_n)
             run_record[state] +=1
+            if run_record[SUCCEED_TAG]>batch_i*FLAGS.batch:
+                batch_i+=1
+                batch_folder = make_batch_folder(output_folder,batch_i)
             common_errors = run_record.most_common(FLAGS.n_errors)
             total_errors = sum(run_record.values())
             for i in np.arange(min(FLAGS.n_errors,len(common_errors))):
@@ -61,15 +72,16 @@ def extract(root_folder,output_folder,tfrecord_writer,raw_folder=None):
             if state == SUCCEED_TAG:
                 if FLAGS.unit:
                     raw_data=reunit(raw_data,offset,digitisation,range_s)
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'raw_data': _bytes_feature(raw_data.tostring()),
-                    'features': _bytes_feature(raw_data_array.tostring()),
-                    'fname':_bytes_feature(str.encode(file_n))}))
-                tfrecord_writer.write(example.SerializeToString())
+                with open(os.path.join(batch_folder,file_prefix+'.signal'),'w+') as f:
+                    f.write('\n'.join([str(x) for x in raw_data]))
+                with open(os.path.join(batch_folder,file_prefix+'.label'),'w+') as f:
+                    for label in raw_data_array:
+                        f.write(' '.join([str(x) for x in label]))
+                        f.write('\n')
                 logger.info("%s file transfered.   \n" % (file_n))
             else:
                 logger.error("FAIL on %s file, because of error %s.   \n" % (file_n,state))
-                
+
 def reunit(signal,offset,digitisation,range_s):
     """
     Rescale the signal to the pA unit. Signal is calculated by
@@ -85,6 +97,7 @@ def reunit(signal,offset,digitisation,range_s):
     return np.asarray(signal,dtype=np.float32)
 
 def run_list(dirs,output_folder):
+    ###This function is depracted.
     """
     Run extract() function on all directories if FLAGS.input is a list.
     Input Args:
@@ -93,13 +106,10 @@ def run_list(dirs,output_folder):
     """
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
-    tfrecords_filename = output_folder + FLAGS.tffile
-    writer = tf.python_io.TFRecordWriter(tfrecords_filename)
     for directory in dirs:
         root_folder = directory + os.path.sep
-        extract(root_folder,output_folder,writer)
-    writer.close()
-    
+        extract(root_folder,output_folder)
+
 def extract_file(input_file):
     try:
         raw_info,channel_info = labelop.get_label_raw(
@@ -115,11 +125,11 @@ def extract_file(input_file):
 #            print("input_file:" + input_file)
 #            raise ValueError("catch a label with length 0")
         raw_data_array.append(
-            [start, start + raw_length[index], str(raw_label['base'][index])])
+            [start, start + raw_length[index], raw_label['base'][index].decode()])
     if FLAGS.mode=='rna':
         raw_data = raw_data[::-1]
     if len(raw_data_array)>FLAGS.min_bps:
-        return SUCCEED_TAG, (raw_data, np.array(raw_data_array, dtype='S8')) , (offset,digitisation,range_s)
+        return SUCCEED_TAG, (raw_data, raw_data_array) , (offset,digitisation,range_s)
     else:
         return "Read has too few nucleotides output", (None, None) ,(None, None,None)
 
@@ -146,8 +156,8 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', required = True, help="Output folder")
     parser.add_argument('--basecall_group',default = "RawGenomeCorrected_000",
                         help='The attribute group to extract the training data from. e.g. RawGenomeCorrected_000')
-    parser.add_argument('-f', '--tffile', default="train.tfrecords",
-                        help="tfrecord file")
+    parser.add_argument('-b', '--batch', type = int, default=4000,
+                        help="Number of files per batches.")
     parser.add_argument('--basecall_subgroup', default='BaseCalled_template',
                         help='Basecall subgroup Nanoraw resquiggle into. Default is BaseCalled_template')
     parser.add_argument('--unit',dest='unit',action='store_true',help='Use the pA unit instead of the original digital signal.')

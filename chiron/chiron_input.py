@@ -322,6 +322,7 @@ def read_tfrecord(data_dir,
                   k_mer=1, 
                   max_segments_num=None,
                   skip_start = 10):
+    ###This method deprecated please use read_raw_data_sets instead
     ###Read from raw data
     count_bar = progress.multi_pbars("Extract tfrecords")
     if max_segments_num is None:
@@ -431,6 +432,10 @@ def read_raw_data_sets(data_dir,
                        k_mer=1, 
                        max_segments_num=FLAGS.max_segments_number):
     ###Read from raw data
+    count_bar = progress.multi_pbars("Extract tfrecords")
+    if max_segments_num is None:
+        max_segments_num = FLAGS.max_segments_number
+        count_bar.update(0,progress = 0,total = max_segments_num)
     if h5py_file_path is None:
         h5py_file_path = tempfile.mkdtemp() + '/temp_record.hdf5'
     else:
@@ -457,23 +462,27 @@ def read_raw_data_sets(data_dir,
         label_length = biglist(data_handle=label_length_h, max_len=FLAGS.MAXLEN)
         count = 0
         file_count = 0
-        for name in os.listdir(data_dir):
+        for root, dirs, files in os.walk(data_dir, topdown=False):
+           for name in files:
             if name.endswith(".signal"):
                 file_pre = os.path.splitext(name)[0]
-                f_signal = read_signal(data_dir + name,normalize = FLAGS.sig_norm)
-
+                signal_f = os.path.join(root,name)
+                f_signal = read_signal(signal_f,normalize = FLAGS.sig_norm)
+                label_f = os.path.join(root,file_pre+'.label')
                 if len(f_signal) == 0:
                     continue
                 try:
-                    f_label = read_label(data_dir + file_pre + '.label',
+                    f_label = read_label(label_f,
                                          skip_start=10,
                                          window_n=int((k_mer - 1) / 2))
                 except:
                     sys.stdout.write("Read the label %s fail.Skipped." % (name))
                     continue
-
-                tmp_event, tmp_event_length, tmp_label, tmp_label_length = \
-                    read_raw(f_signal, f_label, seq_length)
+                try:
+                    tmp_event, tmp_event_length, tmp_label, tmp_label_length = read_raw(f_signal, f_label, seq_length)
+                except Exception as e:
+                    print("Extract label from %s fail, label position exceed max signal length."%(label_f))
+                    raise e
                 event += tmp_event
                 event_length += tmp_event_length
                 label += tmp_label
@@ -485,24 +494,32 @@ def read_raw_data_sets(data_dir,
                 count = len(event)
                 if file_count % 10 == 0:
                     if max_segments_num is not None:
-                        sys.stdout.write("%d/%d events read.   \n" % (
-                        count, max_segments_num))
+                        count_bar.update(0,progress = count,total = max_segments_num)
+                        count_bar.update_bar()
                         if len(event) > max_segments_num:
                             event.resize(max_segments_num)
                             label.resize(max_segments_num)
                             event_length.resize(max_segments_num)
-
+    
                             label_length.resize(max_segments_num)
                             break
                     else:
-                        sys.stdout.write("%d lines read.   \n" % (count))
+                        count_bar.update(0,progress = count,total = count)
+                        count_bar.update_bar()
                 file_count += 1
-        
         if event.cache:
+            event.save_rest()
+            event_length.save_rest()
+            label.save_rest()
+            label_length.save_rest()
             train = read_cache_dataset(h5py_file_path)
         else:
-            train = DataSet(event=event, event_length=event_length, label=label,
-                            label_length=label_length)
+            event.save()
+            event_length.save()
+            label.save()
+            label_length.save()
+            train = read_cache_dataset(h5py_file_path)
+        count_bar.end()
     return train
 
 
@@ -512,13 +529,12 @@ def read_signal(file_path, normalize=None):
     for line in f_h:
         signal += [np.float32(x) for x in line.split()]
     signal = np.asarray(signal)
-    uniq_arr=np.unique(signal)
     if len(signal) == 0:
         return signal.tolist()
     if normalize == MEAN:
-        signal = (signal - np.mean(uniq_arr)) / np.float(np.std(uniq_arr))
+        signal = (signal - np.mean(signal)) / np.float(np.std(signal))
     elif normalize == MEDIAN:
-        signal = (signal - np.median(uniq_arr)) / np.float(robust.mad(uniq_arr))
+        signal = (signal - np.median(signal)) / np.float(robust.mad(signal))
     return signal.tolist()
 
 def read_signal_fast5(fast5_path, normalize=None):
@@ -721,6 +737,7 @@ def test_chiron_dummy_input():
     if not os.path.isdir(dummy_dir):
         os.makedirs(dummy_dir)
     dummy_fast5 = os.path.join(dummy_dir,'fast5s')
+    dummy_raw = os.path.join(dummy_dir,'raw')
     if not os.path.isdir(dummy_fast5):
         os.makedirs(dummy_fast5)
     file_num = 10
@@ -766,17 +783,18 @@ def test_chiron_dummy_input():
     class Args(object):
         def __init__(self):
             self.input = dummy_fast5
-            self.output = dummy_dir
+            self.output = dummy_raw
             self.basecall_group = 'Corrected_000'
             self.mode = 'rna'
-            self.tffile = 'train.tfrecords'
+            self.batch = 1
             self.basecall_subgroup = 'BaseCalled_template'
             self.unit=True
-            
+            self.min_bps = 0
+            self.n_errors = 5
     from chiron.utils import raw
     args = Args()
     raw.run(args)
-    train = read_tfrecord(dummy_dir,"train.tfrecords",seq_length=1000,h5py_file_path=os.path.join(dummy_dir,'cache.fast5'))
+    train = read_raw_data_sets(dummy_raw,seq_length=1000,h5py_file_path=os.path.join(dummy_dir,'cache.fast5'))
     
     for i in range(100):
         inputX, sequence_length, label = train.next_batch(10,shuffle=False)
@@ -788,11 +806,10 @@ def test_chiron_dummy_input():
                 if x_idx==0:
                     y.append(signal)
                 else:
-                    if (abs(signal - x[x_idx-1]) >2) or (signal > x[x_idx-1]):
+                    if (abs(signal - x[x_idx-1]) >0.1) or (signal - x[x_idx-1])>0:
                         y.append(signal)
             corr = np.corrcoef(y, label[1][accum_len:accum_len + len(y)])[0, 1]
             for loc in label[0][accum_len:accum_len + len(y)]:
-                
                 assert(loc[0] == idx)
             accum_len += len(y)
             assert abs(corr - 1)< 1e-6
