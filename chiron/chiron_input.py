@@ -33,7 +33,7 @@ class Flags(object):
     def __init__(self):
         self.max_segments_number = None
         self.MAXLEN = 1e5  # Maximum Length of the holder in biglist. 1e5 by default
-        self.sig_norm = MEAN
+        self.sig_norm = None
 
 #        self.max_segment_len = 200
 FLAGS = Flags()
