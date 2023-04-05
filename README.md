@@ -1,5 +1,7 @@
-[![PyPI](https://img.shields.io/pypi/v/chiron.svg)](https://pypi.org/project/Chiron)
-[![Downloads](https://pepy.tech/badge/chiron)](https://pepy.tech/project/Chiron)
+[![PyPI](https://img.shields.io/pypi/v/chiron.svg)](https://pypi.org/project/chiron)
+[![Downloads](https://pepy.tech/badge/chiron)](https://pepy.tech/project/chiron)
+[![Downloads-Month](https://static.pepy.tech/badge/chiron/month)](https://pepy.tech/project/chiron)
+[![Downloads-Week](https://static.pepy.tech/badge/chiron/week)](https://pepy.tech/project/chiron)
 # Chiron
 ## A basecaller for Oxford Nanopore Technologies' sequencers
 Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling for the nanopore sequencer.  
