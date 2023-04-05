@@ -1,3 +1,5 @@
+[![PyPI](https://img.shields.io/pypi/v/paste-bio.svg)](https://pypi.org/project/Chiron)
+[![Downloads](https://pepy.tech/badge/paste-bio)](https://pepy.tech/project/Chiron)
 # Chiron
 ## A basecaller for Oxford Nanopore Technologies' sequencers
 Using a deep learning CNN+RNN+CTC structure to establish end-to-end basecalling for the nanopore sequencer.  
