@@ -1,3 +1,4 @@
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![PyPI](https://img.shields.io/pypi/v/chiron.svg)](https://pypi.org/project/chiron)
 [![Downloads](https://pepy.tech/badge/chiron)](https://pepy.tech/project/chiron)
 [![Downloads-Month](https://static.pepy.tech/badge/chiron/month)](https://pepy.tech/project/chiron)
