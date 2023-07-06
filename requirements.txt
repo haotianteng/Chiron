@@ -12,7 +12,7 @@ patsy==0.5.0
 protobuf==3.5.2.post1
 python-dateutil==2.7.2
 pytz==2018.4
-scipy==1.0.1
+scipy==1.10.0
 six==1.11.0
 statsmodels==0.8.0
 termcolor==1.1.0
